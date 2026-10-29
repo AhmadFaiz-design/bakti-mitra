@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="id">
-// aaaKura
 
 <head>
     <meta charset="UTF-8">
@@ -38,7 +37,7 @@
             font-family: 'Poppins', sans-serif;
             background: var(--bg);
             color: var(--ink);
-            padding: 20px 0px
+            padding: 20px
         }
 
         svg {
@@ -54,14 +53,26 @@
 
         /* 2. KERANGKA UTAMA: sidebar + konten */
         .app {
+            --sb: 260px;
             display: grid;
-            grid-template-columns: 260px 1fr;
+            grid-template-columns: var(--sb) 1fr;
             gap: 24px;
-            max-width: 1280px;
-            margin: 0px 20px;
+            margin: auto;
+            transition: grid-template-columns .3s ease
+        }
+
+        .app.collapsed {
+            --sb: 84px
+        }
+
+        .app main {
+            min-width: 0
         }
 
         .sidebar {
+            display: flex;
+            flex-direction: column;
+            position: relative;
             background: var(--ink);
             border-radius: var(--radius);
             padding: 24px 20px;
@@ -69,11 +80,110 @@
             min-height: calc(100vh - 40px)
         }
 
+        /* LOGO: dua gambar, satu ditampilkan sesuai kondisi sidebar */
         .logo {
-            height: 64px;
-            border-radius: 20px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-left: 6px
+        }
+
+        .logo img {
+            height: 48px;
+            width: auto;
+            display: block
+        }
+
+        .logo .short {
+            display: none
+        }
+
+        .collapsed .logo {
+            justify-content: center;
+            padding-left: 0
+        }
+
+        .collapsed .logo .long {
+            display: none
+        }
+
+        .collapsed .logo .short {
+            display: block
+        }
+
+        /* TOMBOL TOGGLE: di dalam sidebar, didorong ke paling bawah */
+        .toggle {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 14px;
+            border: 0;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .08);
+            color: #CFCAF0;
+            font: 500 14px 'Poppins';
+            cursor: pointer;
+            text-align: left
+        }
+
+        .toggle:hover {
             background: var(--primary);
-            margin-bottom: 40px
+            color: var(--white)
+        }
+
+        .toggle:focus-visible {
+            outline: 2px solid var(--lime);
+            outline-offset: 2px
+        }
+
+        .toggle svg {
+            transition: transform .3s
+        }
+
+        .collapsed .toggle svg {
+            transform: rotate(180deg)
+        }
+
+        .collapsed .toggle {
+            justify-content: center;
+            padding: 12px 0
+        }
+
+        .collapsed .toggle .label {
+            display: none
+        }
+
+        .menu {
+            margin-bottom: 24px
+        }
+
+        /* MODE PENDEK: sembunyikan teks, ikon di tengah */
+        .menu .label {
+            white-space: nowrap;
+            overflow: hidden
+        }
+
+        .collapsed .sidebar {
+            padding-left: 14px;
+            padding-right: 14px
+        }
+
+        .collapsed .menu .label,
+        .collapsed .menu .chev {
+            display: none
+        }
+
+        .collapsed .menu a,
+        .collapsed .menu button {
+            justify-content: center;
+            padding: 12px 0
+        }
+
+        .collapsed .submenu {
+            padding-left: 0
         }
 
         .menu {
@@ -139,7 +249,7 @@
         }
 
         .topbar h1 {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 600
         }
 
@@ -385,8 +495,14 @@
 
         /* 7. RESPONSIF */
         @media(max-width:1000px) {
-            .app {
+
+            .app,
+            .app.collapsed {
                 grid-template-columns: 1fr
+            }
+
+            .toggle {
+                display: none
             }
 
             .sidebar {
@@ -420,6 +536,9 @@
         <symbol id="i-plus" viewBox="0 0 24 24">
             <path d="M12 5v14M5 12h14" />
         </symbol>
+        <symbol id="i-left" viewBox="0 0 24 24">
+            <path d="M15 6l-6 6 6 6" />
+        </symbol>
         <symbol id="i-down" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6" />
         </symbol>
@@ -445,48 +564,58 @@
         </symbol>
     </svg>
 
-    <div class="app">
+    <div class="app" id="app">
         <!-- SIDEBAR -->
         <aside class="sidebar">
-            <div class="logo"></div>
+            <div class="logo">
+                <img class="long" src="{{ asset('images/Logo Bakti Mitra Long.png') }}" alt="Bakti Mitra">
+                <img class="short" src="{{ asset('images/Logo Bakti Mitra Short.png')}}" alt="Bakti Mitra">
+            </div>
             <nav class="menu">
-                <a href="#" class="active"><svg>
+                <a href="#" class="active" title="Dashboard"><svg>
                         <use href="#i-home" />
-                    </svg>Dashboard</a>
-                <a href="#"><svg>
+                    </svg><span class="label">Dashboard</span></a>
+                <a href="#" title="Mitra"><svg>
                         <use href="#i-user" />
-                    </svg>Mitra</a>
-                <a href="#"><svg>
+                    </svg><span class="label">Mitra</span></a>
+                <a href="#" title="Koordinator"><svg>
                         <use href="#i-user" />
-                    </svg>Koordinator</a>
+                    </svg><span class="label">Koordinator</span></a>
                 <div class="has-sub" id="sub">
-                    <button type="button"
+                    <button type="button" title="Buat Akun"
                         onclick="document.getElementById('sub').classList.toggle('open');document.getElementById('subList').classList.toggle('open')">
                         <svg>
                             <use href="#i-plus" />
-                        </svg>Buat Akun<svg class="chev">
+                        </svg><span class="label">Buat Akun</span><svg class="chev">
                             <use href="#i-down" />
                         </svg>
                     </button>
                     <div class="submenu" id="subList">
-                        <a href="#"><svg>
+                        <a href="#" title="Buat akun Mitra"><svg>
                                 <use href="#i-user" />
-                            </svg>Mitra</a>
-                        <a href="#"><svg>
+                            </svg><span class="label">Mitra</span></a>
+                        <a href="#" title="Buat akun Koordinator"><svg>
                                 <use href="#i-user" />
-                            </svg>Koordinator</a>
+                            </svg><span class="label">Koordinator</span></a>
                     </div>
                 </div>
             </nav>
+
+            <button type="button" class="toggle" id="toggle" aria-label="Perkecil sidebar" aria-expanded="true"
+                title="Perkecil / perbesar sidebar">
+                <svg>
+                    <use href="#i-left" />
+                </svg><span class="label" id="toggleLabel">Perkecil</span>
+            </button>
         </aside>
 
         <!-- KONTEN -->
         <main>
             <header class="topbar">
                 <h1>Dashboard</h1>
-                <button class="pill">Bulan <svg>
+                {{-- <button class="pill">Bulan <svg>
                         <use href="#i-down" />
-                    </svg></button>
+                    </svg></button> --}}
                 <label class="search"><svg>
                         <use href="#i-search" />
                     </svg><input placeholder="Apa yang perlu dicari..."></label>
@@ -582,6 +711,28 @@
             </section>
         </main>
     </div>
+    <script>
+        /* Toggle sidebar panjang <-> pendek */
+        const app = document.getElementById('app');
+        const btn = document.getElementById('toggle');
+
+        function setCollapsed(state) {
+            app.classList.toggle('collapsed', state);
+            btn.setAttribute('aria-expanded', String(!state));
+            btn.setAttribute('aria-label', state ? 'Perbesar sidebar' : 'Perkecil sidebar');
+            document.getElementById('toggleLabel').textContent = state ? 'Perbesar' : 'Perkecil';
+            try {
+                localStorage.setItem('sidebarCollapsed', state ? '1' : '0');
+            } catch (e) {}
+        }
+
+        btn.addEventListener('click', () => setCollapsed(!app.classList.contains('collapsed')));
+
+        /* Ingat pilihan terakhir pengguna */
+        try {
+            if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
+        } catch (e) {}
+    </script>
 </body>
 
 </html>
