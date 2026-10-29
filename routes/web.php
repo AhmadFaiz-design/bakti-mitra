@@ -12,3 +12,10 @@ Route::get('/admin', function () {
 Route::get('/login', function () {
     return view('auth.login');
 });
+Route::get('/koordinator', function () {
+    return view('koordinator.dashboard');
+});
+Route::get('/mitra', function () {
+    return view('mitra.dashboard');
+});
+
