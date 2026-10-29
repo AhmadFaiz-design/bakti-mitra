@@ -47,6 +47,9 @@
         <symbol id="i-list" viewBox="0 0 24 24">
             <path d="M10 6h11M10 12h11M10 18h11M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17" />
         </symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+        </symbol>
     </svg>
 
     <div class="app" id="app">
@@ -54,9 +57,15 @@
         <aside class="sidebar">
             <div class="logo">
                 <img class="long" src="{{ asset('images/Logo Bakti Mitra Long.png') }}" alt="Bakti Mitra">
-                <img class="short" src="{{ asset('images/Logo Bakti Mitra Short.png')}}" alt="Bakti Mitra">
+                <img class="short" src="{{ asset('images/Logo Bakti Mitra Short.png') }}" alt="Bakti Mitra">
             </div>
             <nav class="menu">
+                <a href="#" title="Keluar"
+                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <svg>
+                        <use href="#i-logout" />
+                    </svg><span class="label">Keluar</span>
+                </a>
                 <a href="#" class="active" title="Dashboard"><svg>
                         <use href="#i-home" />
                     </svg><span class="label">Dashboard</span></a>
@@ -196,6 +205,9 @@
             </section>
         </main>
     </div>
+    <form id="logout-form" method="POST" action="{{ route('logout') }}" style="display:none">
+        @csrf
+    </form>
     <script>
         /* Toggle sidebar panjang <-> pendek */
         const app = document.getElementById('app');
