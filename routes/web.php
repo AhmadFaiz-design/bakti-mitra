@@ -38,3 +38,15 @@ Route::middleware(['auth', 'role:mitra'])->group(function () {
         Route::view('/dashboard', 'mitra.dashboard')->name('dashboard');
     });
 });
+
+Route::get('/admin/data-mitra', function () {
+    return view('admin.manajemen-mitra');
+})->name('admin.datamitra');
+
+Route::get('/admin/data-koor', function () {
+    return view('admin.manajemen-koor');
+})->name('admin.datakoor');
+
+Route::get('/admin/tambah-mitra', function () {
+    return view('admin.tambahmitra');
+})->name('admin.tambahmitra');

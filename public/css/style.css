@@ -1,0 +1,1410 @@
+/* 1. PALET WARNA: ubah di sini, seluruh halaman ikut berubah */
+:root {
+    --primary: #8A79F1;
+    /* ungu utama */
+    --primary-dark: #5B49C9;
+    /* ungu tua untuk teks di atas latar terang */
+    --ink: #1F1A3D;
+    /* indigo gelap: sidebar & teks */
+    --bg: #F3F1FD;
+    /* latar halaman (ungu sangat muda) */
+    --tint: #E6E2FB;
+    /* ungu muda: track bar, badge */
+    --white: #fff;
+    --lime: #D6F55B;
+    /* aksen kontras (lawan ungu) */
+    --muted: #6F6A8F;
+    /* teks sekunder */
+    --radius: 24px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 14px 10px
+}
+
+svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none
+}
+
+/* 2. KERANGKA UTAMA: sidebar + konten */
+.app {
+    --sb: 260px;
+    display: grid;
+    grid-template-columns: var(--sb) 1fr;
+    gap: 24px;
+    margin: auto;
+    transition: grid-template-columns .3s ease
+}
+
+.app.collapsed {
+    --sb: 84px
+}
+
+.app main {
+    min-width: 0
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: var(--ink);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    color: var(--white);
+    min-height: calc(100vh - 40px)
+}
+
+/* LOGO: dua gambar, satu ditampilkan sesuai kondisi sidebar */
+.logo {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 40px;
+    padding-left: 6px
+}
+
+.logo img {
+    height: 48px;
+    width: auto;
+    display: block
+}
+
+.logo .short {
+    display: none
+}
+
+.collapsed .logo {
+    justify-content: center;
+    padding-left: 0
+}
+
+.collapsed .logo .long {
+    display: none
+}
+
+.collapsed .logo .short {
+    display: block
+}
+
+/* TOMBOL TOGGLE: di dalam sidebar, didorong ke paling bawah */
+.toggle {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .08);
+    color: #CFCAF0;
+    font: 500 14px 'Poppins';
+    cursor: pointer;
+    text-align: left
+}
+
+.toggle:hover {
+    background: var(--primary);
+    color: var(--white)
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--lime);
+    outline-offset: 2px
+}
+
+.toggle svg {
+    transition: transform .3s
+}
+
+.collapsed .toggle svg {
+    transform: rotate(180deg)
+}
+
+.collapsed .toggle {
+    justify-content: center;
+    padding: 12px 0
+}
+
+.collapsed .toggle .label {
+    display: none
+}
+
+.menu {
+    margin-bottom: 24px
+}
+
+/* MODE PENDEK: sembunyikan teks, ikon di tengah */
+.menu .label {
+    white-space: nowrap;
+    overflow: hidden
+}
+
+.collapsed .sidebar {
+    padding-left: 14px;
+    padding-right: 14px
+}
+
+.collapsed .menu .label,
+.collapsed .menu .chev {
+    display: none
+}
+
+.collapsed .menu a,
+.collapsed .menu button {
+    justify-content: center;
+    padding: 12px 0
+}
+
+.collapsed .submenu {
+    padding-left: 0
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px
+}
+
+.menu a,
+.menu button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: #CFCAF0;
+    font: 500 14px 'Poppins';
+    text-decoration: none;
+    cursor: pointer;
+    text-align: left
+}
+
+.menu a:hover,
+.menu button:hover {
+    background: rgba(255, 255, 255, .08)
+}
+
+.menu .active {
+    background: var(--primary);
+    color: var(--white)
+}
+
+.menu .chev {
+    margin-left: auto;
+    transition: transform .2s
+}
+
+.submenu {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 0 4px 14px
+}
+
+.submenu.open {
+    display: flex
+}
+
+.has-sub.open .chev {
+    transform: rotate(180deg)
+}
+
+/* 3. KONTEN KANAN */
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap
+}
+
+.topbar h1 {
+    font-size: 32px;
+    font-weight: 600
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ink);
+    color: var(--white);
+    border: 0;
+    border-radius: 16px;
+    padding: 8px 16px;
+    font: 500 14px 'Poppins'
+}
+
+.search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: 16px;
+    padding: 11px 18px;
+    width: min(300px, 100%);
+    color: var(--muted)
+}
+
+.search input {
+    border: 0;
+    outline: 0;
+    background: none;
+    font: 400 14px 'Poppins';
+    width: 100%
+}
+
+.search:focus-within {
+    border-color: var(--primary)
+}
+
+.user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    font-size: 14px
+}
+
+.bell {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--white);
+    display: grid;
+    place-items: center
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--lime))
+}
+
+/* 4. KARTU: dasar semua kotak */
+.card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px 20px
+}
+
+.card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 500
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px
+}
+
+.stat .num {
+    font-size: 34px;
+    font-weight: 600;
+    margin: 10px 0 0 0
+}
+
+.badge {
+    display: inline-block;
+    background: var(--tint);
+    color: var(--primary-dark);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 99px
+}
+
+.badge.lime {
+    background: var(--lime);
+    color: var(--ink)
+}
+
+.badge.dark {
+    background: var(--ink);
+    color: var(--white)
+}
+
+/* kartu ungu (seperti kartu hijau pada referensi) */
+.hero {
+    background: var(--primary);
+    color: var(--white)
+}
+
+.progress {
+    height: 20px;
+    background: rgba(255, 255, 255, .3);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 6px
+}
+
+.progress span {
+    display: block;
+    height: 100%;
+    width: 32%;
+    background: var(--lime);
+    border-radius: 99px
+}
+
+/* 5. GRAFIK BATANG: murni CSS */
+.chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px
+}
+
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    /* justify-content: space-between; */
+    height: 190px;
+    border-bottom: 1px solid var(--ink);
+    padding-left: 44px;
+    position: relative
+}
+
+.axis {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--muted)
+}
+
+.bar {
+    flex: 1;
+    /* max-width: 38px; */
+    height: var(--t);
+    background: var(--tint);
+    border-radius: 99px 99px 0px 0px;
+    display: flex;
+    align-items: flex-end
+}
+
+.bar i {
+    display: block;
+    width: 100%;
+    height: var(--v);
+    background: var(--primary);
+    border-radius: 99px 99px 0px 0px
+}
+
+.bar.top i {
+    background: var(--ink)
+}
+
+.labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding-left: 44px;
+    margin-top: 10px;
+    font-size: 13px
+}
+
+.labels span {
+    flex: 1;
+    /* max-width: 38px; */
+    text-align: center;
+    overflow: visible;
+    white-space: nowrap;
+    font-size: 11px
+}
+
+/* 6. DUA KARTU BAWAH */
+.bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px
+}
+
+.list {
+    list-style: none;
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+}
+
+.list li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px
+}
+
+.list .dot {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--tint)
+}
+
+.list .badge {
+    margin-left: auto
+}
+
+.task {
+    align-items: flex-start;
+    font-size: 13px;
+    line-height: 1.5
+}
+
+/* 7. RESPONSIF */
+@media(max-width:1000px) {
+
+    .app,
+    .app.collapsed {
+        grid-template-columns: 1fr
+    }
+
+    .toggle {
+        display: none
+    }
+
+    .sidebar {
+        min-height: 0
+    }
+
+    .stats {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .hero {
+        grid-column: 1/-1
+    }
+
+    .bottom {
+        grid-template-columns: 1fr
+    }
+}
+
+
+/* ========================================
+   8. HALAMAN MANAJEMEN MITRA
+======================================== */
+
+/* Header halaman */
+.page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 26px;
+}
+
+.page-heading h1 {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.page-heading p {
+    margin-top: 7px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--tint);
+    border-radius: 13px;
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.header-icon:hover {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: 4px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-weight: 600;
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+/* Kartu statistik */
+.stats-mitra {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr 1fr 1.15fr;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.stats-koor {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.stats-mitra .card {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--tint);
+}
+
+.stats-mitra .card h2 {
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.stats-mitra .num {
+    margin-top: 12px;
+    font-size: clamp(25px, 2.2vw, 34px);
+    font-weight: 600;
+}
+
+.stats-mitra .hero {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.stats-mitra .hero .num {
+    font-size: 34px;
+}
+
+.stats-mitra .hero .progress {
+    margin-top: 12px;
+}
+
+/* Toolbar pencarian dan filter */
+.mitra-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.mitra-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 150px;
+    height: 42px;
+    padding: 0 15px;
+    background: var(--white);
+    border: 1px solid #D5D0E5;
+    border-radius: 14px;
+    color: var(--muted);
+}
+
+.mitra-search:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 121, 241, .12);
+}
+
+.mitra-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 400 13px 'Poppins', sans-serif;
+}
+
+.mitra-search input::placeholder {
+    color: var(--muted);
+}
+
+.outline-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 15px;
+    border: 1px solid #D5D0E5;
+    border-radius: 14px;
+    background: var(--white);
+    color: var(--ink);
+    font: 500 13px 'Poppins', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.outline-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary-dark);
+    background: var(--tint);
+}
+
+.status-switch {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid #D5D0E5;
+    border-radius: 15px;
+    background: var(--white);
+}
+
+.status-switch button {
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    font: 500 13px 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+.status-switch button.active {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.filter-wrap {
+    position: relative;
+}
+
+.filter-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 10;
+    display: none;
+    width: 200px;
+    padding: 8px;
+    border: 1px solid var(--tint);
+    border-radius: 14px;
+    background: var(--white);
+    box-shadow: 0 10px 30px rgba(31, 26, 61, .12);
+}
+
+.filter-menu.open {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-menu button {
+    padding: 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    font: 400 12px 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+.filter-menu button:hover {
+    background: var(--tint);
+}
+
+/* Kartu tabel */
+.table-card {
+    min-width: 0;
+    min-height: 550px;
+    padding: 24px;
+    border: 1px solid var(--tint);
+    border-radius: var(--radius);
+    background: var(--white);
+}
+
+.table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.table-heading h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--primary);
+    color: var(--white);
+    font: 500 12px 'Poppins', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.primary-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* Scroll horizontal agar tabel tetap terbaca */
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.mitra-table {
+    width: 100%;
+    min-width: 850px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.mitra-table th {
+    padding: 12px 10px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--tint);
+}
+
+.mitra-table td {
+    padding: 13px 10px;
+    border-bottom: 1px solid #F0EDFA;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.mitra-table tbody tr {
+    transition: background .15s ease;
+}
+
+.mitra-table tbody tr:hover {
+    background: #F8F6FF;
+}
+
+.mitra-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.mitra-table th:first-child,
+.mitra-table td:first-child {
+    width: 34px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.mitra-table th:last-child,
+.mitra-table td:last-child {
+    text-align: center;
+}
+
+.check-mitra {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.profile-cell {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 145px;
+}
+
+.profile-avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.profile-name {
+    color: var(--ink);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.id-cell {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.honor-cell {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 94px;
+    padding: 6px 10px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.status-badge.active {
+    background: #E7F7ED;
+    color: #218653;
+}
+
+.status-badge.inactive {
+    background: #F0EDFA;
+    color: var(--muted);
+}
+
+.action-cell {
+    position: relative;
+}
+
+.action-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.row-action-menu {
+    position: absolute;
+    top: 40px;
+    right: 5px;
+    z-index: 5;
+    display: none;
+    width: 145px;
+    padding: 6px;
+    border: 1px solid var(--tint);
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: 0 8px 24px rgba(31, 26, 61, .12);
+    text-align: left;
+}
+
+.row-action-menu.open {
+    display: block;
+}
+
+.row-action-menu button {
+    display: block;
+    width: 100%;
+    padding: 9px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    font: 400 12px 'Poppins', sans-serif;
+    text-align: left;
+    cursor: pointer;
+}
+
+.row-action-menu button:hover {
+    background: var(--tint);
+}
+
+.table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--tint);
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.table-empty {
+    padding: 35px !important;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* Responsif */
+@media (max-width: 1200px) {
+    .stats-mitra {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1000px) {
+    .page-heading h1 {
+        font-size: 25px;
+    }
+
+    .mitra-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .mitra-search {
+        flex-basis: 100%;
+    }
+
+    .table-card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 600px) {
+    .page-heading {
+        align-items: flex-start;
+    }
+
+    .page-heading h1 {
+        font-size: 21px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-user {
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    .header-user .avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .stats-mitra {
+        gap: 10px;
+    }
+
+    .stats-mitra .card {
+        padding: 14px;
+    }
+
+    .stats-mitra .card h2 {
+        font-size: 12px;
+        white-space: normal;
+    }
+
+    .stats-mitra .num,
+    .stats-mitra .hero .num {
+        font-size: 25px;
+    }
+
+    .table-card {
+        padding: 14px;
+    }
+
+    .table-heading h2 {
+        font-size: 16px;
+    }
+
+    .table-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+
+/* ========================================
+   HALAMAN PEMBUATAN AKUN MITRA
+======================================== */
+
+/* HEADER HALAMAN */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    gap: 20px;
+}
+
+.page-title h1 {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.page-title p {
+    font-size: 14px;
+    margin-top: 4px;
+    color: var(--muted);
+}
+
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--tint);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.header-icon:hover {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.username {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+
+/* ========================================
+   INDIKATOR TAHAP
+======================================== */
+
+.step-wrapper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    max-width: 650px;
+    margin: 0 auto 30px;
+    position: relative;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    z-index: 1;
+    min-width: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    font-weight: 600;
+    transition: .3s ease;
+}
+
+.step-item.active .step-number {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.step-item.completed .step-number {
+    background: var(--primary-dark);
+    color: var(--white);
+}
+
+.step-item.active {
+    color: var(--ink);
+}
+
+.step-line {
+    position: absolute;
+    top: 19px;
+    left: 50px;
+    right: 50px;
+    height: 2px;
+    background: var(--tint);
+    z-index: 0;
+}
+
+.step-line::before {
+    content: "";
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--primary);
+    transition: width .3s ease;
+}
+
+.step-line.completed::before {
+    width: 100%;
+}
+
+
+/* ========================================
+   KARTU FORM
+======================================== */
+
+.form-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 26px 32px;
+    box-shadow: 0 4px 20px rgba(31, 26, 61, .04);
+}
+
+.form-card.hidden {
+    display: none;
+}
+
+
+/* SUSUNAN INPUT */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+
+/* INPUT DAN SELECT */
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    height: 50px;
+    padding: 0 22px;
+    border: 1px solid #C8C3D8;
+    border-radius: 18px;
+    background: var(--white);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: .2s ease;
+}
+
+.form-group input::placeholder {
+    color: #9993AD;
+}
+
+.form-group select {
+    cursor: pointer;
+    color: var(--muted);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 121, 241, .12);
+}
+
+
+/* ========================================
+   TOMBOL NAVIGASI
+======================================== */
+
+.form-navigation {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.btn-primary,
+.btn-secondary {
+    height: 48px;
+    border-radius: 16px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.btn-primary {
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--white);
+    border: 1px solid #C8C3D8;
+    color: var(--muted);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary-dark);
+}
+
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 1000px) {
+
+    .page-header {
+        flex-wrap: wrap;
+        margin-bottom: 35px;
+    }
+
+    .page-title h1 {
+        font-size: 26px;
+    }
+
+    .step-wrapper {
+        max-width: 550px;
+    }
+
+}
+
+@media (max-width: 600px) {
+
+    .page-header {
+        gap: 16px;
+    }
+
+    .page-title h1 {
+        font-size: 22px;
+    }
+
+    .page-title p {
+        font-size: 12px;
+    }
+
+    .form-card {
+        padding: 22px 18px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group.full-width {
+        grid-column: auto;
+    }
+
+    .form-navigation {
+        grid-template-columns: 1fr;
+    }
+
+    .step-wrapper {
+        max-width: 100%;
+    }
+
+    .step-item {
+        min-width: 85px;
+        font-size: 12px;
+    }
+
+    .step-number {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+
+    .step-line {
+        top: 17px;
+        left: 42px;
+        right: 42px;
+    }
+
+    .username {
+        display: none;
+    }
+
+}

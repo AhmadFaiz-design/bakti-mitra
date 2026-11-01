@@ -17,6 +17,12 @@ class UserSeeder extends Seeder
             'password'  => Hash::make('password'),
             'is_active' => true,
         ]);
+        User::updateOrCreate(['username' => 'admin'], [
+            'name'      => 'Admin Contoh',
+            'role'      => 'admin',
+            'password'  => Hash::make('admin'),
+            'is_active' => true,
+        ]);
 
         User::updateOrCreate(['username' => '199002022016022002'], [
             'name'      => 'Koordinator Contoh',
