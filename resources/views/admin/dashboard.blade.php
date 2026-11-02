@@ -91,6 +91,9 @@
                         <a href="#" title="Buat akun Koordinator"><svg>
                                 <use href="#i-user" />
                             </svg><span class="label">Koordinator</span></a>
+                                                    <a href="{{ route('admin.mitra.import') }}" title="Import Mitra"><svg>
+                                <use href="#i-plus" />
+                            </svg><span class="label">Import Mitra</span></a>
                     </div>
                 </div>
             </nav>

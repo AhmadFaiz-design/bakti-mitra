@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\MitraImportController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -20,6 +21,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+        Route::get('/mitra/import', [MitraImportController::class, 'form'])->name('mitra.import');
+        Route::post('/mitra/import', [MitraImportController::class, 'proses'])->name('mitra.import.proses');
     });
 });
 
@@ -50,3 +53,11 @@ Route::get('/admin/data-koor', function () {
 Route::get('/admin/tambah-mitra', function () {
     return view('admin.tambahmitra');
 })->name('admin.tambahmitra');
+
+Route::get('/cek-php', function () {
+    return [
+        'versi_php' => PHP_VERSION,
+        'file_ini'  => php_ini_loaded_file(),
+        'zip_aktif' => extension_loaded('zip'),
+    ];
+});
