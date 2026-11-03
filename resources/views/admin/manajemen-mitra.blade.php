@@ -210,22 +210,29 @@
                                         @endif
                                     </td>
 
+                                    @php
+                                        // Sesuaikan nama kolom 'nama' dengan kolom nama tugas di tabel pekerjaan Anda
+                                        // $tugas = $mitra->pekerjaan?->pluck('nama')->values()->all() ?? [];
+                                        $tugas = ['Kambing Goreng', 'Perkedel Sapi'];
+                                        $urlEdit = Route::has('admin.mitra.edit')
+                                            ? route('admin.mitra.edit', $mitra->id)
+                                            : '';
+                                        $urlHapus = Route::has('admin.mitra.destroy')
+                                            ? route('admin.mitra.destroy', $mitra->id)
+                                            : '';
+                                    @endphp
+
                                     <td class="action-cell">
                                         <button type="button" class="action-btn"
-                                            aria-label="Aksi {{ $mitra->user->name }}" onclick="toggleRowMenu(this)">
+                                            aria-label="Aksi {{ $mitra->user->name }}" aria-haspopup="true"
+                                            aria-expanded="false" data-nama="{{ $mitra->user->name }}"
+                                            data-sobat="{{ $mitra->user->username }}"
+                                            data-honor="Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 3500000, 0, ',', '.') }}"
+                                            data-tugas="{{ json_encode($tugas) }}"
+                                            data-wilayah="{{ $mitra->wilayah }}" data-edit-url="{{ $urlEdit }}"
+                                            data-delete-url="{{ $urlHapus }}">
                                             &#8942;
                                         </button>
-
-                                        <div class="row-action-menu">
-                                            <button type="button"
-                                                onclick="alert('Detail mitra akan dibuat berikutnya.')">
-                                                Lihat detail
-                                            </button>
-                                            <button type="button"
-                                                onclick="alert('Form edit mitra akan dibuat berikutnya.')">
-                                                Edit mitra
-                                            </button>
-                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -257,10 +264,12 @@
                     @if ($daftarMitra->hasPages())
                         <span style="display:flex;gap:8px;align-items:center">
                             @if ($daftarMitra->onFirstPage())
-                                <button type="button" class="outline-btn" disabled><</button>
-                            @else
-                                <a class="outline-btn" style="text-decoration:none"
-                                    href="{{ $daftarMitra->previousPageUrl() }}"><</a>
+                                <button type="button" class="outline-btn" disabled>
+                                    << /button>
+                                    @else
+                                        <a class="outline-btn" style="text-decoration:none"
+                                            href="{{ $daftarMitra->previousPageUrl() }}">
+                                            << /a>
                             @endif
 
                             <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
@@ -275,6 +284,58 @@
                     @endif
                 </div>
             </section>
+            {{-- POPOVER AKSI MITRA (satu untuk semua baris) --}}
+            <div class="mitra-popover" id="mitraPopover" role="dialog" aria-label="Detail mitra">
+                <div class="pop-field">
+                    <span class="pop-label">Name</span>
+                    <strong class="pop-name" id="popNama"></strong>
+                </div>
+
+                <div class="pop-row">
+                    <div class="pop-field">
+                        <span class="pop-label">Sobat ID</span>
+                        <strong class="pop-value" id="popSobat"></strong>
+                    </div>
+                    <div class="pop-field">
+                        <span class="pop-label">Total Honor</span>
+                        <strong class="pop-value" id="popHonor"></strong>
+                    </div>
+                </div>
+
+                <div class="pop-field">
+                    <span class="pop-label">Wilayah</span>
+                    <div class="pop-value" id="popWilayah"></div>
+                </div>
+
+                <div class="pop-field">
+                    <span class="pop-label">Tugas</span>
+                    <div class="pop-chips" id="popTugas"></div>
+                </div>
+
+
+                <div class="pop-field">
+                    <span class="pop-label">Aksi</span>
+                    <div class="pop-actions">
+                        <button type="button" class="pop-btn pop-btn-del" id="popHapus">
+                            Hapus Akun Mitra
+                            <svg viewBox="0 0 24 24">
+                                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                            </svg>
+                        </button>
+                        <button type="button" class="pop-btn pop-btn-edit" id="popEdit">
+                            Edit Akun Mitra
+                            <svg viewBox="0 0 24 24">
+                                <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="hapusMitraForm" method="POST" style="display:none">
+                @csrf
+                @method('DELETE')
+            </form>
             @push('scripts')
                 <script>
                     /* Pilih semua baris pada halaman ini */
@@ -285,6 +346,119 @@
                                 .forEach(cb => cb.checked = e.target.checked);
                         });
                     }
+
+                    /* Popover aksi mitra */
+                    (function() {
+                        const pop = document.getElementById('mitraPopover');
+                        const tbody = document.getElementById('mitraTableBody');
+                        const hapusForm = document.getElementById('hapusMitraForm');
+                        let aktif = null;
+
+                        function tutup() {
+                            pop.classList.remove('open');
+                            if (aktif) aktif.setAttribute('aria-expanded', 'false');
+                            aktif = null;
+                        }
+
+                        function posisi(btn) {
+                            const r = btn.getBoundingClientRect();
+                            const gap = 8,
+                                margin = 8;
+                            const w = pop.offsetWidth,
+                                h = pop.offsetHeight;
+
+                            // Utamakan di kiri tombol (kolom aksi ada di sisi kanan tabel)
+                            let left = r.left - w - gap;
+                            if (left < margin) left = r.right + gap;
+                            left = Math.min(left, window.innerWidth - w - margin);
+                            left = Math.max(left, margin);
+
+                            // Sejajar atas tombol, jaga agar tidak keluar layar
+                            let top = r.top;
+                            top = Math.min(top, window.innerHeight - h - margin);
+                            top = Math.max(top, margin);
+
+                            pop.style.left = left + 'px';
+                            pop.style.top = top + 'px';
+                        }
+
+                        function buka(btn) {
+
+                            if (aktif && aktif !== btn) {
+                                aktif.setAttribute('aria-expanded', 'false');
+                            }
+
+                            document.getElementById('popNama').textContent = btn.dataset.nama;
+                            document.getElementById('popWilayah').textContent = btn.dataset.wilayah;
+                            document.getElementById('popSobat').textContent = btn.dataset.sobat;
+                            document.getElementById('popHonor').textContent = btn.dataset.honor;
+
+                            const wadah = document.getElementById('popTugas');
+                            wadah.innerHTML = '';
+                            let tugas = [];
+                            try {
+                                tugas = JSON.parse(btn.dataset.tugas || '[]');
+                            } catch (e) {}
+                            if (tugas.length === 0) {
+                                const kosong = document.createElement('span');
+                                kosong.className = 'pop-empty';
+                                kosong.textContent = 'Belum ada tugas';
+                                wadah.appendChild(kosong);
+                            } else {
+                                tugas.forEach(t => {
+                                    const chip = document.createElement('span');
+                                    chip.className = 'pop-chip';
+                                    chip.textContent = t;
+                                    wadah.appendChild(chip);
+                                });
+                            }
+
+                            aktif = btn;
+                            btn.setAttribute('aria-expanded', 'true');
+                            pop.classList.add('open');
+                            posisi(btn);
+                        }
+
+                        // Klik titik tiga (delegasi event)
+                        tbody.addEventListener('click', e => {
+                            const btn = e.target.closest('.action-btn');
+                            if (!btn) return;
+                            e.stopPropagation();
+                            (aktif === btn) ? tutup(): buka(btn);
+                        });
+
+                        // Klik di luar popover = tutup
+                        document.addEventListener('click', e => {
+                            if (aktif && !pop.contains(e.target)) tutup();
+                        });
+                        document.addEventListener('keydown', e => {
+                            if (e.key === 'Escape') tutup();
+                        });
+                        window.addEventListener('resize', tutup);
+                        window.addEventListener('scroll', e => {
+                            if (aktif && !pop.contains(e.target)) tutup();
+                        }, true);
+
+                        // Tombol edit & hapus
+                        document.getElementById('popEdit').addEventListener('click', () => {
+                            const url = aktif?.dataset.editUrl;
+                            if (url) window.location = url;
+                            else alert('Halaman edit mitra belum dibuat.');
+                        });
+
+                        document.getElementById('popHapus').addEventListener('click', () => {
+                            const url = aktif?.dataset.deleteUrl;
+                            if (!url) {
+                                alert('Fitur hapus mitra belum dibuat.');
+                                return;
+                            }
+                            if (confirm('Hapus akun mitra "' + aktif.dataset.nama +
+                                    '"? Tindakan ini tidak bisa dibatalkan.')) {
+                                hapusForm.action = url;
+                                hapusForm.submit();
+                            }
+                        });
+                    })();
                 </script>
             @endpush
         </x-admin.main>

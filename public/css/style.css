@@ -1713,3 +1713,130 @@ svg {
     background: var(--tint);
     /* senada dengan badge lime */
 }
+
+/* ========================================
+   POPOVER AKSI MITRA
+======================================== */
+
+.mitra-popover {
+    position: fixed;
+    z-index: 100;
+    display: none;
+    width: 330px;
+    max-width: calc(100vw - 16px);
+    padding: 22px 20px;
+    border-radius: 24px;
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 0 12px 32px rgba(31, 26, 61, .18);
+    border: 1px solid var(--muted 0.8);
+}
+
+.mitra-popover.open {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pop-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pop-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+}
+
+.pop-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pop-value {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pop-row {
+    display: flex;
+    gap: 32px;
+}
+
+.pop-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.pop-chip {
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: var(--tint);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pop-empty {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.pop-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.pop-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 10px;
+    border: 0;
+    border-radius: 10px;
+    /* background: var(--white);
+    color: var(--ink); */
+    font: 500 12px 'Poppins', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.pop-btn-edit {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.pop-btn-del {
+    background: #FDE8E9;
+    color: #E5484D;
+}
+
+.pop-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.pop-btn:hover {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+#popHapus:hover {
+    background: #eca0a3;
+    color: #e6343a;
+}
+
+/* Tombol titik tiga saat popover terbuka */
+.action-btn[aria-expanded="true"] {
+    background: var(--tint);
+    color: var(--primary-dark);
+}

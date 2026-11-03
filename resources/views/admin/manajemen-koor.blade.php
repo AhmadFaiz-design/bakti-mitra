@@ -117,7 +117,7 @@
                         <svg>
                             <use href="#i-user" />
                         </svg>
-                        List Mitra
+                        List Koordinator
                     </h2>
 
                     <button type="button" class="primary-btn"
