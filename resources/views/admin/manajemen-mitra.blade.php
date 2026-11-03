@@ -74,13 +74,18 @@
 
             {{-- PENCARIAN, EXPORT, STATUS, FILTER --}}
             <section class="mitra-toolbar">
-                <label class="mitra-search">
-                    <svg>
-                        <use href="#i-search" />
-                    </svg>
-                    <input id="searchMitra" type="search" placeholder="Cari nama mitra atau lainnya..."
-                        autocomplete="off">
-                </label>
+                {{-- Pencarian (dikirim ke server saat menekan Enter) --}}
+                <form method="GET" action="{{ route('admin.datamitra') }}" style="display: contents">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <input type="hidden" name="sort" value="{{ $sort }}">
+                    <label class="mitra-search">
+                        <svg>
+                            <use href="#i-search" />
+                        </svg>
+                        <input id="searchMitra" type="search" name="q" value="{{ $q }}"
+                            placeholder="Cari nama, Sobat ID, atau NIK..." autocomplete="off">
+                    </label>
+                </form>
 
                 <button type="button" class="outline-btn" id="exportMitra">
                     <svg>
@@ -90,11 +95,15 @@
                 </button>
 
                 <div class="status-switch" aria-label="Filter status mitra">
-                    <button type="button" class="active" data-status="active" aria-pressed="true">
+                    <button type="button" class="{{ $status === 'active' ? 'active' : '' }}" data-status="active"
+                        aria-pressed="{{ $status === 'active' ? 'true' : 'false' }}"
+                        onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'active', 'page' => null]) }}'">
                         Active
                     </button>
 
-                    <button type="button" data-status="inactive" aria-pressed="false">
+                    <button type="button" class="{{ $status === 'inactive' ? 'active' : '' }}" data-status="inactive"
+                        aria-pressed="{{ $status === 'inactive' ? 'true' : 'false' }}"
+                        onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'inactive', 'page' => null]) }}'">
                         Inactive
                     </button>
                 </div>
@@ -108,13 +117,16 @@
                     </button>
 
                     <div class="filter-menu" id="filterMenu">
-                        <button type="button" data-sort="name">
+                        <button type="button" data-sort="name"
+                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'name', 'page' => null]) }}'">
                             Nama A–Z
                         </button>
-                        <button type="button" data-sort="honor-desc">
+                        <button type="button" data-sort="honor-desc"
+                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'honor-desc', 'page' => null]) }}'">
                             Honor tertinggi
                         </button>
-                        <button type="button" data-sort="honor-asc">
+                        <button type="button" data-sort="honor-asc"
+                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'honor-asc', 'page' => null]) }}'">
                             Honor terendah
                         </button>
                     </div>
@@ -216,8 +228,12 @@
                             @empty
                                 <tr>
                                     <td colspan="8" style="text-align:center;padding:24px">
-                                        Belum ada data mitra.
-                                        <a href="{{ route('admin.mitra.import') }}">Import dari Excel</a>
+                                        @if ($q !== '')
+                                            Tidak ada mitra yang cocok dengan "{{ $q }}".
+                                        @else
+                                            Belum ada data mitra pada status ini.
+                                            <a href="{{ route('admin.mitra.import') }}">Import dari Excel</a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforelse
@@ -226,8 +242,46 @@
                 </div>
 
                 <div class="table-footer">
-                    <span id="mitraCount">Menampilkan data mitra</span>
-                    <span>Data dari database</span>
+                    <span>
+                        @if ($daftarMitra->total() > 0)
+                            Menampilkan {{ $daftarMitra->firstItem() }}–{{ $daftarMitra->lastItem() }}
+                            dari {{ $daftarMitra->total() }} mitra
+                        @else
+                            Tidak ada data
+                        @endif
+                    </span>
+
+                    @if ($daftarMitra->hasPages())
+                        <span style="display:flex;gap:8px;align-items:center">
+                            @if ($daftarMitra->onFirstPage())
+                                <button type="button" class="outline-btn" disabled><</button>
+                            @else
+                                <a class="outline-btn" style="text-decoration:none"
+                                    href="{{ $daftarMitra->previousPageUrl() }}"><</a>
+                            @endif
+
+                            <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
+
+                            @if ($daftarMitra->hasMorePages())
+                                <a class="outline-btn" style="text-decoration:none"
+                                    href="{{ $daftarMitra->nextPageUrl() }}">></a>
+                            @else
+                                <button type="button" class="outline-btn" disabled>></button>
+                            @endif
+                        </span>
+                    @endif
                 </div>
             </section>
+            @push('scripts')
+                <script>
+                    /* Pilih semua baris pada halaman ini */
+                    const pilihSemua = document.getElementById('selectAll');
+                    if (pilihSemua) {
+                        pilihSemua.addEventListener('change', e => {
+                            document.querySelectorAll('#mitraTableBody .row-check')
+                                .forEach(cb => cb.checked = e.target.checked);
+                        });
+                    }
+                </script>
+            @endpush
         </x-admin.main>

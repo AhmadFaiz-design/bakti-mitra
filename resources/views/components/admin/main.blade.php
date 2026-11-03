@@ -111,7 +111,7 @@
                     <svg>
                         <use href="#i-left" />
                     </svg>
-                    <span class="label" id="togglelabel">Perkecil</span>
+                    <span class="label" id="toggleLabel">Perkecil</span>
                 </button>
             </div>
         </aside>
