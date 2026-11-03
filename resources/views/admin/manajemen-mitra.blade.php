@@ -230,34 +230,4 @@
                     <span>Data dari database</span>
                 </div>
             </section>
-        </main>
-
-    </div>
-    <form id="logout-form" method="POST" action="{{ route('logout') }}" style="display:none">
-        @csrf
-    </form>
-    <script>
-        /* Toggle sidebar panjang <-> pendek */
-        const app = document.getElementById('app');
-        const btn = document.getElementById('toggle');
-
-        function setCollapsed(state) {
-            app.classList.toggle('collapsed', state);
-            btn.setAttribute('aria-expanded', String(!state));
-            btn.setAttribute('aria-label', state ? 'Perbesar sidebar' : 'Perkecil sidebar');
-            document.getElementById('toggleLabel').textContent = state ? 'Perbesar' : 'Perkecil';
-            try {
-                localStorage.setItem('sidebarCollapsed', state ? '1' : '0');
-            } catch (e) {}
-        }
-
-        btn.addEventListener('click', () => setCollapsed(!app.classList.contains('collapsed')));
-
-        /* Ingat pilihan terakhir pengguna */
-        try {
-            if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
-        } catch (e) {}
-    </script>
-</body>
-
-</html>
+        </x-admin.main>
