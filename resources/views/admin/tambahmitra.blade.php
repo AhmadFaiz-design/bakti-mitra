@@ -113,7 +113,7 @@
                     <!-- TOMBOL LANJUT -->
                     <div class="form-navigation">
                         <button type="button" class="btn-primary" onclick="nextStep()">
-                            Lanjut Tahap Selanjutnya
+                            Selanjutnya
                         </button>
                     </div>
 

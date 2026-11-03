@@ -64,11 +64,14 @@ svg {
     display: flex;
     flex-direction: column;
     position: sticky;
-    top: 14px;                              /* sama dengan padding atas body */
-    height: calc(100vh - 28px);             /* 100vh dikurangi padding atas+bawah body (14 + 14) */
+    top: 14px;
+    /* sama dengan padding atas body */
+    height: calc(100vh - 28px);
+    /* 100vh dikurangi padding atas+bawah body (14 + 14) */
     height: calc(100dvh - 28px);
     align-self: flex-start;
-    overflow-y: auto;                       /* jika menu panjang, sidebar scroll sendiri */
+    overflow-y: auto;
+    /* jika menu panjang, sidebar scroll sendiri */
     background: var(--ink);
     border-radius: var(--radius);
     padding: 24px 20px;
@@ -76,7 +79,7 @@ svg {
     /* hapus min-height */
 }
 
-.sidebar-bottom{
+.sidebar-bottom {
     margin-top: auto;
     display: flex;
     flex-direction: column;
@@ -530,8 +533,10 @@ svg {
     }
 
     .sidebar {
-        position: static;      /* tidak sticky lagi */
-        height: auto;          /* tinggi mengikuti isi */
+        position: static;
+        /* tidak sticky lagi */
+        height: auto;
+        /* tinggi mengikuti isi */
         overflow-y: visible;
     }
 
@@ -1330,6 +1335,11 @@ svg {
     margin-top: 16px;
 }
 
+/* Jika hanya ada satu tombol, buat selebar penuh */
+.form-navigation .btn-primary:only-child {
+    grid-column: 1 / -1;
+}
+
 .btn-primary,
 .btn-secondary {
     height: 48px;
@@ -1381,6 +1391,23 @@ svg {
 
     .step-wrapper {
         max-width: 550px;
+    }
+
+    .dash-top {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-top .stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .calendar-card {
+        height: auto;
+        min-height: 0;
+    }
+
+    .cal-notes {
+        max-height: 220px;
     }
 
 }
@@ -1441,6 +1468,7 @@ svg {
     }
 
 }
+
 /* ========================================
    KALENDER DASHBOARD
 ======================================== */
@@ -1478,10 +1506,17 @@ svg {
     gap: 8px;
 }
 
-.cal-summary div {
+.cal-summary .box-cal {
     padding: 6px 12px 4px;
     border-radius: 12px;
     background: var(--tint);
+    color: var(--ink);
+}
+
+.cal-summary div {
+    padding: 6px 12px 4px;
+    border-radius: 12px;
+    /* background: var(--tint); */
     color: var(--ink);
 }
 
@@ -1511,12 +1546,24 @@ svg {
 }
 
 .cal-day {
+    position: relative;
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     margin: 0 auto;
+    padding: 0;
+    border: 0;
     border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.cal-day:hover {
+    background: var(--tint);
 }
 
 .cal-day.today {
@@ -1526,6 +1573,47 @@ svg {
 
 .cal-day.other {
     opacity: .4;
+}
+
+/* Tanggal yang sedang dipilih */
+.cal-day.selected {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.cal-day:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 2px;
+}
+
+/* Titik merah penanda deadline */
+.cal-day.has-deadline::after {
+    content: "";
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: #E5484D;
+    /* border: 1px solid var(--white); */
+}
+
+/* Label deadline di keterangan */
+.tag-deadline {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    background: #FDE8E9;
+    color: #E5484D;
+    font-size: 10px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.cal-notes .empty {
+    color: var(--muted);
 }
 
 /* Keterangan: mengisi sisa ruang dan bisa di-scroll */
@@ -1572,4 +1660,56 @@ svg {
     .dash-top .stats {
         grid-template-columns: 1fr 1fr;
     }
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdown .pill svg {
+    transition: transform .2s ease;
+}
+
+.dropdown .pill svg.rotate {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 150px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .1);
+    z-index: 50;
+}
+
+.dropdown-menu button {
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: 12px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+    background: #f3f4f6;
+}
+
+.dropdown-menu button.active {
+    font-weight: 600;
+    background: var(--tint);
+    /* senada dengan badge lime */
 }

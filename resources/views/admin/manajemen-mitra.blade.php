@@ -36,7 +36,7 @@
                         <svg>
                             <use href="#i-ring" />
                         </svg>
-                        Penyelesaian Tugas Mitra
+                        Progres Tugas Mitra
                     </h2>
                     <p class="num">32%</p>
                 </div>
@@ -162,6 +162,7 @@
                                 </th>
                                 <th>Profile</th>
                                 <th>Nama</th>
+                                <th>Wilayah</th>
                                 <th>Sobat ID</th>
                                 <th>NIK</th>
                                 <th>Total Honor</th>
@@ -191,12 +192,14 @@
                                         <span class="profile-name">{{ $mitra->user->name }}</span>
                                     </td>
 
+                                    <td><span class="profile-name">{{ $mitra->wilayah }}</span></td>
+
                                     <td class="id-cell">{{ $mitra->user->username }}</td>
 
                                     <td class="id-cell">{{ $mitra->nik }}</td>
 
                                     <td class="honor-cell">
-                                        Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 0, 0, ',', '.') }}
+                                        Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 3500000, 0, ',', '.') }}
                                     </td>
 
                                     <td>

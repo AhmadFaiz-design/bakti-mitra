@@ -19,6 +19,22 @@
                 $calStart = $today->copy()->startOfMonth()->startOfWeek(\Carbon\Carbon::SUNDAY);
                 $calEnd = $today->copy()->endOfMonth()->endOfWeek(\Carbon\Carbon::SATURDAY);
                 $namaBulan = $today->copy()->locale('id')->translatedFormat('F');
+
+                // CONTOH DATA: ganti dengan data dari database.
+                // Format: 'Y-m-d' => [ ['judul' => '...', 'deadline' => true/false], ... ]
+                $tugas = [
+                    $today->format('Y-m-d') => [
+                        ['judul' => 'Pengolahan Dokumen Pencacahan Susenas September', 'deadline' => false],
+                        ['judul' => 'Pengolahan Dokumen Pencacahan Susenas September', 'deadline' => false],
+                    ],
+                    $today->copy()->addDays(4)->format('Y-m-d') => [
+                        ['judul' => 'Rekap Data Sakernas', 'deadline' => true],
+                    ],
+                    $today->copy()->addDays(9)->format('Y-m-d') => [
+                        ['judul' => 'Validasi Dokumen Susenas', 'deadline' => true],
+                        ['judul' => 'Entri Data Survei Harga', 'deadline' => false],
+                    ],
+                ];
             @endphp
 
             <div class="dash-top">
@@ -50,9 +66,27 @@
                             <h2><svg>
                                     <use href="#i-chart" />
                                 </svg>Progres Mitra</h2>
-                            <button class="pill">Semua <svg>
-                                    <use href="#i-down" />
-                                </svg></button>
+
+                            <div class="dropdown" x-data="{ open: false, selected: 'Semua' }" @click.outside="open = false">
+                                <button type="button" class="pill" @click="open = !open" :aria-expanded="open">
+                                    <span x-text="selected"></span>
+                                    <svg :class="{ 'rotate': open }">
+                                        <use href="#i-down" />
+                                    </svg>
+                                </button>
+
+                                <ul class="dropdown-menu" x-show="open" x-transition.opacity.duration.150ms x-cloak>
+                                    @foreach (['Semua', 'Aktif', 'Tidak Aktif', 'Selesai', 'Berlangsung'] as $opsi)
+                                        <li>
+                                            <button type="button"
+                                                :class="{ 'active': selected === '{{ $opsi }}' }"
+                                                @click="selected = '{{ $opsi }}'; open = false">
+                                                {{ $opsi }}
+                                            </button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         </div>
                         <div class="chart">
                             <div class="axis"><span>10</span><span>20</span><span>30</span><span>40</span></div>
@@ -81,25 +115,33 @@
                         </svg>{{ $namaBulan }}</h2>
 
                     <div class="cal-summary">
-                        <div><small>Deadline</small><strong>10</strong></div>
+                        <div class="box-cal" ><small>Deadline</small><strong>10</strong></div>
                         <div><small>Selesai</small><strong>15</strong></div>
                         <div><small>Berlangsung</small><strong>13</strong></div>
                     </div>
 
                     <div class="cal-grid">
                         @for ($d = $calStart->copy(); $d->lte($calEnd); $d->addDay())
-                            <span @class([
-                                'cal-day',
-                                'other' => $d->month !== $today->month,
-                                'today' => $d->isSameDay($today),
-                            ])>{{ $d->day }}</span>
+                            @php
+                                $key = $d->format('Y-m-d');
+                                $adaDeadline = collect($tugas[$key] ?? [])->contains('deadline', true);
+                            @endphp
+                            <button type="button" data-date="{{ $key }}"
+                                data-label="{{ $d->copy()->locale('id')->translatedFormat('j F') }}"
+                                @class([
+                                    'cal-day',
+                                    'other' => $d->month !== $today->month,
+                                    'today' => $d->isSameDay($today),
+                                    'selected' => $d->isSameDay($today),
+                                    'has-deadline' => $adaDeadline,
+                                ])>{{ $d->day }}</button>
                         @endfor
                     </div>
 
+
                     <div class="cal-notes">
-                        <h3>Keterangan Hari ini</h3>
-                        <p>Pengolahan Dokumen Pencacahan Susenas September</p>
-                        <p>Pengolahan Dokumen Pencacahan Susenas September</p>
+                        <p id="calNotesTitle">Keterangan Hari ini</p>
+                        <div id="calNotesList"></div>
                     </div>
                 </aside>
             </div>
@@ -132,4 +174,51 @@
                     </ul>
                 </div>
             </section>
+            @push('scripts')
+                <script>
+                    (function() {
+                        const tugas = @json($tugas);
+                        const todayKey = @json($today->format('Y-m-d'));
+                        const days = document.querySelectorAll('.cal-day');
+                        const title = document.getElementById('calNotesTitle');
+                        const list = document.getElementById('calNotesList');
+
+                        function tampilkan(key, label) {
+                            title.textContent = key === todayKey ? 'Keterangan Hari ini' : 'Keterangan ' + label;
+                            list.innerHTML = '';
+
+                            const items = tugas[key] || [];
+                            if (!items.length) {
+                                const p = document.createElement('p');
+                                p.className = 'empty';
+                                p.textContent = 'Tidak ada tugas pada tanggal ini.';
+                                list.appendChild(p);
+                                return;
+                            }
+
+                            items.forEach(item => {
+                                const p = document.createElement('p');
+                                p.textContent = item.judul;
+                                if (item.deadline) {
+                                    const tag = document.createElement('span');
+                                    tag.className = 'tag-deadline';
+                                    tag.textContent = 'Deadline';
+                                    p.appendChild(tag);
+                                }
+                                list.appendChild(p);
+                            });
+                        }
+
+                        days.forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                days.forEach(d => d.classList.remove('selected'));
+                                btn.classList.add('selected');
+                                tampilkan(btn.dataset.date, btn.dataset.label);
+                            });
+                        });
+
+                        tampilkan(todayKey, '');
+                    })();
+                </script>
+            @endpush
         </x-admin.main>
