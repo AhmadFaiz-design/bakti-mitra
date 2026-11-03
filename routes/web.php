@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\MitraController;
+use App\Http\Controllers\Admin\MitraImportController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\MitraImportController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -21,8 +22,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+
+        Route::get('/mitra', [MitraController::class, 'index'])->name('datamitra');
         Route::get('/mitra/import', [MitraImportController::class, 'form'])->name('mitra.import');
         Route::post('/mitra/import', [MitraImportController::class, 'proses'])->name('mitra.import.proses');
+
+        Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
+        Route::view('/tambah-mitra', 'admin.tambahmitra')->name('tambahmitra');
     });
 });
 
@@ -43,19 +49,16 @@ Route::middleware(['auth', 'role:mitra'])->group(function () {
 });
 
 Route::get('/admin/data-mitra', function () {
-    return view('admin.manajemen-mitra', ['titlex' => 'Data Mitra']);
+    return view('admin.manajemen-mitra');
 })->name('admin.datamitra');
 
 Route::get('/admin/data-koor', function () {
-    return view('admin.manajemen-koor', ['titlex' => 'Data Koor']);
+    return view('admin.manajemen-koor');
 })->name('admin.datakoor');
 
 Route::get('/admin/tambah-mitra', function () {
-    return view('admin.tambahmitra', ['titlex' => 'Tambah Mitra']);
+    return view('admin.tambahmitra');
 })->name('admin.tambahmitra');
-Route::get('/admin/tes', function () {
-    return view('admin.testing');
-})->name('admin.testing');
 
 Route::get('/cek-php', function () {
     return [

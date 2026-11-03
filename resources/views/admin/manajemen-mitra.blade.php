@@ -20,11 +20,10 @@
                             <use href="#i-bell" />
                         </svg>
                     </button>
-
                     <div class="header-user">
-                        <span>Alyssa</span>
+                        <span>{{ auth()->user()->name }}</span>
                         <div class="avatar" style="width:48px;height:48px">
-                            A
+                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                         </div>
                     </div>
                 </div>
@@ -49,7 +48,7 @@
                         </svg>
                         Total Mitra
                     </h2>
-                    <p class="num">123</p>
+                    <p class="num">{{ $total }}</p> {{-- di kartu Total Mitra --}}
                 </div>
 
                 <div class="card stat">
@@ -59,7 +58,7 @@
                         </svg>
                         Mitra Aktif
                     </h2>
-                    <p class="num">13</p>
+                    <p class="num">{{ $aktif }}</p> {{-- di kartu Mitra Aktif --}}
                 </div>
 
                 <div class="card stat">
@@ -69,7 +68,7 @@
                         </svg>
                         Mitra Non Aktif
                     </h2>
-                    <p class="num">110</p>
+                    <p class="num">{{ $nonaktif }}</p> {{-- di kartu Mitra Non Aktif --}}
                 </div>
             </section>
 
@@ -160,101 +159,45 @@
                         </thead>
 
                         <tbody id="mitraTableBody">
-                            @php
-                                $mitraContoh = [
-                                    [
-                                        'nama' => 'Nicholas Saputra',
-                                        'sobat_id' => '123412341234',
-                                        'nik' => '1234123412341234',
-                                        'honor' => 4500000,
-                                        'status' => 'inactive',
-                                    ],
-                                    [
-                                        'nama' => 'Andi Pratama',
-                                        'sobat_id' => '123412341235',
-                                        'nik' => '1234123412341235',
-                                        'honor' => 2500000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Siti Rahma',
-                                        'sobat_id' => '123412341236',
-                                        'nik' => '1234123412341236',
-                                        'honor' => 1800000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Muhammad Akbar',
-                                        'sobat_id' => '123412341237',
-                                        'nik' => '1234123412341237',
-                                        'honor' => 3200000,
-                                        'status' => 'inactive',
-                                    ],
-                                    [
-                                        'nama' => 'Nur Aisyah',
-                                        'sobat_id' => '123412341238',
-                                        'nik' => '1234123412341238',
-                                        'honor' => 1500000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Rizky Ramadhan',
-                                        'sobat_id' => '123412341239',
-                                        'nik' => '1234123412341239',
-                                        'honor' => 2800000,
-                                        'status' => 'inactive',
-                                    ],
-                                ];
-                            @endphp
-
-                            @foreach ($mitraContoh as $mitra)
-                                <tr data-status="{{ $mitra['status'] }}" data-name="{{ strtolower($mitra['nama']) }}"
-                                    data-honor="{{ $mitra['honor'] }}">
+                            @forelse ($daftarMitra as $mitra)
+                                <tr data-status="{{ $mitra->user->is_active ? 'active' : 'inactive' }}"
+                                    data-name="{{ strtolower($mitra->user->name) }}"
+                                    data-honor="{{ $mitra->pekerjaan_sum_jumlah ?? 0 }}">
 
                                     <td>
                                         <input type="checkbox" class="check-mitra row-check"
-                                            aria-label="Pilih {{ $mitra['nama'] }}">
+                                            aria-label="Pilih {{ $mitra->user->name }}">
                                     </td>
 
                                     <td>
                                         <div class="profile-avatar">
-                                            {{ strtoupper(substr($mitra['nama'], 0, 1)) }}
+                                            {{ strtoupper(substr($mitra->user->name, 0, 1)) }}
                                         </div>
                                     </td>
 
                                     <td>
-                                        <span class="profile-name">
-                                            {{ $mitra['nama'] }}
-                                        </span>
+                                        <span class="profile-name">{{ $mitra->user->name }}</span>
                                     </td>
 
-                                    <td class="id-cell">
-                                        {{ $mitra['sobat_id'] }}
-                                    </td>
+                                    <td class="id-cell">{{ $mitra->user->username }}</td>
 
-                                    <td class="id-cell">
-                                        {{ $mitra['nik'] }}
-                                    </td>
+                                    <td class="id-cell">{{ $mitra->nik }}</td>
 
                                     <td class="honor-cell">
-                                        Rp {{ number_format($mitra['honor'], 0, ',', '.') }}
+                                        Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 0, 0, ',', '.') }}
                                     </td>
 
                                     <td>
-                                        @if ($mitra['status'] === 'active')
-                                            <span class="status-badge active">
-                                                Aktif
-                                            </span>
+                                        @if ($mitra->user->is_active)
+                                            <span class="status-badge active">Aktif</span>
                                         @else
-                                            <span class="status-badge inactive">
-                                                Tidak Aktif
-                                            </span>
+                                            <span class="status-badge inactive">Tidak Aktif</span>
                                         @endif
                                     </td>
 
                                     <td class="action-cell">
                                         <button type="button" class="action-btn"
-                                            aria-label="Aksi {{ $mitra['nama'] }}" onclick="toggleRowMenu(this)">
+                                            aria-label="Aksi {{ $mitra->user->name }}" onclick="toggleRowMenu(this)">
                                             &#8942;
                                         </button>
 
@@ -270,14 +213,51 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="8" style="text-align:center;padding:24px">
+                                        Belum ada data mitra.
+                                        <a href="{{ route('admin.mitra.import') }}">Import dari Excel</a>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <div class="table-footer">
                     <span id="mitraCount">Menampilkan data mitra</span>
-                    <span>Data contoh — belum terhubung ke database</span>
+                    <span>Data dari database</span>
                 </div>
             </section>
-        </x-admin.main>
+        </main>
+
+    </div>
+    <form id="logout-form" method="POST" action="{{ route('logout') }}" style="display:none">
+        @csrf
+    </form>
+    <script>
+        /* Toggle sidebar panjang <-> pendek */
+        const app = document.getElementById('app');
+        const btn = document.getElementById('toggle');
+
+        function setCollapsed(state) {
+            app.classList.toggle('collapsed', state);
+            btn.setAttribute('aria-expanded', String(!state));
+            btn.setAttribute('aria-label', state ? 'Perbesar sidebar' : 'Perkecil sidebar');
+            document.getElementById('toggleLabel').textContent = state ? 'Perbesar' : 'Perkecil';
+            try {
+                localStorage.setItem('sidebarCollapsed', state ? '1' : '0');
+            } catch (e) {}
+        }
+
+        btn.addEventListener('click', () => setCollapsed(!app.classList.contains('collapsed')));
+
+        /* Ingat pilihan terakhir pengguna */
+        try {
+            if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
+        } catch (e) {}
+    </script>
+</body>
+
+</html>
