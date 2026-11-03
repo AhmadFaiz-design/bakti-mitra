@@ -63,12 +63,24 @@ svg {
 .sidebar {
     display: flex;
     flex-direction: column;
-    position: relative;
+    position: sticky;
+    top: 14px;                              /* sama dengan padding atas body */
+    height: calc(100vh - 28px);             /* 100vh dikurangi padding atas+bawah body (14 + 14) */
+    height: calc(100dvh - 28px);
+    align-self: flex-start;
+    overflow-y: auto;                       /* jika menu panjang, sidebar scroll sendiri */
     background: var(--ink);
     border-radius: var(--radius);
     padding: 24px 20px;
     color: var(--white);
-    min-height: calc(100vh - 40px)
+    /* hapus min-height */
+}
+
+.sidebar-bottom{
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 /* LOGO: dua gambar, satu ditampilkan sesuai kondisi sidebar */
@@ -105,7 +117,6 @@ svg {
 
 /* TOMBOL TOGGLE: di dalam sidebar, didorong ke paling bawah */
 .toggle {
-    margin-top: auto;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -149,6 +160,26 @@ svg {
 
 .menu {
     margin-bottom: 24px
+}
+
+.logout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .08);
+    color: #CFCAF0;
+    font: 500 14px 'Poppins';
+    cursor: pointer;
+    text-align: left
+}
+
+.logout-btn:hover {
+    background: #E5484D;
+    color: var(--white);
 }
 
 /* MODE PENDEK: sembunyikan teks, ikon di tengah */
@@ -499,7 +530,9 @@ svg {
     }
 
     .sidebar {
-        min-height: 0
+        position: static;      /* tidak sticky lagi */
+        height: auto;          /* tinggi mengikuti isi */
+        overflow-y: visible;
     }
 
     .stats {
@@ -1407,4 +1440,136 @@ svg {
         display: none;
     }
 
+}
+/* ========================================
+   KALENDER DASHBOARD
+======================================== */
+
+.dash-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 16px;
+}
+
+.dash-left {
+    min-width: 0;
+}
+
+/* 3 kartu statistik di kolom kiri (tanpa kartu Tanggal) */
+.dash-top .stats {
+    grid-template-columns: 1.6fr 1fr 1fr;
+}
+
+.calendar-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    background: var(--white);
+    /* Tinggi mengikuti kolom kiri, bukan isinya sendiri */
+    height: 0;
+    min-height: 100%;
+}
+
+/* Ringkasan: Deadline / Selesai / Berlangsung */
+.cal-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.cal-summary div {
+    padding: 6px 12px 4px;
+    border-radius: 12px;
+    background: var(--tint);
+    color: var(--ink);
+}
+
+.cal-summary small {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.cal-summary strong {
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+/* Grid tanggal */
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 8px;
+    padding: 18px 12px;
+    border-radius: 16px;
+    background: var(--tint);
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cal-day {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+    border-radius: 50%;
+}
+
+.cal-day.today {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.cal-day.other {
+    opacity: .4;
+}
+
+/* Keterangan: mengisi sisa ruang dan bisa di-scroll */
+.cal-notes {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+/* Keterangan hari ini */
+.cal-notes h3 {
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.cal-notes p {
+    margin-bottom: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* Scrollbar tipis */
+.cal-notes::-webkit-scrollbar {
+    width: 5px;
+}
+
+.cal-notes::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 99px;
+}
+
+.cal-notes {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
+}
+
+@media (max-width: 1000px) {
+    .dash-top {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-top .stats {
+        grid-template-columns: 1fr 1fr;
+    }
 }

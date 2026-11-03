@@ -43,16 +43,19 @@ Route::middleware(['auth', 'role:mitra'])->group(function () {
 });
 
 Route::get('/admin/data-mitra', function () {
-    return view('admin.manajemen-mitra');
+    return view('admin.manajemen-mitra', ['titlex' => 'Data Mitra']);
 })->name('admin.datamitra');
 
 Route::get('/admin/data-koor', function () {
-    return view('admin.manajemen-koor');
+    return view('admin.manajemen-koor', ['titlex' => 'Data Koor']);
 })->name('admin.datakoor');
 
 Route::get('/admin/tambah-mitra', function () {
-    return view('admin.tambahmitra');
+    return view('admin.tambahmitra', ['titlex' => 'Tambah Mitra']);
 })->name('admin.tambahmitra');
+Route::get('/admin/tes', function () {
+    return view('admin.testing');
+})->name('admin.testing');
 
 Route::get('/cek-php', function () {
     return [
