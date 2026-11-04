@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\MitraImportController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\DashboardController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -21,21 +22,16 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::redirect('/admin', '/admin/dashboard');
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
-
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/mitra', [MitraController::class, 'index'])->name('datamitra');
         Route::get('/mitra/import', [MitraImportController::class, 'form'])->name('mitra.import');
         Route::post('/mitra/import', [MitraImportController::class, 'proses'])->name('mitra.import.proses');
-
         Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
         Route::view('/tambah-mitra', 'admin.tambahmitra')->name('tambahmitra');
-
         Route::post('/tambah-mitra', [MitraController::class, 'store'])->name('tambahmitra.simpan');
-
         Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
             ->whereNumber('mitra')
             ->name('mitra.destroy');
-
         Route::get('/mitra/{mitra}/edit', [MitraController::class, 'edit'])
             ->whereNumber('mitra')
             ->name('mitra.edit');
