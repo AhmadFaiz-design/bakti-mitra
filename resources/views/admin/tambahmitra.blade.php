@@ -4,22 +4,24 @@
             <header class="page-header">
                 <div class="page-title">
                     <h1>Pembuatan Akun Mitra</h1>
-                    <p>Manajemen Data Koordinator Mitra BPS Kota Kendari</p>
+                    <p>Manajemen Data Mitra BPS Kota Kendari</p>
                 </div>
 
                 <div class="page-actions">
-                    <button type="button" class="header-icon">
+                    <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
                         <svg>
                             <use href="#i-cal" />
                         </svg>
                     </button>
-                    <button type="button" class="header-icon">
+                    <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
                         <svg>
                             <use href="#i-bell" />
                         </svg>
                     </button>
-                    <span class="username">Alyssa</span>
-                    <div class="avatar"></div>
+                    <span class="username">{{ auth()->user()->name }}</span>
+                    <div class="avatar" style="display:flex;align-items:center;justify-content:center">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    </div>
                 </div>
             </header>
 
@@ -241,7 +243,11 @@
 
                             event.preventDefault();
 
-                            alert('Password dan konfirmasi password tidak sama!');
+                            popup({
+                                jenis: 'gagal',
+                                judul: 'Password tidak sama',
+                                pesan: 'Password dan konfirmasi password harus sama.'
+                            });
 
                             document.getElementById(
                                 'password_confirmation'
@@ -252,11 +258,6 @@
                         }
 
                     });
-
-                    /* Jika kesalahan ada di tahap 2, langsung buka tahap 2 */
-                    @if ($errors->hasAny(['sobat_id', 'email', 'password']))
-                        nextStep();
-                    @endif
 
                     /* DRAF FORM: bertahan saat halaman di-refresh */
                     const KUNCI_DRAFT = 'draftTambahMitra';
@@ -293,6 +294,11 @@
                     mitraForm.addEventListener('input', simpanDraft);
                     mitraForm.addEventListener('change', simpanDraft);
                     pulihkanDraft();
+
+                    /* Jika kesalahan ada di tahap 2, langsung buka tahap 2 */
+                    @if ($errors->hasAny(['sobat_id', 'email', 'password']))
+                        nextStep();
+                    @endif
                 </script>
             @endpush
 
