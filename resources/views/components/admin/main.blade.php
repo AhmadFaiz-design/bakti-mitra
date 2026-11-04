@@ -68,8 +68,8 @@
     <div class="app" id="app">
         <aside class="sidebar">
             <div class="logo">
-                <img class="long" src="{{ asset('images/Logo Bakti Mitra Long.png') }}" alt="Bakti Mitra">
-                <img class="short" src="{{ asset('images/Logo Bakti Mitra Short.png') }}" alt="Bakti Mitra">
+                <img class="long" src="{{ asset('images/Logo Bakti Mitra Long putih.png') }}" alt="Bakti Mitra">
+                <img class="short" src="{{ asset('images/Logo Bakti Mitra Short putih.png') }}" alt="Bakti Mitra">
             </div>
 
             <nav class="menu">

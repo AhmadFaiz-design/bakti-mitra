@@ -8,122 +8,63 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use Illuminate\Database\Eloquent\Builder;
 
 class MitraController extends Controller
 {
 
     public function index(Request $request)
     {
-        $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
-        $sort   = in_array($request->query('sort'), ['honor-desc', 'honor-asc'])
-            ? $request->query('sort')
-            : 'name';
-        $q = trim((string) $request->query('q', ''));
+           $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
+    $sort   = in_array($request->query('sort'), ['honor-desc', 'honor-asc'])
+        ? $request->query('sort')
+        : 'name';
+    $q = trim((string) $request->query('q', ''));
 
-        // Subquery total honor per mitra (dipakai untuk filter honor)
-        $honorSql = '(select COALESCE(sum(kp.jumlah), 0)
-                  from kontrak_pekerjaan kp
-                  join kontrak k on k.id = kp.kontrak_id
-                  where k.mitra_id = mitra.id)';
+    $daftarMitra = $this->buildQuery($request)->paginate(10)->withQueryString();
 
-        $query = Mitra::query()
-            ->join('users', 'users.id', '=', 'mitra.user_id')
-            ->select('mitra.*')
-            ->with('user')
-            ->withSum('pekerjaan', 'jumlah')
-            ->where('users.is_active', $status === 'active');
+    // ---- Daftar tugas tiap mitra di halaman ini (untuk popover aksi) ----
+    $tugasPerMitra = DB::table('kontrak_pekerjaan as kp')
+        ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+        ->whereIn('k.mitra_id', $daftarMitra->pluck('id'))
+        ->whereNotNull('kp.uraian_pekerjaan')
+        ->select('k.mitra_id', 'kp.uraian_pekerjaan')
+        ->distinct()
+        ->get()
+        ->groupBy('mitra_id')
+        ->map(fn ($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
 
-        // ---- Pencarian ----
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('users.name', 'like', "%{$q}%")
-                    ->orWhere('users.username', 'like', "%{$q}%")
-                    ->orWhere('mitra.nik', 'like', "%{$q}%");
-            });
-        }
+    // ---- Pilihan dropdown filter ----
+    $daftarWilayah = Mitra::whereNotNull('wilayah')
+        ->distinct()
+        ->orderBy('wilayah')
+        ->pluck('wilayah');
 
-        // ---- Filter honor ----
-        $parse = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
-        $min = $max = null;
+    $daftarTugas = DB::table('kontrak_pekerjaan')
+        ->whereNotNull('uraian_pekerjaan')
+        ->distinct()
+        ->orderBy('uraian_pekerjaan')
+        ->pluck('uraian_pekerjaan');
 
-        if ($request->input('honor_mode') === 'rentang') {
-            if ($request->filled('honor_dari'))   $min = $parse($request->honor_dari);
-            if ($request->filled('honor_sampai')) $max = $parse($request->honor_sampai);
-        } elseif ($request->filled('honor_jumlah')) {
-            $min = $max = $parse($request->honor_jumlah); // nominal: honor sama dengan jumlah
-        }
+    // ---- Statistik (dari seluruh data) ----
+    $total    = Mitra::count();
+    $aktif    = Mitra::whereHas('user', fn ($u) => $u->where('is_active', true))->count();
+    $nonaktif = $total - $aktif;
 
-        if ($min !== null) $query->whereRaw("$honorSql >= ?", [$min]);
-        if ($max !== null) $query->whereRaw("$honorSql <= ?", [$max]);
-
-        // ---- Filter wilayah ----
-        if ($request->filled('wilayah')) {
-            $query->where('mitra.wilayah', $request->wilayah);
-        }
-
-        // ---- Filter tugas (cocok dengan salah satu tugas yang dipilih) ----
-        $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
-        if ($tugasDipilih) {
-            $query->whereExists(function ($s) use ($tugasDipilih) {
-                $s->select(DB::raw(1))
-                    ->from('kontrak_pekerjaan as kp')
-                    ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
-                    ->whereColumn('k.mitra_id', 'mitra.id')
-                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
-            });
-        }
-
-        // ---- Urutan ----
-        if ($sort === 'honor-desc') {
-            $query->orderByRaw('COALESCE(pekerjaan_sum_jumlah, 0) DESC')->orderBy('users.name');
-        } elseif ($sort === 'honor-asc') {
-            $query->orderByRaw('COALESCE(pekerjaan_sum_jumlah, 0) ASC')->orderBy('users.name');
-        } else {
-            $query->orderBy('users.name');
-        }
-
-        $daftarMitra = $query->paginate(10)->withQueryString();
-
-        // ---- Daftar tugas tiap mitra di halaman ini (untuk popover aksi) ----
-        $tugasPerMitra = DB::table('kontrak_pekerjaan as kp')
-            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
-            ->whereIn('k.mitra_id', $daftarMitra->pluck('id'))
-            ->whereNotNull('kp.uraian_pekerjaan')
-            ->select('k.mitra_id', 'kp.uraian_pekerjaan')
-            ->distinct()
-            ->get()
-            ->groupBy('mitra_id')
-            ->map(fn($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
-
-        // ---- Pilihan dropdown filter ----
-        $daftarWilayah = Mitra::whereNotNull('wilayah')
-            ->distinct()
-            ->orderBy('wilayah')
-            ->pluck('wilayah');
-
-        $daftarTugas = DB::table('kontrak_pekerjaan')
-            ->whereNotNull('uraian_pekerjaan')
-            ->distinct()
-            ->orderBy('uraian_pekerjaan')
-            ->pluck('uraian_pekerjaan');
-
-        // ---- Statistik (dari seluruh data) ----
-        $total    = Mitra::count();
-        $aktif    = Mitra::whereHas('user', fn($u) => $u->where('is_active', true))->count();
-        $nonaktif = $total - $aktif;
-
-        return view('admin.manajemen-mitra', compact(
-            'daftarMitra',
-            'tugasPerMitra',
-            'daftarWilayah',
-            'daftarTugas',
-            'total',
-            'aktif',
-            'nonaktif',
-            'status',
-            'sort',
-            'q'
-        ));
+    return view('admin.manajemen-mitra', compact(
+        'daftarMitra',
+        'tugasPerMitra',
+        'daftarWilayah',
+        'daftarTugas',
+        'total',
+        'aktif',
+        'nonaktif',
+        'status',
+        'sort',
+        'q'
+    ));
     }
 
     public function store(Request $request)
@@ -282,4 +223,151 @@ class MitraController extends Controller
             ->route('admin.datamitra', ['status' => $data['is_active'] ? 'active' : 'inactive'])
             ->with('sukses', 'Data mitra "' . $data['nama'] . '" berhasil diperbarui.');
     }
+
+    /**
+ * Query daftar mitra lengkap dengan pencarian, filter, dan urutan.
+ * Dipakai oleh index() dan export().
+ */
+private function buildQuery(Request $request): Builder
+{
+    $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
+    $sort   = in_array($request->query('sort'), ['honor-desc', 'honor-asc'])
+        ? $request->query('sort')
+        : 'name';
+    $q = trim((string) $request->query('q', ''));
+
+    $honorSql = '(select COALESCE(sum(kp.jumlah), 0)
+                  from kontrak_pekerjaan kp
+                  join kontrak k on k.id = kp.kontrak_id
+                  where k.mitra_id = mitra.id)';
+
+    $query = Mitra::query()
+        ->join('users', 'users.id', '=', 'mitra.user_id')
+        ->select('mitra.*')
+        ->with('user')
+        ->withSum('pekerjaan', 'jumlah')
+        ->where('users.is_active', $status === 'active');
+
+    // Pencarian
+    if ($q !== '') {
+        $query->where(function ($w) use ($q) {
+            $w->where('users.name', 'like', "%{$q}%")
+                ->orWhere('users.username', 'like', "%{$q}%")
+                ->orWhere('mitra.nik', 'like', "%{$q}%");
+        });
+    }
+
+    // Filter honor
+    $parse = fn ($v) => (int) preg_replace('/\D/', '', (string) $v);
+    $min = $max = null;
+
+    if ($request->input('honor_mode') === 'rentang') {
+        if ($request->filled('honor_dari'))   $min = $parse($request->honor_dari);
+        if ($request->filled('honor_sampai')) $max = $parse($request->honor_sampai);
+    } elseif ($request->filled('honor_jumlah')) {
+        $min = $max = $parse($request->honor_jumlah);
+    }
+
+    if ($min !== null) $query->whereRaw("$honorSql >= ?", [$min]);
+    if ($max !== null) $query->whereRaw("$honorSql <= ?", [$max]);
+
+    // Filter wilayah
+    if ($request->filled('wilayah')) {
+        $query->where('mitra.wilayah', $request->wilayah);
+    }
+
+    // Filter tugas
+    $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
+    if ($tugasDipilih) {
+        $query->whereExists(function ($s) use ($tugasDipilih) {
+            $s->select(DB::raw(1))
+                ->from('kontrak_pekerjaan as kp')
+                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                ->whereColumn('k.mitra_id', 'mitra.id')
+                ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
+        });
+    }
+
+    // Urutan
+    if ($sort === 'honor-desc') {
+        $query->orderByRaw('COALESCE(pekerjaan_sum_jumlah, 0) DESC')->orderBy('users.name');
+    } elseif ($sort === 'honor-asc') {
+        $query->orderByRaw('COALESCE(pekerjaan_sum_jumlah, 0) ASC')->orderBy('users.name');
+    } else {
+        $query->orderBy('users.name');
+    }
+
+    return $query;
+}
+
+public function export(Request $request)
+{
+    $format = $request->query('format') === 'pdf' ? 'pdf' : 'csv';
+    $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
+
+    $daftar   = $this->buildQuery($request)->get();
+    $namaFile = 'data-mitra-' . now()->format('Ymd-His');
+
+    // ================= CSV =================
+    if ($format === 'csv') {
+        return response()->streamDownload(function () use ($daftar) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
+
+            fputcsv($out, ['No', 'Nama', 'Sobat ID', 'NIK', 'Wilayah', 'Total Honor', 'Status'], ';', '"', '');
+
+            foreach ($daftar as $i => $m) {
+                fputcsv($out, [
+                    $i + 1,
+                    $m->user?->name,
+                    '="' . $m->user?->username . '"', // cegah Excel mengubah angka panjang
+                    '="' . $m->nik . '"',
+                    $m->wilayah,
+                    (int) ($m->pekerjaan_sum_jumlah ?? 0),
+                    ($m->user?->is_active ?? false) ? 'Aktif' : 'Tidak Aktif',
+                ], ';', '"', '');
+            }
+            fclose($out);
+        }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    // ================= PDF =================
+    $ringkasan = ['Status: ' . ($status === 'active' ? 'Aktif' : 'Tidak Aktif')];
+    if (trim((string) $request->query('q')) !== '') {
+        $ringkasan[] = 'Pencarian: "' . trim($request->query('q')) . '"';
+    }
+    if ($request->filled('wilayah')) {
+        $ringkasan[] = 'Wilayah: ' . $request->wilayah;
+    }
+    if ($request->input('honor_mode') === 'rentang' && ($request->filled('honor_dari') || $request->filled('honor_sampai'))) {
+        $ringkasan[] = 'Honor: Rp ' . number_format((int) preg_replace('/\D/', '', (string) $request->honor_dari), 0, ',', '.')
+            . ' - Rp ' . number_format((int) preg_replace('/\D/', '', (string) $request->honor_sampai), 0, ',', '.');
+    } elseif ($request->filled('honor_jumlah')) {
+        $ringkasan[] = 'Honor: Rp ' . number_format((int) preg_replace('/\D/', '', (string) $request->honor_jumlah), 0, ',', '.');
+    }
+    $tugasDipilih = array_filter((array) $request->input('tugas', []));
+    if ($tugasDipilih) {
+        $ringkasan[] = 'Tugas: ' . implode(', ', $tugasDipilih);
+    }
+
+    $html = view('admin.export-mitra', [
+        'daftar'    => $daftar,
+        'ringkasan' => $ringkasan,
+        'tanggal'   => now()->translatedFormat('d F Y H:i'),
+    ])->render();
+
+    $options = new Options();
+    $options->set('defaultFont', 'DejaVu Sans');
+    $options->set('isRemoteEnabled', false);
+
+    $pdf = new Dompdf($options);
+    $pdf->loadHtml($html);
+    $pdf->setPaper('A4', 'landscape');
+    $pdf->render();
+
+    return response($pdf->output(), 200, [
+        'Content-Type'        => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="' . $namaFile . '.pdf"',
+    ]);
+}
 }

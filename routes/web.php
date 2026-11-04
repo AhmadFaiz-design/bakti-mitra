@@ -80,3 +80,4 @@ Route::get('/cek-php', function () {
         'zip_aktif' => extension_loaded('zip'),
     ];
 });
+Route::get('/admin/exportPDF', [MitraController::class, 'export'])->name('admin.mitra.export');

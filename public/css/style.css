@@ -2123,3 +2123,151 @@ svg {
 .btn-apply:hover {
     background: var(--primary-dark);
 }
+/* ========================================
+   MODAL EXPORT MITRA
+======================================== */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    background: rgba(31, 26, 61, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.export-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 140;
+    width: 560px;
+    max-width: calc(100vw - 24px);
+    padding: 30px 32px 26px;
+    border-radius: 28px;
+    border: 1px solid var(--tint);
+    background: var(--white);
+    box-shadow: 0 16px 40px rgba(31, 26, 61, .22);
+    transform: translate(-50%, -46%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, transform .2s ease, visibility .2s;
+}
+
+.export-modal.open {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    visibility: visible;
+}
+
+.export-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.export-sub {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 26px 0 28px;
+}
+
+.export-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border: 1px solid var(--ink);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.export-option:hover {
+    border-color: var(--primary);
+}
+
+.export-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.export-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--muted);
+}
+
+.export-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.export-text strong {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.export-text small {
+    font-size: 12px;
+    color: var(--ink);
+}
+
+.export-radio {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    background: var(--white);
+    transition: .15s ease;
+}
+
+/* Pilihan aktif */
+.export-option:has(input:checked) {
+    border-color: var(--primary);
+    background: var(--tint);
+}
+
+.export-option:has(input:checked) .export-radio {
+    border-width: 7px;
+    border-color: var(--primary);
+}
+
+.export-option:has(input:checked) .export-icon {
+    color: var(--primary-dark);
+}
+
+.export-option:has(input:focus-visible) {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 2px;
+}
+
+.export-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (max-width: 600px) {
+    .export-modal {
+        padding: 24px 18px 20px;
+    }
+}

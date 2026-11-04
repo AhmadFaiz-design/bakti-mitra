@@ -78,6 +78,17 @@
                 <form method="GET" action="{{ route('admin.datamitra') }}" style="display: contents">
                     <input type="hidden" name="status" value="{{ $status }}">
                     <input type="hidden" name="sort" value="{{ $sort }}">
+
+                    @foreach (['honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah'] as $f)
+                        @if (request()->filled($f))
+                            <input type="hidden" name="{{ $f }}" value="{{ request($f) }}">
+                        @endif
+                    @endforeach
+
+                    @foreach (array_filter((array) request('tugas', [])) as $t)
+                        <input type="hidden" name="tugas[]" value="{{ $t }}">
+                    @endforeach
+
                     <label class="mitra-search">
                         <svg>
                             <use href="#i-search" />
@@ -209,7 +220,7 @@
                                     @php
                                         // Sesuaikan nama kolom 'nama' dengan kolom nama tugas di tabel pekerjaan Anda
                                         // $tugas = $mitra->pekerjaan?->pluck('nama')->values()->all() ?? [];
-                                        $tugas = $tugasperMitra[$mitra->id] ?? [];
+                                        $tugas = $tugasPerMitra[$mitra->id] ?? [];
                                         $urlEdit = Route::has('admin.mitra.edit')
                                             ? route('admin.mitra.edit', $mitra->id)
                                             : '';
@@ -260,7 +271,7 @@
                     @if ($daftarMitra->hasPages())
                         <span style="display:flex;gap:8px;align-items:center">
                             @if ($daftarMitra->onFirstPage())
-                                <button type="button" class="outline-btn" disabled>
+                                <button type="button" class="outline-btn" disabled>&lt;
                                 </button>
                             @else
                                 <a class="outline-btn" style="text-decoration:none"
@@ -434,10 +445,68 @@
                             Reset
                         </button>
                         <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
-                        <button type="submit" class="btn-apply">Terapkan</button>
+                        <button type="submit" class="btn-apply">Download</button>
                     </div>
                 </form>
             </aside>
+
+            <div class="modal-overlay" id="exportOverlay"></div>
+
+            <div class="export-modal" id="exportModal" role="dialog" aria-modal="true"
+                aria-labelledby="exportTitle" aria-hidden="true">
+                <form method="GET" action="{{ route('admin.mitra.export') }}" id="exportForm">
+                    {{-- bawa semua pencarian dan filter yang sedang aktif --}}
+                    <input type="hidden" name="q" value="{{ $q }}">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <input type="hidden" name="sort" value="{{ $sort }}">
+                    @foreach (['honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah'] as $f)
+                        @if (request()->filled($f))
+                            <input type="hidden" name="{{ $f }}" value="{{ request($f) }}">
+                        @endif
+                    @endforeach
+                    @foreach (array_filter((array) request('tugas', [])) as $t)
+                        <input type="hidden" name="tugas[]" value="{{ $t }}">
+                    @endforeach
+
+                    <h2 id="exportTitle" class="export-title">Export Data Mitra</h2>
+                    <p class="export-sub">Data yang diexport berdasarkan hasil filter</p>
+
+                    <div class="export-options">
+                        <label class="export-option">
+                            <input type="radio" name="format" value="csv" checked>
+                            <svg class="export-icon" viewBox="0 0 32 32">
+                                <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                                <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                    fill="currentColor" stroke="none">CSV</text>
+                            </svg>
+                            <span class="export-text">
+                                <strong>CSV</strong>
+                                <small>Dokumen diekspor dengan format CSV</small>
+                            </span>
+                            <span class="export-radio"></span>
+                        </label>
+
+                        <label class="export-option">
+                            <input type="radio" name="format" value="pdf">
+                            <svg class="export-icon" viewBox="0 0 32 32">
+                                <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                                <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                    fill="currentColor" stroke="none">PDF</text>
+                            </svg>
+                            <span class="export-text">
+                                <strong>PDF</strong>
+                                <small>Dokumen diekspor dengan format PDF</small>
+                            </span>
+                            <span class="export-radio"></span>
+                        </label>
+                    </div>
+
+                    <div class="export-footer">
+                        <button type="button" class="btn-cancel" id="exportCancel">Cancel</button>
+                        <button type="submit" class="btn-apply">Download</button>
+                    </div>
+                </form>
+            </div>
 
             <form id="hapusMitraForm" method="POST" style="display:none">
                 @csrf
@@ -694,6 +763,35 @@
                             form.submit();
                         });
                     })();
+                    /* Export data mitra */
+                        (function() {
+                            const modal = document.getElementById('exportModal');
+                            const overlay = document.getElementById('exportOverlay');
+                            const tombol = document.getElementById('exportMitra');
+                            const form = document.getElementById('exportForm');
+
+                            function buka() {
+                                modal.classList.add('open');
+                                overlay.classList.add('open');
+                                modal.setAttribute('aria-hidden', 'false');
+                            }
+
+                            function tutup() {
+                                modal.classList.remove('open');
+                                overlay.classList.remove('open');
+                                modal.setAttribute('aria-hidden', 'true');
+                            }
+
+                            tombol.addEventListener('click', buka);
+                            overlay.addEventListener('click', tutup);
+                            document.getElementById('exportCancel').addEventListener('click', tutup);
+                            document.addEventListener('keydown', e => {
+                                if (e.key === 'Escape') tutup();
+                            });
+
+                            // File diunduh oleh browser, halaman tetap di tempat. Tutup modal setelahnya.
+                            form.addEventListener('submit', () => setTimeout(tutup, 400));
+                        })();
                 </script>
             @endpush
 
