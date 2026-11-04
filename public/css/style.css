@@ -74,9 +74,11 @@ svg {
     /* jika menu panjang, sidebar scroll sendiri */
     background: var(--ink);
     border-radius: var(--radius);
-    padding: 24px 20px;
+    padding: 24px 14px;
     color: var(--white);
     /* hapus min-height */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .sidebar-bottom {
@@ -88,34 +90,38 @@ svg {
 
 /* LOGO: dua gambar, satu ditampilkan sesuai kondisi sidebar */
 .logo {
+    position: relative;
     height: 48px;
-    display: flex;
-    align-items: center;
     margin-bottom: 40px;
-    padding-left: 6px
 }
 
 .logo img {
+    position: absolute;
+    top: 0;
     height: 48px;
     width: auto;
-    display: block
-}
-
-.logo .short {
-    display: none
-}
-
-.collapsed .logo {
-    justify-content: center;
-    padding-left: 0
+    max-width: none;
+    transition: opacity .25s ease;
 }
 
 .collapsed .logo .long {
-    display: none
+    opacity: 0;
 }
 
 .collapsed .logo .short {
-    display: block
+    opacity: 1;
+}
+
+/* Logo panjang: sejajar dengan ikon menu */
+.logo .long {
+    left: 6px;
+}
+
+/* Logo pendek: pusatnya dikunci di 28px (tengah bar kecil), tidak ikut bergerak saat bar berubah */
+.logo .short {
+    left: 28px;
+    transform: translateX(-50%);
+    opacity: 0;
 }
 
 /* TOMBOL TOGGLE: di dalam sidebar, didorong ke paling bawah */
@@ -124,7 +130,7 @@ svg {
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 11px 14px;
+    padding: 11px 18px;
     border: 0;
     border-radius: 14px;
     background: rgba(255, 255, 255, .08);
@@ -152,59 +158,74 @@ svg {
     transform: rotate(180deg)
 }
 
-.collapsed .toggle {
-    justify-content: center;
-    padding: 12px 0
-}
-
-.collapsed .toggle .label {
-    display: none
-}
-
 .menu {
     margin-bottom: 24px
 }
 
-.logout {
+/* TOMBOL PERKECIL: tanpa kotak, dengan garis di atasnya */
+.sidebar-collapse {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
-    padding: 11px 14px;
+    margin-top: 6px;
+    padding: 16px 20px 4px;
     border: 0;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, .08);
+    border-top: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 0;
+    background: transparent;
     color: #CFCAF0;
-    font: 500 14px 'Poppins';
+    font: 500 13px 'Poppins', sans-serif;
+    text-align: left;
     cursor: pointer;
-    text-align: left
+    transition: color .15s ease;
 }
 
-.logout-btn:hover {
-    background: #E5484D;
+.sidebar-collapse svg {
+    width: 16px;
+    height: 16px;
+    transition: transform .3s;
+}
+
+.sidebar-collapse:hover {
     color: var(--white);
 }
+
+.sidebar-collapse:focus-visible {
+    outline: 2px solid var(--lime);
+    outline-offset: 2px;
+}
+
+/* Teks memudar mengikuti bar yang mengecil */
+.sidebar .label {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity .15s ease .1s;
+    /* saat membesar: muncul sedikit terlambat */
+}
+
+.collapsed .sidebar .label {
+    opacity: 0;
+    transition-delay: 0s;
+    /* saat mengecil: langsung memudar */
+}
+
+/* Mode sidebar kecil: hanya ikon, di tengah, panah berbalik */
+
+.collapsed .sidebar-collapse svg {
+    transform: rotate(180deg);
+}
+
+/* Ikon Keluar tidak ikut berputar saat sidebar kecil */
+.collapsed .logout-btn svg {
+    transform: none;
+}
+
 
 /* MODE PENDEK: sembunyikan teks, ikon di tengah */
 .menu .label {
     white-space: nowrap;
     overflow: hidden
-}
-
-.collapsed .sidebar {
-    padding-left: 14px;
-    padding-right: 14px
-}
-
-.collapsed .menu .label,
-.collapsed .menu .chev {
-    display: none
-}
-
-.collapsed .menu a,
-.collapsed .menu button {
-    justify-content: center;
-    padding: 12px 0
 }
 
 .collapsed .submenu {
@@ -223,7 +244,7 @@ svg {
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 11px 14px;
+    padding: 11px 18px;
     border: 0;
     border-radius: 14px;
     background: transparent;
@@ -231,7 +252,7 @@ svg {
     font: 500 14px 'Poppins';
     text-decoration: none;
     cursor: pointer;
-    text-align: left
+    text-align: left;
 }
 
 .menu a:hover,
@@ -528,7 +549,7 @@ svg {
         grid-template-columns: 1fr
     }
 
-    .toggle {
+    .sidebar-collapse {
         display: none
     }
 
@@ -550,6 +571,10 @@ svg {
 
     .bottom {
         grid-template-columns: 1fr
+    }
+
+    .collapsed .sidebar .label {
+        opacity: 1;
     }
 }
 
@@ -775,11 +800,11 @@ svg {
     box-shadow: 0 10px 30px rgba(31, 26, 61, .12);
 } */
 
-.filter-menu.open {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+/* .filter-menu.open {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    } */
 
 .filter-menu button {
     padding: 10px;
@@ -1840,6 +1865,7 @@ svg {
     background: var(--tint);
     color: var(--primary-dark);
 }
+
 /* ========================================
    PANEL FILTER MITRA
 ======================================== */
@@ -2123,6 +2149,7 @@ svg {
 .btn-apply:hover {
     background: var(--primary-dark);
 }
+
 /* ========================================
    MODAL EXPORT MITRA
 ======================================== */

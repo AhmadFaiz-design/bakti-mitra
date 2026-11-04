@@ -108,7 +108,9 @@
                     </svg>
                     <span class="label">Keluar</span>
                 </button>
-                <button type="button" class="toggle" id="toggle" aria-label="Perkecil Sidebar" aria-expanded="true">
+
+                <button type="button" class="sidebar-collapse" id="toggle" aria-label="Perkecil sidebar"
+                    aria-expanded="true">
                     <svg>
                         <use href="#i-left" />
                     </svg>
