@@ -29,6 +29,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
         Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
         Route::view('/tambah-mitra', 'admin.tambahmitra')->name('tambahmitra');
+
+        Route::post('/tambah-mitra', [MitraController::class, 'store'])->name('tambahmitra.simpan');
+
+        Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
+            ->whereNumber('mitra')
+            ->name('mitra.destroy');
     });
 });
 
