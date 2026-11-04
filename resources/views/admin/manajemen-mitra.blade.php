@@ -258,7 +258,7 @@
                     </table>
                 </div>
 
-                                <div class="table-footer">
+                <div class="table-footer">
                     <span>
                         @if ($daftarMitra->total() > 0)
                             Menampilkan {{ $daftarMitra->firstItem() }}–{{ $daftarMitra->lastItem() }}
@@ -449,7 +449,7 @@
                             Reset
                         </button>
                         <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
-                        <button type="submit" class="btn-apply">Download</button>
+                        <button type="submit" class="btn-apply">Terapkan</button>
                     </div>
                 </form>
             </aside>
@@ -768,34 +768,34 @@
                         });
                     })();
                     /* Export data mitra */
-                        (function() {
-                            const modal = document.getElementById('exportModal');
-                            const overlay = document.getElementById('exportOverlay');
-                            const tombol = document.getElementById('exportMitra');
-                            const form = document.getElementById('exportForm');
+                    (function() {
+                        const modal = document.getElementById('exportModal');
+                        const overlay = document.getElementById('exportOverlay');
+                        const tombol = document.getElementById('exportMitra');
+                        const form = document.getElementById('exportForm');
 
-                            function buka() {
-                                modal.classList.add('open');
-                                overlay.classList.add('open');
-                                modal.setAttribute('aria-hidden', 'false');
-                            }
+                        function buka() {
+                            modal.classList.add('open');
+                            overlay.classList.add('open');
+                            modal.setAttribute('aria-hidden', 'false');
+                        }
 
-                            function tutup() {
-                                modal.classList.remove('open');
-                                overlay.classList.remove('open');
-                                modal.setAttribute('aria-hidden', 'true');
-                            }
+                        function tutup() {
+                            modal.classList.remove('open');
+                            overlay.classList.remove('open');
+                            modal.setAttribute('aria-hidden', 'true');
+                        }
 
-                            tombol.addEventListener('click', buka);
-                            overlay.addEventListener('click', tutup);
-                            document.getElementById('exportCancel').addEventListener('click', tutup);
-                            document.addEventListener('keydown', e => {
-                                if (e.key === 'Escape') tutup();
-                            });
+                        tombol.addEventListener('click', buka);
+                        overlay.addEventListener('click', tutup);
+                        document.getElementById('exportCancel').addEventListener('click', tutup);
+                        document.addEventListener('keydown', e => {
+                            if (e.key === 'Escape') tutup();
+                        });
 
-                            // File diunduh oleh browser, halaman tetap di tempat. Tutup modal setelahnya.
-                            form.addEventListener('submit', () => setTimeout(tutup, 400));
-                        })();
+                        // File diunduh oleh browser, halaman tetap di tempat. Tutup modal setelahnya.
+                        form.addEventListener('submit', () => setTimeout(tutup, 400));
+                    })();
                 </script>
             @endpush
 

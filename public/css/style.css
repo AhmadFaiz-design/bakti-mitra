@@ -228,9 +228,9 @@ svg {
     overflow: hidden
 }
 
-.collapsed .submenu {
+/* .collapsed .submenu {
     padding-left: 0
-}
+} */
 
 .menu {
     display: flex;
@@ -270,19 +270,67 @@ svg {
     transition: transform .2s
 }
 
-.submenu {
+/* .submenu {
     display: none;
     flex-direction: column;
     gap: 4px;
     padding: 6px 0 4px 14px
-}
+} */
 
-.submenu.open {
+/* .submenu.open {
     display: flex
-}
+} */
 
 .has-sub.open .chev {
     transform: rotate(180deg)
+}
+
+/* DROPDOWN BUAT AKUN */
+.has-sub {
+    border-radius: 14px;
+    transition: background .2s ease;
+}
+
+.has-sub.open {
+    background: rgba(255, 255, 255, .08);
+}
+
+/* Tombol induk saat terbuka: putih seperti desain */
+.has-sub.open>.sub-toggle {
+    background: var(--lime);
+    color: var(--ink);
+}
+
+/* Isi dropdown: dibuka dengan animasi tinggi */
+.submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .25s ease;
+}
+
+.has-sub.open .submenu {
+    grid-template-rows: 1fr;
+}
+
+.submenu-inner {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.has-sub.open .submenu-inner {
+    padding: 6px 0 8px;
+}
+
+/* Panah memudar saat sidebar kecil */
+.sidebar .chev {
+    transition: transform .2s, opacity .15s ease;
+}
+
+.collapsed .sidebar .chev {
+    opacity: 0;
 }
 
 /* 3. KONTEN KANAN */

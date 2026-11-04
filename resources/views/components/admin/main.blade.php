@@ -57,11 +57,15 @@
             <path d="M7 10l5 5 5-5" />
             <path d="M12 15V3" />
         </symbol>
-
         <symbol id="i-filter" viewBox="0 0 24 24">
             <path d="M4 6h16" />
             <path d="M7 12h10" />
             <path d="M10 18h4" />
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2 20c.6-3.5 3.2-5.5 7-5.5s6.4 2 7 5.5" />
+            <path d="M15.5 4.8a3.5 3.5 0 010 6.4M18 14.8c2 .7 3.6 2.4 4 5.2" />
         </symbol>
     </svg>
 
@@ -82,22 +86,48 @@
                 <x-admin.list-sidebar :href="route('admin.datamitra')" title="Mitra" :active="request()->routeIs('admin.datamitra')">
                     <svg>
                         <use href="#i-user" />
-                    </svg><span class="label">Mitra</span>
+                    </svg><span class="label">Data Mitra</span>
                 </x-admin.list-sidebar>
 
                 <x-admin.list-sidebar :href="route('admin.datakoor')" title="Koordinator" :active="request()->routeIs('admin.datakoor')">
                     <svg>
                         <use href="#i-user" />
-                    </svg><span class="label">Koordinator</span>
+                    </svg><span class="label">Data Koordinator</span>
                 </x-admin.list-sidebar>
 
-                <x-admin.list-sidebar :href="route('admin.tambahmitra')" title="Tambah Mitra" :active="request()->routeIs('admin.tambahmitra')">
-                    <svg>
-                        <use href="#i-plus" />
-                    </svg><span class="label">Tambah Mitra</span>
-                </x-admin.list-sidebar>
+                @php
+                    $urlTambahKoor = Route::has('admin.tambahkoor') ? route('admin.tambahkoor') : '#';
+                    $grupAkunAktif = request()->routeIs('admin.tambahmitra', 'admin.tambahkoor');
+                @endphp
 
-                {{-- Submenu "Buat Akun" dan tombol Keluar tetap seperti sebelumnya --}}
+                <div class="has-sub {{ $grupAkunAktif ? 'open' : '' }}" id="sub">
+                    <button type="button" class="sub-toggle" title="Buat Akun" aria-controls="subList"
+                        aria-expanded="{{ $grupAkunAktif ? 'true' : 'false' }}">
+                        <svg>
+                            <use href="#i-plus" />
+                        </svg>
+                        <span class="label">Tambah Akun</span>
+                        <svg class="chev">
+                            <use href="#i-down" />
+                        </svg>
+                    </button>
+
+                    <div class="submenu" id="subList">
+                        <div class="submenu-inner">
+                            <x-admin.list-sidebar :href="route('admin.tambahmitra')" title="Buat akun Mitra" :active="request()->routeIs('admin.tambahmitra')">
+                                <svg>
+                                    <use href="#i-users" />
+                                </svg><span class="label">Akun Mitra</span>
+                            </x-admin.list-sidebar>
+
+                            <x-admin.list-sidebar :href="$urlTambahKoor" title="Buat akun Koordinator" :active="request()->routeIs('admin.tambahkoor')">
+                                <svg>
+                                    <use href="#i-users" />
+                                </svg><span class="label">Akun Koordinator</span>
+                            </x-admin.list-sidebar>
+                        </div>
+                    </div>
+                </div>
             </nav>
 
             <div class="sidebar-bottom">
@@ -149,6 +179,13 @@
         try {
             if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
         } catch (e) {}
+        /* Dropdown Buat Akun */
+        const sub = document.getElementById('sub');
+        const subBtn = sub.querySelector('.sub-toggle');
+        subBtn.addEventListener('click', () => {
+            const terbuka = sub.classList.toggle('open');
+            subBtn.setAttribute('aria-expanded', String(terbuka));
+        });
     </script>
     <x-admin.notifikasi />
     @stack('scripts')
