@@ -27,6 +27,12 @@
                         </div>
                     </div>
                 </div>
+                @if (session('sukses'))
+                    <div role="status"
+                        style="background:#e6f4ee;border:1px solid #0f6b4f;color:#0f6b4f;border-radius:10px;padding:12px 16px;margin:0 0 16px;font-size:14px">
+                        {{ session('sukses') }}
+                    </div>
+                @endif
             </header>
 
             {{-- KARTU STATISTIK --}}
@@ -140,13 +146,12 @@
                         List Mitra
                     </h2>
 
-                    <button type="button" class="primary-btn"
-                        onclick="alert('Form tambah mitra akan dibuat pada tahap berikutnya.')">
+                    <a href="{{ route('admin.tambahmitra') }}" class="primary-btn" style="text-decoration:none">
                         <svg>
                             <use href="#i-plus" />
                         </svg>
                         Add Mitra
-                    </button>
+                    </a>
                 </div>
 
                 <div class="table-scroll">
@@ -262,11 +267,19 @@
                         <span style="display:flex;gap:8px;align-items:center">
                             @if ($daftarMitra->onFirstPage())
                                 <button type="button" class="outline-btn" disabled>
+<<<<<<< HEAD
                                     <</button>
                                     @else
                                         <a class="outline-btn" style="text-decoration:none"
                                             href="{{ $daftarMitra->previousPageUrl() }}">
                                             <</a>
+=======
+                                </button>
+                            @else
+                                <a class="outline-btn" style="text-decoration:none"
+                                    href="{{ $daftarMitra->previousPageUrl() }}">
+                                    < </a>
+>>>>>>> 90450ed452d6ff0955018c3eb18ad2f6a89fedd4
                             @endif
 
                             <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
@@ -673,4 +686,77 @@
                     })();
                 </script>
             @endpush
+
+            @if (session('sukses'))
+                <div id="popupSukses" role="dialog" aria-modal="true" aria-labelledby="popupJudul"
+                    style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px">
+                    <div
+                        style="background:#fff;color:#17261f;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+                        <div
+                            style="width:56px;height:56px;margin:0 auto 14px;border-radius:50%;background:#e6f4ee;color:#0f6b4f;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">
+                            ✓</div>
+                        <h3 id="popupJudul" style="margin:0 0 8px;font-size:18px">Berhasil</h3>
+                        <p style="margin:0 0 20px;font-size:14px;color:#5f7068">{{ session('sukses') }}</p>
+                        <button type="button" id="popupTutup"
+                            style="padding:10px 28px;font-size:15px;font-weight:600;color:#fff;background:#0f6b4f;border:0;border-radius:10px;cursor:pointer">
+                            OK
+                        </button>
+                    </div>
+                </div>
+
+                @push('scripts')
+                    <script>
+                        (function() {
+                            /* Hapus draf form karena data sudah tersimpan */
+                            try {
+                                sessionStorage.removeItem('draftTambahMitra');
+                            } catch (e) {}
+
+                            const popup = document.getElementById('popupSukses');
+                            const tutup = () => popup && popup.remove();
+
+                            document.getElementById('popupTutup').addEventListener('click', tutup);
+                            popup.addEventListener('click', e => {
+                                if (e.target === popup) tutup();
+                            });
+                            document.addEventListener('keydown', e => {
+                                if (e.key === 'Escape') tutup();
+                            });
+                        })();
+                    </script>
+                @endpush
+            @endif
+            @if (session('gagal'))
+                <div id="popupGagal" role="alertdialog" aria-modal="true" aria-labelledby="popupGagalJudul"
+                    style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px">
+                    <div
+                        style="background:#fff;color:#17261f;border-radius:16px;max-width:400px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+                        <div
+                            style="width:56px;height:56px;margin:0 auto 14px;border-radius:50%;background:#fdecea;color:#b3261e;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">
+                            !</div>
+                        <h3 id="popupGagalJudul" style="margin:0 0 8px;font-size:18px">Tidak berhasil</h3>
+                        <p style="margin:0 0 20px;font-size:14px;color:#5f7068">{{ session('gagal') }}</p>
+                        <button type="button" id="popupGagalTutup"
+                            style="padding:10px 28px;font-size:15px;font-weight:600;color:#fff;background:#b3261e;border:0;border-radius:10px;cursor:pointer">
+                            OK
+                        </button>
+                    </div>
+                </div>
+
+                @push('scripts')
+                    <script>
+                        (function() {
+                            const popup = document.getElementById('popupGagal');
+                            const tutup = () => popup && popup.remove();
+                            document.getElementById('popupGagalTutup').addEventListener('click', tutup);
+                            popup.addEventListener('click', e => {
+                                if (e.target === popup) tutup();
+                            });
+                            document.addEventListener('keydown', e => {
+                                if (e.key === 'Escape') tutup();
+                            });
+                        })();
+                    </script>
+                @endpush
+            @endif
         </x-admin.main>
