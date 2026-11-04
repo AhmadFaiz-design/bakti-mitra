@@ -7,6 +7,7 @@ use App\Models\Mitra;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class MitraController extends Controller
 {
@@ -144,5 +145,75 @@ class MitraController extends Controller
         return redirect()
             ->route('admin.datamitra', ['status' => $status])
             ->with('sukses', 'Akun mitra "' . $nama . '" berhasil dihapus.');
+    }
+
+    public function edit(Mitra $mitra)
+    {
+        $mitra->load('user');
+
+        return view('admin.edit-mitra', compact('mitra'));
+    }
+
+    public function update(Request $request, Mitra $mitra)
+    {
+        $mitra->load('user');
+        $user = $mitra->user;
+
+        $data = $request->validate([
+            'nama'          => 'required|string|max:150',
+            'nik'           => ['required', 'digits:16', Rule::unique('mitra', 'nik')->ignore($mitra->id)],
+            'pekerjaan'     => 'nullable|string|max:150',
+            'jenis_kelamin' => 'nullable|in:Lk,Pr',
+            'wilayah'       => 'nullable|string|max:100',
+            'alamat'        => 'nullable|string|max:500',
+            'sobat_id'      => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
+            'email'         => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'is_active'     => 'required|in:0,1',
+            'password'      => 'nullable|string|min:8|confirmed',
+        ], [
+            'nik.digits'         => 'NIK harus 16 digit angka.',
+            'nik.unique'         => 'NIK sudah dipakai mitra lain.',
+            'sobat_id.unique'    => 'Sobat ID sudah dipakai akun lain.',
+            'email.unique'       => 'Email sudah dipakai akun lain.',
+            'password.min'       => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak sama.',
+        ]);
+
+        try {
+            DB::transaction(function () use ($data, $mitra, $user) {
+                $akun = [
+                    'name'      => $data['nama'],
+                    'username'  => $data['sobat_id'],
+                    'email'     => $data['email'] ?? null,
+                    'is_active' => (bool) (int) $data['is_active'],
+                ];
+
+                // Password hanya diubah jika diisi
+                if (!empty($data['password'])) {
+                    $akun['password'] = $data['password']; // otomatis di-hash oleh model
+                }
+
+                $user->update($akun);
+
+                $mitra->update([
+                    'nik'           => $data['nik'],
+                    'pekerjaan'     => $data['pekerjaan'] ?? null,
+                    'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
+                    'wilayah'       => $data['wilayah'] ?? null,
+                    'alamat'        => $data['alamat'] ?? null,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->withErrors(['server' => 'Gagal menyimpan perubahan: ' . $e->getMessage()]);
+        }
+
+        // Kembali ke tab status yang sesuai, agar baris yang diedit tetap terlihat
+        return redirect()
+            ->route('admin.datamitra', ['status' => $data['is_active'] ? 'active' : 'inactive'])
+            ->with('sukses', 'Data mitra "' . $data['nama'] . '" berhasil diperbarui.');
     }
 }

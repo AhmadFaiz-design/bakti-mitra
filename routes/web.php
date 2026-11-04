@@ -35,6 +35,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
             ->whereNumber('mitra')
             ->name('mitra.destroy');
+
+        Route::get('/mitra/{mitra}/edit', [MitraController::class, 'edit'])
+            ->whereNumber('mitra')
+            ->name('mitra.edit');
+        Route::put('/mitra/{mitra}', [MitraController::class, 'update'])
+            ->whereNumber('mitra')
+            ->name('mitra.update');
     });
 });
 

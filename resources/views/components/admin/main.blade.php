@@ -148,6 +148,7 @@
             if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
         } catch (e) {}
     </script>
+    <x-admin.notifikasi />
     @stack('scripts')
 </body>
 
