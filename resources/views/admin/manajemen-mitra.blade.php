@@ -108,29 +108,26 @@
                     </button>
                 </div>
 
-                <div class="filter-wrap">
-                    <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false">
-                        <svg>
-                            <use href="#i-filter" />
-                        </svg>
-                        Filter
-                    </button>
+                @php
+                    $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
+                    $honorMode = request('honor_mode', 'nominal');
+                    $adaHonor =
+                        $honorMode === 'nominal'
+                            ? request()->filled('honor_jumlah')
+                            : request()->filled('honor_dari') || request()->filled('honor_sampai');
+                    $jumlahFilter = (int) $adaHonor + (int) request()->filled('wilayah') + count($tugasDipilih);
+                @endphp
 
-                    <div class="filter-menu" id="filterMenu">
-                        <button type="button" data-sort="name"
-                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'name', 'page' => null]) }}'">
-                            Nama A–Z
-                        </button>
-                        <button type="button" data-sort="honor-desc"
-                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'honor-desc', 'page' => null]) }}'">
-                            Honor tertinggi
-                        </button>
-                        <button type="button" data-sort="honor-asc"
-                            onclick="window.location='{{ request()->fullUrlWithQuery(['sort' => 'honor-asc', 'page' => null]) }}'">
-                            Honor terendah
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false"
+                    aria-controls="filterPanel">
+                    <svg>
+                        <use href="#i-filter" />
+                    </svg>
+                    Filter
+                    @if ($jumlahFilter > 0)
+                        <span class="filter-count">{{ $jumlahFilter }}</span>
+                    @endif
+                </button>
             </section>
 
             {{-- TABEL MITRA --}}
@@ -213,7 +210,7 @@
                                     @php
                                         // Sesuaikan nama kolom 'nama' dengan kolom nama tugas di tabel pekerjaan Anda
                                         // $tugas = $mitra->pekerjaan?->pluck('nama')->values()->all() ?? [];
-                                        $tugas = ['Kambing Goreng', 'Perkedel Sapi'];
+                                        $tugas = [];
                                         $urlEdit = Route::has('admin.mitra.edit')
                                             ? route('admin.mitra.edit', $mitra->id)
                                             : '';
@@ -265,11 +262,11 @@
                         <span style="display:flex;gap:8px;align-items:center">
                             @if ($daftarMitra->onFirstPage())
                                 <button type="button" class="outline-btn" disabled>
-                                    << /button>
+                                    <</button>
                                     @else
                                         <a class="outline-btn" style="text-decoration:none"
                                             href="{{ $daftarMitra->previousPageUrl() }}">
-                                            << /a>
+                                            <</a>
                             @endif
 
                             <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
@@ -331,6 +328,117 @@
                     </div>
                 </div>
             </div>
+            <div class="filter-overlay" id="filterOverlay"></div>
+
+            <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Data Mitra"
+                aria-hidden="true">
+                <form method="GET" action="{{ route('admin.datamitra') }}" id="filterForm" class="filter-form">
+                    {{-- pertahankan pencarian, status, dan urutan --}}
+                    <input type="hidden" name="q" value="{{ $q }}">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <input type="hidden" name="sort" value="{{ $sort }}">
+
+                    <div class="filter-body">
+                        <h2 class="filter-title">Filter Data Mitra</h2>
+
+                        {{-- HONOR --}}
+                        <div class="filter-section">
+                            <span class="filter-label">Honor</span>
+
+                            <div class="honor-box">
+                                <div class="honor-mode">
+                                    <label><input type="radio" name="honor_mode" value="nominal"
+                                            {{ $honorMode === 'nominal' ? 'checked' : '' }}> Nominal</label>
+                                    <label><input type="radio" name="honor_mode" value="rentang"
+                                            {{ $honorMode === 'rentang' ? 'checked' : '' }}> Rentang</label>
+                                </div>
+
+                                {{-- Mode nominal: satu kolom --}}
+                                <div class="honor-fields" id="honorNominal">
+                                    <span class="filter-sub">Jumlah</span>
+                                    <div class="rupiah-input">
+                                        <span>Rp</span>
+                                        <input type="text" inputmode="numeric" name="honor_jumlah" data-rupiah
+                                            value="{{ request('honor_jumlah') }}" placeholder="100.000">
+                                    </div>
+                                </div>
+
+                                {{-- Mode rentang: dua kolom --}}
+                                <div class="honor-fields" id="honorRentang">
+                                    <div class="honor-two">
+                                        <div>
+                                            <span class="filter-sub">Dari</span>
+                                            <div class="rupiah-input">
+                                                <span>Rp</span>
+                                                <input type="text" inputmode="numeric" name="honor_dari"
+                                                    data-rupiah value="{{ request('honor_dari') }}"
+                                                    placeholder="100.000">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="filter-sub">Sampai</span>
+                                            <div class="rupiah-input">
+                                                <span>Rp</span>
+                                                <input type="text" inputmode="numeric" name="honor_sampai"
+                                                    data-rupiah value="{{ request('honor_sampai') }}"
+                                                    placeholder="100.000">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- WILAYAH --}}
+                        <div class="filter-section">
+                            <label class="filter-label" for="filterWilayah">Wilayah</label>
+                            <div class="select-wrap">
+                                <select name="wilayah" id="filterWilayah">
+                                    <option value="">Pilih Wilayah</option>
+                                    @foreach ($daftarWilayah ?? ['Kendari', 'Mandonga', 'Baruga', 'Poasia', 'Kadia', 'Abeli'] as $w)
+                                        <option value="{{ $w }}"
+                                            {{ request('wilayah') === $w ? 'selected' : '' }}>
+                                            {{ $w }}</option>
+                                    @endforeach
+                                </select>
+                                <svg>
+                                    <use href="#i-down" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {{-- TUGAS --}}
+                        <div class="filter-section">
+                            <label class="filter-label" for="filterTugas">Tugas</label>
+                            <div class="select-wrap">
+                                <select id="filterTugas">
+                                    <option value="">Pilih Tugas</option>
+                                    @foreach ($daftarTugas ?? ["Susenas", "Seruti"] as $t)
+                                        <option value="{{ $t }}">{{ $t }}</option>
+                                    @endforeach
+                                </select>
+                                <svg>
+                                    <use href="#i-down" />
+                                </svg>
+                            </div>
+
+                            <div class="filter-chips" id="tugasChips" data-selected='@json($tugasDipilih)'>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-footer">
+                        <button type="button" class="filter-reset" id="filterReset">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                            </svg>
+                            Reset
+                        </button>
+                        <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
+                        <button type="submit" class="btn-apply">Terapkan</button>
+                    </div>
+                </form>
+            </aside>
 
             <form id="hapusMitraForm" method="POST" style="display:none">
                 @csrf
@@ -457,6 +565,110 @@
                                 hapusForm.action = url;
                                 hapusForm.submit();
                             }
+                        });
+                    })();
+                    /* Filter data mitra */
+                    (function() {
+                        const panel = document.getElementById('filterPanel');
+                        const overlay = document.getElementById('filterOverlay');
+                        const toggle = document.getElementById('filterToggle');
+                        const form = document.getElementById('filterForm');
+                        const chips = document.getElementById('tugasChips');
+                        const selTugas = document.getElementById('filterTugas');
+
+                        /* Buka / tutup panel */
+                        function buka() {
+                            panel.classList.add('open');
+                            overlay.classList.add('open');
+                            panel.setAttribute('aria-hidden', 'false');
+                            toggle.setAttribute('aria-expanded', 'true');
+                        }
+
+                        function tutup() {
+                            panel.classList.remove('open');
+                            overlay.classList.remove('open');
+                            panel.setAttribute('aria-hidden', 'true');
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                        toggle.addEventListener('click', buka);
+                        overlay.addEventListener('click', tutup);
+                        document.getElementById('filterCancel').addEventListener('click', tutup);
+                        document.addEventListener('keydown', e => {
+                            if (e.key === 'Escape') tutup();
+                        });
+
+                        /* Mode honor: nominal <-> rentang */
+                        const boxNominal = document.getElementById('honorNominal');
+                        const boxRentang = document.getElementById('honorRentang');
+
+                        function aturMode() {
+                            const mode = form.querySelector('input[name="honor_mode"]:checked').value;
+                            const nominal = mode === 'nominal';
+                            boxNominal.hidden = !nominal;
+                            boxRentang.hidden = nominal;
+                            // input yang tersembunyi dinonaktifkan agar tidak ikut terkirim
+                            boxNominal.querySelectorAll('input').forEach(i => i.disabled = !nominal);
+                            boxRentang.querySelectorAll('input').forEach(i => i.disabled = nominal);
+                        }
+                        form.querySelectorAll('input[name="honor_mode"]').forEach(r => r.addEventListener('change', aturMode));
+                        aturMode();
+
+                        /* Format rupiah: 1500000 -> 1.500.000 */
+                        const formatRp = v => v.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        form.querySelectorAll('[data-rupiah]').forEach(input => {
+                            input.value = formatRp(input.value);
+                            input.addEventListener('input', () => input.value = formatRp(input.value));
+                        });
+                        // buang titik sebelum dikirim ke server
+                        form.addEventListener('submit', () => {
+                            form.querySelectorAll('[data-rupiah]').forEach(i => i.value = i.value.replace(/\./g, ''));
+                        });
+
+                        /* Tugas: pilih dari dropdown -> muncul sebagai chip */
+                        function tambahChip(nama) {
+                            if (!nama || chips.querySelector('[data-nama="' + CSS.escape(nama) + '"]')) return;
+
+                            const chip = document.createElement('span');
+                            chip.className = 'filter-chip';
+                            chip.dataset.nama = nama;
+
+                            const teks = document.createElement('span');
+                            teks.textContent = nama;
+
+                            const hapus = document.createElement('button');
+                            hapus.type = 'button';
+                            hapus.setAttribute('aria-label', 'Hapus ' + nama);
+                            hapus.textContent = '×';
+                            hapus.addEventListener('click', () => chip.remove());
+
+                            const hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = 'tugas[]';
+                            hidden.value = nama;
+
+                            chip.append(teks, hapus, hidden);
+                            chips.appendChild(chip);
+                        }
+
+                        selTugas.addEventListener('change', () => {
+                            tambahChip(selTugas.value);
+                            selTugas.value = '';
+                        });
+
+                        // pulihkan chip dari filter yang sedang aktif
+                        try {
+                            JSON.parse(chips.dataset.selected || '[]').forEach(tambahChip);
+                        } catch (e) {}
+
+                        /* Reset: kosongkan semua pilihan lalu terapkan */
+                        document.getElementById('filterReset').addEventListener('click', () => {
+                            form.querySelectorAll('[data-rupiah]').forEach(i => i.value = '');
+                            form.querySelector('input[name="honor_mode"][value="nominal"]').checked = true;
+                            document.getElementById('filterWilayah').value = '';
+                            chips.innerHTML = '';
+                            selTugas.value = '';
+                            aturMode();
+                            form.submit();
                         });
                     })();
                 </script>
