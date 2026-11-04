@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class MitraController extends Controller
 {
+
     public function index(Request $request)
     {
         $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
@@ -18,6 +19,12 @@ class MitraController extends Controller
             : 'name';
         $q = trim((string) $request->query('q', ''));
 
+        // Subquery total honor per mitra (dipakai untuk filter honor)
+        $honorSql = '(select COALESCE(sum(kp.jumlah), 0)
+                  from kontrak_pekerjaan kp
+                  join kontrak k on k.id = kp.kontrak_id
+                  where k.mitra_id = mitra.id)';
+
         $query = Mitra::query()
             ->join('users', 'users.id', '=', 'mitra.user_id')
             ->select('mitra.*')
@@ -25,6 +32,7 @@ class MitraController extends Controller
             ->withSum('pekerjaan', 'jumlah')
             ->where('users.is_active', $status === 'active');
 
+        // ---- Pencarian ----
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('users.name', 'like', "%{$q}%")
@@ -33,6 +41,38 @@ class MitraController extends Controller
             });
         }
 
+        // ---- Filter honor ----
+        $parse = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+        $min = $max = null;
+
+        if ($request->input('honor_mode') === 'rentang') {
+            if ($request->filled('honor_dari'))   $min = $parse($request->honor_dari);
+            if ($request->filled('honor_sampai')) $max = $parse($request->honor_sampai);
+        } elseif ($request->filled('honor_jumlah')) {
+            $min = $max = $parse($request->honor_jumlah); // nominal: honor sama dengan jumlah
+        }
+
+        if ($min !== null) $query->whereRaw("$honorSql >= ?", [$min]);
+        if ($max !== null) $query->whereRaw("$honorSql <= ?", [$max]);
+
+        // ---- Filter wilayah ----
+        if ($request->filled('wilayah')) {
+            $query->where('mitra.wilayah', $request->wilayah);
+        }
+
+        // ---- Filter tugas (cocok dengan salah satu tugas yang dipilih) ----
+        $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
+        if ($tugasDipilih) {
+            $query->whereExists(function ($s) use ($tugasDipilih) {
+                $s->select(DB::raw(1))
+                    ->from('kontrak_pekerjaan as kp')
+                    ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                    ->whereColumn('k.mitra_id', 'mitra.id')
+                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
+            });
+        }
+
+        // ---- Urutan ----
         if ($sort === 'honor-desc') {
             $query->orderByRaw('COALESCE(pekerjaan_sum_jumlah, 0) DESC')->orderBy('users.name');
         } elseif ($sort === 'honor-asc') {
@@ -43,13 +83,39 @@ class MitraController extends Controller
 
         $daftarMitra = $query->paginate(10)->withQueryString();
 
-        // Statistik dihitung dari seluruh data, bukan hanya halaman ini
+        // ---- Daftar tugas tiap mitra di halaman ini (untuk popover aksi) ----
+        $tugasPerMitra = DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->whereIn('k.mitra_id', $daftarMitra->pluck('id'))
+            ->whereNotNull('kp.uraian_pekerjaan')
+            ->select('k.mitra_id', 'kp.uraian_pekerjaan')
+            ->distinct()
+            ->get()
+            ->groupBy('mitra_id')
+            ->map(fn($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
+
+        // ---- Pilihan dropdown filter ----
+        $daftarWilayah = Mitra::whereNotNull('wilayah')
+            ->distinct()
+            ->orderBy('wilayah')
+            ->pluck('wilayah');
+
+        $daftarTugas = DB::table('kontrak_pekerjaan')
+            ->whereNotNull('uraian_pekerjaan')
+            ->distinct()
+            ->orderBy('uraian_pekerjaan')
+            ->pluck('uraian_pekerjaan');
+
+        // ---- Statistik (dari seluruh data) ----
         $total    = Mitra::count();
         $aktif    = Mitra::whereHas('user', fn($u) => $u->where('is_active', true))->count();
         $nonaktif = $total - $aktif;
 
         return view('admin.manajemen-mitra', compact(
             'daftarMitra',
+            'tugasPerMitra',
+            'daftarWilayah',
+            'daftarTugas',
             'total',
             'aktif',
             'nonaktif',

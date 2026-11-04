@@ -201,7 +201,7 @@
                                     <td class="id-cell">{{ $mitra->nik }}</td>
 
                                     <td class="honor-cell">
-                                        Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 3500000, 0, ',', '.') }}
+                                        Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 0, 0, ',', '.') }}
                                     </td>
 
                                     <td>
@@ -215,7 +215,7 @@
                                     @php
                                         // Sesuaikan nama kolom 'nama' dengan kolom nama tugas di tabel pekerjaan Anda
                                         // $tugas = $mitra->pekerjaan?->pluck('nama')->values()->all() ?? [];
-                                        $tugas = [];
+                                        $tugas = $tugasperMitra[$mitra->id] ?? [];
                                         $urlEdit = Route::has('admin.mitra.edit')
                                             ? route('admin.mitra.edit', $mitra->id)
                                             : '';
@@ -400,7 +400,7 @@
                             <div class="select-wrap">
                                 <select name="wilayah" id="filterWilayah">
                                     <option value="">Pilih Wilayah</option>
-                                    @foreach ($daftarWilayah ?? ['Kendari', 'Mandonga', 'Baruga', 'Poasia', 'Kadia', 'Abeli'] as $w)
+                                    @foreach ($daftarWilayah ?? ['Kota Kendari', 'Kab. Konawe Kepulauan'] as $w)
                                         <option value="{{ $w }}"
                                             {{ request('wilayah') === $w ? 'selected' : '' }}>
                                             {{ $w }}</option>
