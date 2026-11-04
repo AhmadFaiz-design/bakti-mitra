@@ -258,7 +258,7 @@
                     </table>
                 </div>
 
-                <div class="table-footer">
+                                <div class="table-footer">
                     <span>
                         @if ($daftarMitra->total() > 0)
                             Menampilkan {{ $daftarMitra->firstItem() }}–{{ $daftarMitra->lastItem() }}
@@ -270,22 +270,26 @@
 
                     @if ($daftarMitra->hasPages())
                         <span style="display:flex;gap:8px;align-items:center">
-                            @if ($daftarMitra->onFirstPage())
-                                <button type="button" class="outline-btn" disabled>&lt;
-                                </button>
-                            @else
+                            {{-- << dan < hanya tampil jika bukan halaman pertama --}}
+                            @unless ($daftarMitra->onFirstPage())
+                                <a class="outline-btn" style="text-decoration:none"&lt;
+                                    href="{{ $daftarMitra->url(1) }}" aria-label="Halaman pertama"
+                                    title="Halaman pertama">&lt;&lt;</a>
                                 <a class="outline-btn" style="text-decoration:none"
-                                    href="{{ $daftarMitra->previousPageUrl() }}">
-                                    < </a>
-                            @endif
+                                    href="{{ $daftarMitra->previousPageUrl() }}" aria-label="Halaman sebelumnya"
+                                    title="Halaman sebelumnya">&lt;</a>
+                            @endunless
 
                             <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
 
+                            {{-- > dan >> hanya tampil jika bukan halaman terakhir --}}
                             @if ($daftarMitra->hasMorePages())
                                 <a class="outline-btn" style="text-decoration:none"
-                                    href="{{ $daftarMitra->nextPageUrl() }}">></a>
-                            @else
-                                <button type="button" class="outline-btn" disabled>></button>
+                                    href="{{ $daftarMitra->nextPageUrl() }}" aria-label="Halaman berikutnya"
+                                    title="Halaman berikutnya">&gt;</a>
+                                <a class="outline-btn" style="text-decoration:none"
+                                    href="{{ $daftarMitra->url($daftarMitra->lastPage()) }}"
+                                    aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
                             @endif
                         </span>
                     @endif
