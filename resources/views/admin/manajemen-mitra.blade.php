@@ -27,12 +27,6 @@
                         </div>
                     </div>
                 </div>
-                @if (session('sukses'))
-                    <div role="status"
-                        style="background:#e6f4ee;border:1px solid #0f6b4f;color:#0f6b4f;border-radius:10px;padding:12px 16px;margin:0 0 16px;font-size:14px">
-                        {{ session('sukses') }}
-                    </div>
-                @endif
             </header>
 
             {{-- KARTU STATISTIK --}}
@@ -418,7 +412,7 @@
                             <div class="select-wrap">
                                 <select id="filterTugas">
                                     <option value="">Pilih Tugas</option>
-                                    @foreach ($daftarTugas ?? ["Susenas", "Seruti"] as $t)
+                                    @foreach ($daftarTugas ?? ['Susenas', 'Seruti'] as $t)
                                         <option value="{{ $t }}">{{ $t }}</option>
                                     @endforeach
                                 </select>
@@ -555,18 +549,42 @@
                         // Tombol edit & hapus
                         document.getElementById('popEdit').addEventListener('click', () => {
                             const url = aktif?.dataset.editUrl;
-                            if (url) window.location = url;
-                            else alert('Halaman edit mitra belum dibuat.');
-                        });
-
-                        document.getElementById('popHapus').addEventListener('click', () => {
-                            const url = aktif?.dataset.deleteUrl;
-                            if (!url) {
-                                alert('Fitur hapus mitra belum dibuat.');
+                            if (url) {
+                                window.location = url;
                                 return;
                             }
-                            if (confirm('Hapus akun mitra "' + aktif.dataset.nama +
-                                    '"? Tindakan ini tidak bisa dibatalkan.')) {
+                            tutup();
+                            popup({
+                                jenis: 'info',
+                                judul: 'Belum tersedia',
+                                pesan: 'Halaman edit mitra belum dibuat.'
+                            });
+                        });
+
+                        document.getElementById('popHapus').addEventListener('click', async () => {
+                            const url = aktif?.dataset.deleteUrl;
+                            const nama = aktif?.dataset.nama;
+
+                            tutup(); // tutup popover aksi lebih dulu
+
+                            if (!url) {
+                                popup({
+                                    jenis: 'info',
+                                    judul: 'Belum tersedia',
+                                    pesan: 'Fitur hapus mitra belum dibuat.'
+                                });
+                                return;
+                            }
+
+                            const lanjut = await popup({
+                                jenis: 'hapus',
+                                judul: 'Hapus akun mitra?',
+                                pesan: 'Akun "' + nama + '" akan dihapus permanen dan tidak bisa dikembalikan.',
+                                tombolOk: 'Ya, hapus',
+                                tombolBatal: 'Batal'
+                            });
+
+                            if (lanjut) {
                                 hapusForm.action = url;
                                 hapusForm.submit();
                             }
@@ -679,45 +697,6 @@
                 </script>
             @endpush
 
-            @if (session('sukses'))
-                <div id="popupSukses" role="dialog" aria-modal="true" aria-labelledby="popupJudul"
-                    style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px">
-                    <div
-                        style="background:#fff;color:#17261f;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25)">
-                        <div
-                            style="width:56px;height:56px;margin:0 auto 14px;border-radius:50%;background:#e6f4ee;color:#0f6b4f;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">
-                            ✓</div>
-                        <h3 id="popupJudul" style="margin:0 0 8px;font-size:18px">Berhasil</h3>
-                        <p style="margin:0 0 20px;font-size:14px;color:#5f7068">{{ session('sukses') }}</p>
-                        <button type="button" id="popupTutup"
-                            style="padding:10px 28px;font-size:15px;font-weight:600;color:#fff;background:#0f6b4f;border:0;border-radius:10px;cursor:pointer">
-                            OK
-                        </button>
-                    </div>
-                </div>
-
-                @push('scripts')
-                    <script>
-                        (function() {
-                            /* Hapus draf form karena data sudah tersimpan */
-                            try {
-                                sessionStorage.removeItem('draftTambahMitra');
-                            } catch (e) {}
-
-                            const popup = document.getElementById('popupSukses');
-                            const tutup = () => popup && popup.remove();
-
-                            document.getElementById('popupTutup').addEventListener('click', tutup);
-                            popup.addEventListener('click', e => {
-                                if (e.target === popup) tutup();
-                            });
-                            document.addEventListener('keydown', e => {
-                                if (e.key === 'Escape') tutup();
-                            });
-                        })();
-                    </script>
-                @endpush
-            @endif
             @if (session('gagal'))
                 <div id="popupGagal" role="alertdialog" aria-modal="true" aria-labelledby="popupGagalJudul"
                     style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px">
