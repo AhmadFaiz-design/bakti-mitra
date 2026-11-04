@@ -267,19 +267,11 @@
                         <span style="display:flex;gap:8px;align-items:center">
                             @if ($daftarMitra->onFirstPage())
                                 <button type="button" class="outline-btn" disabled>
-<<<<<<< HEAD
-                                    <</button>
-                                    @else
-                                        <a class="outline-btn" style="text-decoration:none"
-                                            href="{{ $daftarMitra->previousPageUrl() }}">
-                                            <</a>
-=======
                                 </button>
                             @else
                                 <a class="outline-btn" style="text-decoration:none"
                                     href="{{ $daftarMitra->previousPageUrl() }}">
                                     < </a>
->>>>>>> 90450ed452d6ff0955018c3eb18ad2f6a89fedd4
                             @endif
 
                             <span>Halaman {{ $daftarMitra->currentPage() }} dari {{ $daftarMitra->lastPage() }}</span>
