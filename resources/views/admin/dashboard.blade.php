@@ -2,15 +2,15 @@
         <x-admin.main>
             <header class="topbar">
                 <h1>Dashboard</h1>
-                {{-- <button class="pill">Bulan <svg>
-                        <use href="#i-down" />
-                    </svg></button> --}}
                 <label class="search"><svg>
                         <use href="#i-search" />
                     </svg><input placeholder="Apa yang perlu dicari..."></label>
                 <div class="user"><span class="bell"><svg>
                             <use href="#i-bell" />
-                        </svg></span>Alyssa<div class="avatar"></div>
+                        </svg></span>{{ auth()->user()->name }}<div class="avatar"
+                        style="display:flex;align-items:center;justify-content:center">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    </div>
                 </div>
             </header>
 
@@ -51,13 +51,15 @@
                             <h2><svg>
                                     <use href="#i-user" />
                                 </svg>Total Mitra</h2>
-                            <p class="num">123</p><span class="badge lime">120 Mitra Aktif</span>
+                            <p class="num">{{ $totalMitra }}</p><span class="badge lime">{{ $mitraAktif }} Mitra
+                                Aktif</span>
                         </div>
                         <div class="card stat">
                             <h2><svg>
                                     <use href="#i-user" />
                                 </svg>Total Koor</h2>
-                            <p class="num">13</p><span class="badge">2 Aktif</span>
+                            <p class="num">{{ $totalKoor }}</p><span class="badge">{{ $koorAktif }}
+                                Aktif</span>
                         </div>
                     </section>
 
@@ -115,7 +117,7 @@
                         </svg>{{ $namaBulan }}</h2>
 
                     <div class="cal-summary">
-                        <div class="box-cal" ><small>Deadline</small><strong>10</strong></div>
+                        <div class="box-cal"><small>Deadline</small><strong>10</strong></div>
                         <div><small>Selesai</small><strong>15</strong></div>
                         <div><small>Berlangsung</small><strong>13</strong></div>
                     </div>
@@ -152,10 +154,17 @@
                             <use href="#i-user" />
                         </svg>Status Mitra</h2>
                     <ul class="list">
-                        <li><span class="dot"></span>Nicholas Saputra<span class="badge lime">Aktif</span></li>
-                        <li><span class="dot"></span>Nicholas Saputra<span class="badge">Tidak Aktif</span></li>
-                        <li><span class="dot"></span>Nicholas Saputra<span class="badge lime">Aktif</span></li>
-                        <li><span class="dot"></span>Nicholas Saputra<span class="badge lime">Aktif</span></li>
+                        @forelse ($statusMitra as $m)
+                            <li><span class="dot"></span>{{ $m->user->name }}
+                                @if ($m->user->is_active)
+                                    <span class="badge lime">Aktif</span>
+                                @else
+                                    <span class="badge">Tidak Aktif</span>
+                                @endif
+                            </li>
+                        @empty
+                            <li>Belum ada data mitra.</li>
+                        @endforelse
                     </ul>
                 </div>
                 <div class="card">
