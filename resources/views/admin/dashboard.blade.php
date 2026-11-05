@@ -15,7 +15,7 @@
             </header>
 
             @php
-                $today = now();
+                $today = now('Asia/Makassar');
                 $calStart = $today->copy()->startOfMonth()->startOfWeek(\Carbon\Carbon::SUNDAY);
                 $calEnd = $today->copy()->endOfMonth()->endOfWeek(\Carbon\Carbon::SATURDAY);
                 $namaBulan = $today->copy()->locale('id')->translatedFormat('F');

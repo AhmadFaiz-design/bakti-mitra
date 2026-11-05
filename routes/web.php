@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MitraController;
+use App\Http\Controllers\Admin\KoordinatorController;
 use App\Http\Controllers\Admin\MitraImportController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
@@ -34,14 +35,17 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/tambah-mitra', [MitraController::class, 'store'])->name('tambahmitra.simpan');
         Route::get('/exportPDF', [MitraController::class, 'export'])->name('mitra.export');
         Route::get('/mitra/{mitra}/edit', [MitraController::class, 'edit'])
-            ->whereNumber('mitra')->name('mitra.edit');
+        ->whereNumber('mitra')->name('mitra.edit');
         Route::put('/mitra/{mitra}', [MitraController::class, 'update'])
-            ->whereNumber('mitra')->name('mitra.update');
+        ->whereNumber('mitra')->name('mitra.update');
         Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
-            ->whereNumber('mitra')->name('mitra.destroy');
+        ->whereNumber('mitra')->name('mitra.destroy');
 
         // Koordinator
         Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
+        Route::get('/tambah-koor', [KoordinatorController::class, 'create'])->name('tambahkoor');
+        // Route::get('/tambah-koor', fn() => view('admin.tambah-mitra'))->name('admin.tambahkoor');
+        Route::post('/tambah-koor', [KoordinatorController::class, 'store'])->name('tambahkoor.simpan');
 
         // Penugasan
         Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');
