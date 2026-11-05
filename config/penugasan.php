@@ -7,8 +7,11 @@
  */
 return [
 
-    // Dropdown RO (juga dipakai untuk RO Paket Data / Pulsa)
-    'ro' => [
+    // Dropdown RO PULSA( dipakai untuk RO Paket Data / Pulsa)
+    'ro_pulsa' => [
+        '054.01.WA.2886.EBA.994',
+        '054.01.WA.2886.EBD.952',
+        '054.01.WA.2886.EBD.955',
         '054.01.GG.2896.BMA.004',
         '054.01.GG.2897.BDB.003',
         '054.01.GG.2897.BMA.004',
@@ -17,20 +20,19 @@ return [
         '054.01.GG.2899.BMA.006',
         '054.01.GG.2900.BMA.005',
         '054.01.GG.2902.BMA.004',
-        '054.01.GG.2902.BMA.006',
+        '054.01.GG.2902.QMA.006',
         '054.01.GG.2903.BMA.009',
-        '054.01.GG.2903.QMA.006',
         '054.01.GG.2904.BMA.006',
         '054.01.GG.2905.BMA.004',
-        '054.01.GG.2905.BMA.005',
         '054.01.GG.2906.BMA.006',
         '054.01.GG.2907.BMA.006',
         '054.01.GG.2907.BMA.008',
         '054.01.GG.2908.BMA.004',
-        '054.01.GG.2908.BMA.009',
         '054.01.GG.2909.BMA.005',
-        '054.01.GG.2910.BMA.007',
         '054.01.GG.2910.BMA.008',
+        '054.01.GG.2910.QMA.006',
+        '054.01.GG.2910.QMA.007',
+        '054.01.GG.2910.QMA.010',
     ],
 
     // Dropdown KRO/RO
@@ -75,7 +77,6 @@ return [
         '725.A.521213',
     ],
 
-    // Dropdown Satuan
     // Dropdown Satuan
     'satuan' => [
         'Dokumen',
