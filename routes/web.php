@@ -8,7 +8,6 @@ use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PenugasanController;
 
-
 /*
  | Halaman awal selalu diarahkan ke /login.
  | Jika pengguna sudah login, AuthController@showLogin meneruskannya
@@ -46,12 +45,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/data-koor', [KoordinatorController::class, 'index'])->name('datakoor');
         Route::get('/tambah-koor', [KoordinatorController::class, 'create'])->name('tambahkoor');
         Route::post('/tambah-koor', [KoordinatorController::class, 'store'])->name('tambahkoor.simpan');
+        Route::delete('/koordinator/{koordinator}', [KoordinatorController::class, 'destroy'])
+            ->whereNumber('koordinator')->name('koordinator.destroy');
         Route::get('/koordinator/{koordinator}/edit', [KoordinatorController::class, 'edit'])
             ->whereNumber('koordinator')->name('koordinator.edit');
         Route::put('/koordinator/{koordinator}', [KoordinatorController::class, 'update'])
             ->whereNumber('koordinator')->name('koordinator.update');
-        Route::delete('/koordinator/{koordinator}', [KoordinatorController::class, 'destroy'])
-            ->whereNumber('koordinator')->name('koordinator.destroy');
 
         // Penugasan
         Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');
@@ -65,6 +64,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             ->whereNumber('pekerjaan')->name('penugasan.edit');
         Route::put('/penugasan/{pekerjaan}', [PenugasanController::class, 'update'])
             ->whereNumber('pekerjaan')->name('penugasan.update');
+        Route::get('/penugasan/export', [PenugasanController::class, 'export'])->name('penugasan.export');
+        Route::post('/penugasan/bayar-massal', [PenugasanController::class, 'bayarMassal'])->name('penugasan.bayar-massal');
     });
 });
 

@@ -8,10 +8,14 @@ use App\Models\KontrakPekerjaan;
 use App\Models\Mitra;
 use App\Models\User;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
 
 class PenugasanController extends Controller
 {
@@ -19,15 +23,11 @@ class PenugasanController extends Controller
     public function index(Request $request)
     {
         $q      = trim((string) $request->query('q', ''));
-        $status = $request->query('status', 'semua'); // semua | belum | lunas
+        $status = in_array($request->query('status'), ['belum', 'lunas'], true)
+            ? $request->query('status')
+            : 'semua'; // semua | belum | lunas
 
-        $query = KontrakPekerjaan::query()
-            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
-                $w->where('uraian_pekerjaan', 'like', "%{$q}%")
-                  ->orWhereHas('kontrak.mitra.user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
-            }))
-            ->when($status === 'lunas', fn ($query) => $query->where('honor_dibayar', true))
-            ->when($status === 'belum', fn ($query) => $query->where('honor_dibayar', false));
+        $query = $this->filterQuery($request);
 
         // Ringkasan honor mengikuti pencarian/filter yang sedang aktif
         $ringkasan = [
@@ -42,7 +42,25 @@ class PenugasanController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.penugasan', compact('daftar', 'q', 'status', 'ringkasan'));
+        // Pilihan dropdown di panel filter
+        $daftarWilayah = Mitra::whereNotNull('wilayah')
+            ->distinct()->orderBy('wilayah')->pluck('wilayah');
+
+        $daftarTugas = KontrakPekerjaan::whereNotNull('uraian_pekerjaan')
+            ->distinct()->orderBy('uraian_pekerjaan')->pluck('uraian_pekerjaan');
+
+        $daftarKoordinator = User::where('role', 'koordinator')
+            ->orderBy('name')->get(['id', 'name']);
+
+        return view('admin.penugasan', compact(
+            'daftar',
+            'q',
+            'status',
+            'ringkasan',
+            'daftarWilayah',
+            'daftarTugas',
+            'daftarKoordinator'
+        ));
     }
 
     /** Admin menandai honor sudah / belum dibayar */
@@ -53,7 +71,7 @@ class PenugasanController extends Controller
         $pekerjaan->update([
             'honor_dibayar' => $dibayar,
             'dibayar_pada'  => $dibayar ? now() : null,
-            'dibayar_oleh'  => $dibayar ? auth()->id() : null,
+            'dibayar_oleh'  => $dibayar ? Auth::id() : null,
         ]);
 
         return response()->json([
@@ -66,9 +84,9 @@ class PenugasanController extends Controller
     public function create()
     {
         $mitra = Mitra::with('user:id,name,username,is_active')
-            ->whereHas('user', fn ($u) => $u->where('is_active', true))
+            ->whereHas('user', fn($u) => $u->where('is_active', true))
             ->get()
-            ->sortBy(fn ($m) => strtolower($m->user->name))
+            ->sortBy(fn($m) => strtolower($m->user->name))
             ->values();
 
         return view('admin.tambah-penugasan', [
@@ -112,7 +130,7 @@ class PenugasanController extends Controller
             DB::transaction(function () use ($data, $tanggal, $jumlah, $pulsa, $ro, $koordinatorId, &$dibuat, &$dilewati) {
                 $daftarMitra = Mitra::with('user')
                     ->whereIn('id', $data['mitra_id'])
-                    ->whereHas('user', fn ($u) => $u->where('is_active', true))
+                    ->whereHas('user', fn($u) => $u->where('is_active', true))
                     ->get();
 
                 foreach ($daftarMitra as $mitra) {
@@ -123,7 +141,7 @@ class PenugasanController extends Controller
                             'periode_tahun' => $tanggal->year,
                             'periode_bulan' => $tanggal->month,
                         ],
-                        ['dibuat_oleh' => auth()->id()]
+                        ['dibuat_oleh' => Auth::id()]
                     );
 
                     // Lewati jika mitra sudah punya tugas yang sama pada bulan itu
@@ -168,7 +186,7 @@ class PenugasanController extends Controller
             return back()->withInput()->with(
                 'gagal',
                 'Tidak ada tugas yang dibuat. Mitra yang dipilih sudah memiliki tugas "'
-                . $data['uraian_pekerjaan'] . '" pada bulan itu, atau akunnya tidak aktif.'
+                    . $data['uraian_pekerjaan'] . '" pada bulan itu, atau akunnya tidak aktif.'
             );
         }
 
@@ -229,7 +247,7 @@ class PenugasanController extends Controller
                         'periode_tahun' => $tanggal->year,
                         'periode_bulan' => $tanggal->month,
                     ],
-                    ['dibuat_oleh' => auth()->id()]
+                    ['dibuat_oleh' => Auth::id()]
                 );
 
                 $pindah = $kontrak->getKey() !== $kontrakLama->getKey();
@@ -304,6 +322,192 @@ class PenugasanController extends Controller
         return redirect()
             ->route('admin.penugasan')
             ->with('sukses', 'Tugas "' . $nama . '" berhasil dihapus.');
+    }
+
+    /**
+     * Query penugasan dengan pencarian, status, dan semua filter.
+     * Dipakai oleh index(), export(), dan bayarMassal().
+     */
+    private function filterQuery(Request $request): Builder
+    {
+        $q      = trim((string) $request->input('q', ''));
+        $status = $request->input('status');
+
+        $query = KontrakPekerjaan::query()
+            ->when($q !== '', fn($query) => $query->where(function ($w) use ($q) {
+                $w->where('uraian_pekerjaan', 'like', "%{$q}%")
+                    ->orWhere('ro', 'like', "%{$q}%")
+                    ->orWhereHas('kontrak.mitra.user', fn($u) => $u
+                        ->where('name', 'like', "%{$q}%")
+                        ->orWhere('username', 'like', "%{$q}%"));
+            }))
+            ->when($status === 'lunas', fn($query) => $query->where('honor_dibayar', true))
+            ->when($status === 'belum', fn($query) => $query->where('honor_dibayar', false));
+
+        // Honor per tugas: nominal (sama dengan) atau rentang
+        $parse = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+        $min = $max = null;
+
+        if ($request->input('honor_mode') === 'rentang') {
+            if ($request->filled('honor_dari'))   $min = $parse($request->input('honor_dari'));
+            if ($request->filled('honor_sampai')) $max = $parse($request->input('honor_sampai'));
+        } elseif ($request->filled('honor_jumlah')) {
+            $min = $max = $parse($request->input('honor_jumlah'));
+        }
+        if ($min !== null) $query->where('jumlah', '>=', $min);
+        if ($max !== null) $query->where('jumlah', '<=', $max);
+
+        // Wilayah mitra
+        if ($request->filled('wilayah')) {
+            $query->whereHas('kontrak.mitra', fn($m) => $m->where('wilayah', $request->input('wilayah')));
+        }
+
+        // Koordinator pemberi tugas
+        if ($request->filled('koordinator')) {
+            $query->where('koordinator_id', (int) $request->input('koordinator'));
+        }
+
+        // Tugas (cocok dengan salah satu yang dipilih)
+        $tugas = array_values(array_filter((array) $request->input('tugas', [])));
+        if ($tugas) {
+            $query->whereIn('uraian_pekerjaan', $tugas);
+        }
+
+        return $query;
+    }
+
+    /** Tandai banyak tugas sekaligus: sudah / belum dibayar */
+    public function bayarMassal(Request $request)
+    {
+        $request->validate([
+            'aksi'  => 'required|in:bayar,batal',
+            'ids'   => 'nullable|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $dibayar = $request->input('aksi') === 'bayar';
+
+        // "Pilih semua hasil filter" mengambil seluruh halaman, bukan hanya yang tampil
+        $ids = $request->boolean('semua_hasil')
+            ? $this->filterQuery($request)->pluck('id')
+            : collect((array) $request->input('ids', []))->filter()->values();
+
+        if ($ids->isEmpty()) {
+            return back()->with('gagal', 'Belum ada tugas yang dipilih.');
+        }
+
+        $target = KontrakPekerjaan::whereIn('id', $ids)
+            ->where('honor_dibayar', ! $dibayar); // hanya yang statusnya memang berubah
+
+        $jumlah = $target->update([
+            'honor_dibayar' => $dibayar,
+            'dibayar_pada'  => $dibayar ? now() : null,
+            'dibayar_oleh'  => $dibayar ? Auth::id() : null,
+        ]);
+
+        if ($jumlah === 0) {
+            return back()->with('gagal', 'Semua tugas yang dipilih sudah berstatus '
+                . ($dibayar ? 'dibayar.' : 'belum dibayar.'));
+        }
+
+        return back()->with('sukses', $jumlah . ' tugas berhasil ditandai '
+            . ($dibayar ? 'sudah dibayar.' : 'belum dibayar.'));
+    }
+
+    /** Export hasil filter ke CSV atau PDF */
+    public function export(Request $request)
+    {
+        $format   = $request->input('format') === 'pdf' ? 'pdf' : 'csv';
+        $daftar   = $this->filterQuery($request)
+            ->with('kontrak.mitra.user', 'koordinator')
+            ->latest('id')
+            ->get();
+        $namaFile = 'penugasan-mitra-' . now()->format('Ymd-His');
+
+        $tgl = fn($d) => $d ? Carbon::parse($d)->format('d/m/Y') : '-';
+
+        // ================= CSV =================
+        if ($format === 'csv') {
+            return response()->streamDownload(function () use ($daftar, $tgl) {
+                $out = fopen('php://output', 'w');
+                fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
+
+                fputcsv($out, [
+                    'No',
+                    'Nama Mitra',
+                    'Sobat ID',
+                    'Uraian Pekerjaan',
+                    'RO',
+                    'Koordinator',
+                    'Tanggal Mulai',
+                    'Tanggal Selesai',
+                    'Volume',
+                    'Satuan',
+                    'Honor',
+                    'Status Pembayaran',
+                    'Dibayar Pada',
+                ], ';', '"', '');
+
+                foreach ($daftar as $i => $p) {
+                    $user = $p->kontrak?->mitra?->user;
+                    fputcsv($out, [
+                        $i + 1,
+                        $user?->name,
+                        '="' . $user?->username . '"', // cegah Excel mengubah angka panjang
+                        $p->uraian_pekerjaan,
+                        $p->ro,
+                        $p->koordinator?->name,
+                        $tgl($p->tanggal_mulai),
+                        $tgl($p->tanggal_selesai),
+                        $p->volume,
+                        $p->satuan,
+                        (int) ($p->jumlah ?? 0),
+                        $p->honor_dibayar ? 'Sudah Dibayar' : 'Belum Dibayar',
+                        $p->honor_dibayar ? ($p->dibayar_pada?->format('d/m/Y H:i') ?? '') : '',
+                    ], ';', '"', '');
+                }
+                fclose($out);
+            }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
+
+        // ================= PDF =================
+        $statusLabel = ['lunas' => 'Sudah Dibayar', 'belum' => 'Belum Dibayar'][$request->input('status')] ?? 'Semua';
+        $keterangan  = ['Status: ' . $statusLabel];
+
+        if (trim((string) $request->input('q')) !== '') {
+            $keterangan[] = 'Pencarian: "' . trim($request->input('q')) . '"';
+        }
+        if ($request->filled('wilayah')) {
+            $keterangan[] = 'Wilayah: ' . $request->input('wilayah');
+        }
+        if ($request->filled('koordinator')) {
+            $keterangan[] = 'Koordinator: ' . (User::find($request->input('koordinator'))?->name ?? '-');
+        }
+        $tugas = array_filter((array) $request->input('tugas', []));
+        if ($tugas) {
+            $keterangan[] = 'Tugas: ' . implode(', ', $tugas);
+        }
+
+        $html = view('admin.export-penugasan-pdf', [
+            'daftar'     => $daftar,
+            'keterangan' => $keterangan,
+            'tanggal'    => now()->translatedFormat('d F Y H:i'),
+            'totalHonor' => (int) $daftar->sum('jumlah'),
+        ])->render();
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isRemoteEnabled', false);
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html);
+        $pdf->setPaper('A4', 'landscape');
+        $pdf->render();
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $namaFile . '.pdf"',
+        ]);
     }
 
     /* ===================== Bagian bersama ===================== */

@@ -186,7 +186,7 @@
                                     aria-haspopup="true" aria-expanded="false" data-nama="{{ $k->name }}"
                                     data-username="{{ $k->username }}" data-pekerjaan="{{ $jumlahPekerjaan }}"
                                     data-mitra="{{ $jumlahMitra }}" data-tugas="{{ json_encode($tugas) }}"
-                                    data-edit-url="{{ route('admin.koordinator.edit', $k->id) }}"
+                                    data-edit-url="{{ Route::has('admin.koordinator.edit') ? route('admin.koordinator.edit', $k->id) : '' }}"
                                     data-delete-url="{{ route('admin.koordinator.destroy', $k->id) }}">
                                     &#8942;
                                 </button>

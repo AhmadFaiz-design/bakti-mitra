@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\KontrakPekerjaan;
 use App\Models\User;
@@ -12,69 +13,110 @@ use Illuminate\Validation\Rule;
 class KoordinatorController extends Controller
 {
     /** Daftar koordinator beserta jumlah pekerjaan dan mitra yang dikelola */
-    public function index(Request $request)
-    {
-        $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
-        $sort   = in_array($request->query('sort'), ['pekerjaan-desc', 'mitra-desc'])
-            ? $request->query('sort')
-            : 'name';
-        $q = trim((string) $request->query('q', ''));
+    /** Daftar koordinator */
+public function index(Request $request)
+{
+    $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
+    $sort   = in_array($request->query('sort'), ['pekerjaan-desc', 'mitra-desc'])
+        ? $request->query('sort')
+        : 'name';
+    $q = trim((string) $request->query('q', ''));
 
-        // Jumlah pekerjaan = banyaknya uraian pekerjaan yang berbeda.
-        // (Satu pekerjaan yang diberikan ke 10 mitra tetap dihitung 1.)
-        $hitungPekerjaan = DB::table('kontrak_pekerjaan as kp')
-            ->whereColumn('kp.koordinator_id', 'users.id')
-            ->selectRaw('COUNT(DISTINCT kp.uraian_pekerjaan)');
+    $query = User::query()
+        ->where('role', 'koordinator')
+        ->where('is_active', $status === 'active')
+        ->select('users.*')
+        // jumlah tugas yang diberikan koordinator ini
+        ->selectSub(
+            fn ($s) => $s->from('kontrak_pekerjaan as kp')
+                ->whereColumn('kp.koordinator_id', 'users.id')
+                ->selectRaw('count(distinct kp.uraian_pekerjaan)'),
+            'jumlah_pekerjaan'
+        )
+        // jumlah mitra berbeda yang menerima tugasnya
+        ->selectSub(
+            fn ($s) => $s->from('kontrak_pekerjaan as kp')
+                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                ->whereColumn('kp.koordinator_id', 'users.id')
+                ->selectRaw('count(distinct k.mitra_id)'),
+            'jumlah_mitra'
+        );
 
-        // Jumlah mitra = banyaknya mitra berbeda yang mendapat pekerjaan dari koordinator ini.
-        $hitungMitra = DB::table('kontrak_pekerjaan as kp')
-            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
-            ->whereColumn('kp.koordinator_id', 'users.id')
-            ->selectRaw('COUNT(DISTINCT k.mitra_id)');
-
-        $query = User::query()
-            ->where('role', 'koordinator')
-            ->where('is_active', $status === 'active')
-            ->select('users.*')
-            ->selectSub($hitungPekerjaan, 'jumlah_pekerjaan')
-            ->selectSub($hitungMitra, 'jumlah_mitra');
-
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('users.name', 'like', "%{$q}%")
-                  ->orWhere('users.username', 'like', "%{$q}%");
-            });
-        }
-
-        match ($sort) {
-            'pekerjaan-desc' => $query->orderByDesc('jumlah_pekerjaan')->orderBy('users.name'),
-            'mitra-desc'     => $query->orderByDesc('jumlah_mitra')->orderBy('users.name'),
-            default          => $query->orderBy('users.name'),
-        };
-
-        $daftarKoordinator = $query->paginate(25)->withQueryString();
-
-        // Daftar nama pekerjaan per koordinator (untuk popover), hanya untuk halaman ini
-        $pekerjaanPerKoordinator = KontrakPekerjaan::query()
-            ->whereIn('koordinator_id', $daftarKoordinator->pluck('id'))
-            ->whereNotNull('uraian_pekerjaan')
-            ->select('koordinator_id', 'uraian_pekerjaan')
-            ->distinct()
-            ->orderBy('uraian_pekerjaan')
-            ->get()
-            ->groupBy('koordinator_id')
-            ->map(fn ($g) => $g->pluck('uraian_pekerjaan')->take(10)->values()->all());
-
-        // Statistik dihitung dari seluruh koordinator, bukan hanya halaman ini
-        $total    = User::where('role', 'koordinator')->count();
-        $aktif    = User::where('role', 'koordinator')->where('is_active', true)->count();
-        $nonaktif = $total - $aktif;
-
-        return view('admin.manajemen-koor', compact(
-            'daftarKoordinator', 'pekerjaanPerKoordinator',
-            'total', 'aktif', 'nonaktif', 'status', 'sort', 'q'
-        ));
+    if ($q !== '') {
+        $query->where(function ($w) use ($q) {
+            $w->where('users.name', 'like', "%{$q}%")
+                ->orWhere('users.username', 'like', "%{$q}%");
+        });
     }
+
+    if ($sort === 'pekerjaan-desc') {
+        $query->orderByDesc('jumlah_pekerjaan')->orderBy('users.name');
+    } elseif ($sort === 'mitra-desc') {
+        $query->orderByDesc('jumlah_mitra')->orderBy('users.name');
+    } else {
+        $query->orderBy('users.name');
+    }
+
+    $daftarKoordinator = $query->paginate(10)->withQueryString();
+
+    // Nama pekerjaan tiap koordinator di halaman ini (untuk popover)
+    $pekerjaanPerKoordinator = DB::table('kontrak_pekerjaan')
+        ->whereIn('koordinator_id', $daftarKoordinator->pluck('id'))
+        ->whereNotNull('uraian_pekerjaan')
+        ->select('koordinator_id', 'uraian_pekerjaan')
+        ->distinct()
+        ->get()
+        ->groupBy('koordinator_id')
+        ->map(fn ($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
+
+    // Statistik dari seluruh koordinator
+    $total    = User::where('role', 'koordinator')->count();
+    $aktif    = User::where('role', 'koordinator')->where('is_active', true)->count();
+    $nonaktif = $total - $aktif;
+
+    return view('admin.manajemen-koor', compact(
+        'daftarKoordinator',
+        'pekerjaanPerKoordinator',
+        'total',
+        'aktif',
+        'nonaktif',
+        'status',
+        'sort',
+        'q'
+    ));
+}
+
+/** Hapus akun koordinator */
+public function destroy(User $koordinator)
+{
+    if ($koordinator->role !== 'koordinator') {
+        abort(404);
+    }
+
+    if ($koordinator->id === Auth::id()) {
+        return back()->with('gagal', 'Anda tidak bisa menghapus akun Anda sendiri.');
+    }
+
+    // Koordinator yang sudah pernah memberi tugas tidak dihapus, agar riwayat tidak kehilangan pemberi tugasnya
+    $sudahMemberiTugas = DB::table('kontrak_pekerjaan')
+        ->where('koordinator_id', $koordinator->id)
+        ->exists();
+
+    if ($sudahMemberiTugas) {
+        return back()->with(
+            'gagal',
+            'Akun "' . $koordinator->name . '" tidak bisa dihapus karena sudah memberi tugas. '
+            . 'Nonaktifkan akunnya sebagai gantinya.'
+        );
+    }
+
+    $nama = $koordinator->name;
+    $koordinator->delete();
+
+    return redirect()
+        ->route('admin.datakoor')
+        ->with('sukses', 'Akun koordinator "' . $nama . '" berhasil dihapus.');
+}
 
     /** Form buat akun koordinator */
     public function create()
@@ -173,37 +215,6 @@ class KoordinatorController extends Controller
         return redirect()
             ->route('admin.datakoor', ['status' => $data['is_active'] ? 'active' : 'inactive'])
             ->with('sukses', 'Data koordinator "' . $data['nama'] . '" berhasil diperbarui.');
-    }
-
-    /** Hapus akun koordinator */
-    public function destroy(User $koordinator)
-    {
-        $this->pastikanKoordinator($koordinator);
-
-        $nama   = $koordinator->name;
-        $status = $koordinator->is_active ? 'active' : 'inactive';
-
-        // Koordinator yang tercatat pada data pekerjaan tidak boleh dihapus,
-        // agar riwayat penugasan tidak kehilangan koordinatornya.
-        if (KontrakPekerjaan::where('koordinator_id', $koordinator->id)->exists()) {
-            return back()->with(
-                'gagal',
-                'Akun "' . $nama . '" tidak bisa dihapus karena tercatat sebagai koordinator pada data '
-                . 'pekerjaan. Nonaktifkan akunnya sebagai gantinya.'
-            );
-        }
-
-        try {
-            $koordinator->delete();
-        } catch (\Throwable $e) {
-            report($e);
-
-            return back()->with('gagal', 'Gagal menghapus akun koordinator: ' . $e->getMessage());
-        }
-
-        return redirect()
-            ->route('admin.datakoor', ['status' => $status])
-            ->with('sukses', 'Akun koordinator "' . $nama . '" berhasil dihapus.');
     }
 
     /** Pengaman: hanya akun berperan koordinator yang boleh diubah/dihapus dari sini */

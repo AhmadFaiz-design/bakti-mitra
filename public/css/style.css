@@ -2346,3 +2346,159 @@ svg {
         padding: 24px 18px 20px;
     }
 }
+
+/* ========================================
+   HALAMAN PENUGASAN MITRA
+======================================== */
+
+/* Angka kartu: lebih kecil agar nominal rupiah muat */
+.stats-mitra .num.kecil {
+    font-size: clamp(20px, 1.8vw, 26px);
+}
+
+.stats-mitra .num.hijau {
+    color: #218653;
+}
+
+.stats-mitra .num.oranye {
+    color: #A86400;
+}
+
+/* Tabel */
+.penugasan-table {
+    min-width: 1100px;
+}
+
+.cell-wrap {
+    min-width: 220px;
+    max-width: 320px;
+    line-height: 1.45;
+}
+
+.cell-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.cell-wrap .cell-sub {
+    white-space: normal;
+}
+
+.status-badge.pending {
+    background: #FFF1DC;
+    color: #A86400;
+}
+
+/* Bar aksi massal */
+.bulk-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: var(--tint);
+    font-size: 13px;
+}
+
+.bulk-bar[hidden] {
+    display: none;
+}
+
+.bulk-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
+.bulk-info span {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.bulk-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary-dark);
+    font: 600 12px 'Poppins', sans-serif;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.bulk-actions .primary-btn,
+.bulk-actions .outline-btn {
+    min-height: 38px;
+    font-size: 12px;
+}
+
+/* Popover: teks bebas wrap dan kotak ceklist pembayaran */
+.pop-text {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.pop-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #D5D0E5;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.pop-check:hover {
+    border-color: var(--primary);
+    background: var(--bg);
+}
+
+.pop-check input {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.pop-check input:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+.pop-sub {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.pop-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.pop-btn-edit:disabled:hover {
+    background: var(--primary);
+    color: var(--white);
+}
+
+#popHapus:disabled:hover,
+.pop-btn-del:disabled:hover {
+    background: #FDE8E9;
+    color: #E5484D;
+}
