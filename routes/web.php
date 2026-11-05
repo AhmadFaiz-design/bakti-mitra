@@ -5,12 +5,14 @@ use App\Http\Controllers\Admin\MitraController;
 use App\Http\Controllers\Admin\MitraImportController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\PenugasanController;
 
 /*
  | Halaman awal selalu diarahkan ke /login.
  | Jika pengguna sudah login, AuthController@showLogin meneruskannya
  | ke dashboard sesuai peran (admin, koordinator, mitra).
  */
+
 Route::redirect('/', '/login');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -28,7 +30,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/mitra', [MitraController::class, 'index'])->name('datamitra');
         Route::get('/mitra/import', [MitraImportController::class, 'form'])->name('mitra.import');
         Route::post('/mitra/import', [MitraImportController::class, 'proses'])->name('mitra.import.proses');
-        Route::get('/tambah-mitra', fn () => view('admin.tambahmitra'))->name('tambahmitra');
+        Route::get('/tambah-mitra', fn() => view('admin.tambah-mitra'))->name('tambahmitra');
         Route::post('/tambah-mitra', [MitraController::class, 'store'])->name('tambahmitra.simpan');
         Route::get('/exportPDF', [MitraController::class, 'export'])->name('mitra.export');
         Route::get('/mitra/{mitra}/edit', [MitraController::class, 'edit'])
@@ -40,6 +42,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
         // Koordinator
         Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
+
+        // Penugasan
+        Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');
+        Route::get('/penugasan/buat', [PenugasanController::class, 'create'])->name('penugasan.buat');
+        Route::post('/penugasan', [PenugasanController::class, 'store'])->name('penugasan.simpan');
+        Route::delete('/penugasan/{pekerjaan}', [PenugasanController::class, 'destroy'])
+            ->whereNumber('pekerjaan')->name('penugasan.hapus');
     });
 });
 
