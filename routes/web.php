@@ -53,6 +53,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/penugasan', [PenugasanController::class, 'store'])->name('penugasan.simpan');
         Route::delete('/penugasan/{pekerjaan}', [PenugasanController::class, 'destroy'])
             ->whereNumber('pekerjaan')->name('penugasan.hapus');
+        Route::patch('/penugasan/{pekerjaan}/bayar', [PenugasanController::class, 'ubahStatusBayar'])
+            ->whereNumber('pekerjaan')->name('penugasan.bayar');
+        Route::get('/penugasan/{pekerjaan}/edit', [PenugasanController::class, 'edit'])
+            ->whereNumber('pekerjaan')->name('penugasan.edit');
+        Route::put('/penugasan/{pekerjaan}', [PenugasanController::class, 'update'])
+            ->whereNumber('pekerjaan')->name('penugasan.update');
     });
 });
 
