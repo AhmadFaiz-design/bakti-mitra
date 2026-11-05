@@ -68,6 +68,83 @@
             font-size: 14px;
         }
 
+        /* Checkbox: kembalikan ke ukuran normal (menimpa style input global) */
+        .form-group label.cek input[type="checkbox"],
+        .picker input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            flex: none;
+            padding: 0;
+            margin: 0;
+            border: 0;
+            box-shadow: none;
+            background: none;
+            accent-color: #0d6efd;
+            cursor: pointer;
+        }
+
+        .form-group label.cek {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .terpilih {
+            padding: 10px 12px;
+            border-bottom: 1px solid #d5e0da;
+            background: #f7faf8;
+        }
+
+        .terpilih[hidden] {
+            display: none;
+        }
+
+        .terpilih-judul {
+            font-size: 13px;
+            color: #5f7068;
+            margin: 0 0 8px;
+        }
+
+        .terpilih-daftar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 120px;
+            overflow: auto;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 6px 4px 10px;
+            border: 1px solid #d5e0da;
+            border-radius: 999px;
+            background: #fff;
+            font-size: 13px;
+        }
+
+        .chip button {
+            border: 0;
+            background: #eef3f0;
+            color: #5f7068;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .chip button:hover {
+            background: #fdecea;
+            color: #b3261e;
+        }
+
         .catatan {
             font-size: 13px;
             color: #5f7068;
@@ -188,26 +265,16 @@
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="ro">RO</label>
-                    <select id="ro" name="ro">
-                        <option value="">Pilih RO</option>
-                        @foreach ($daftarRo as $opsi)
-                            <option value="{{ $opsi }}" @selected(old('ro') === $opsi)>{{ $opsi }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="kro_ro">KRO/RO</label>
+                    <label for="kro_ro">KRO</label>
                     <select id="kro_ro" name="kro_ro">
-                        <option value="">Pilih KRO/RO</option>
+                        <option value="">Pilih KRO</option>
                         @foreach ($daftarKro as $opsi)
                             <option value="{{ $opsi }}" @selected(old('kro_ro') === $opsi)>{{ $opsi }}</option>
                         @endforeach
                     </select>
                 </div>
 
-                <div class="form-group full-width">
+                <div class="form-group">
                     <label for="komponen">Komponen</label>
                     <select id="komponen" name="komponen">
                         <option value="">Pilih Komponen</option>
@@ -218,7 +285,13 @@
                 </div>
 
                 <div class="form-group full-width">
-                    <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+                    <label for="previewRo">RO (gabungan KRO + Komponen)</label>
+                    <input type="text" id="previewRo" value="" readonly tabindex="-1"
+                        placeholder="Terisi otomatis">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="cek">
                         <input type="checkbox" id="paket_data_pulsa" name="paket_data_pulsa" value="1"
                             @checked(old('paket_data_pulsa'))>
                         Termasuk paket data / pulsa
@@ -228,8 +301,8 @@
                 <div class="form-group full-width" id="grupRoPulsa" hidden>
                     <label for="ro_paket_data_pulsa">RO Paket Data / Pulsa</label>
                     <select id="ro_paket_data_pulsa" name="ro_paket_data_pulsa">
-                        <option value="">Pilih RO</option>
-                        @foreach ($daftarRo as $opsi)
+                        <option value="">Pilih RO Pulsa</option>
+                        @foreach ($daftarRoPulsa as $opsi)
                             <option value="{{ $opsi }}" @selected(old('ro_paket_data_pulsa') === $opsi)>{{ $opsi }}</option>
                         @endforeach
                     </select>
@@ -260,6 +333,11 @@
                             <input type="checkbox" id="pilihSemuaMitra"> Pilih semua yang tampil
                         </label>
                         <strong id="jumlahDipilih" style="font-size:14px">0 dipilih</strong>
+                    </div>
+
+                    <div class="terpilih" id="boxTerpilih" hidden>
+                        <p class="terpilih-judul">Mitra terpilih (klik × untuk membatalkan)</p>
+                        <div class="terpilih-daftar" id="daftarTerpilih"></div>
                     </div>
 
                     <div class="picker-list">
@@ -317,6 +395,17 @@
                 pulsa.addEventListener('change', aturPulsa);
                 aturPulsa();
 
+                /* RO = KRO + Komponen */
+                const kro = document.getElementById('kro_ro');
+                const komp = document.getElementById('komponen');
+                const previewRo = document.getElementById('previewRo');
+                const aturRo = () => {
+                    previewRo.value = (kro.value && komp.value) ? kro.value + '.' + komp.value : '';
+                };
+                kro.addEventListener('change', aturRo);
+                komp.addEventListener('change', aturRo);
+                aturRo();
+
                 /* Pilih mitra */
                 const cari = document.getElementById('cariMitra');
                 if (!cari) return;
@@ -325,9 +414,35 @@
                 const jumlah = document.getElementById('jumlahDipilih');
                 const semua = document.getElementById('pilihSemuaMitra');
 
+                const boxTerpilih = document.getElementById('boxTerpilih');
+                const daftarTerpilih = document.getElementById('daftarTerpilih');
+
                 function hitungDipilih() {
-                    const n = items.filter(i => i.querySelector('input').checked).length;
-                    jumlah.textContent = n + ' dipilih';
+                    const dipilih = items.filter(i => i.querySelector('input').checked);
+                    jumlah.textContent = dipilih.length + ' dipilih';
+
+                    /* Preview nama mitra yang dipilih */
+                    daftarTerpilih.innerHTML = '';
+                    dipilih.forEach(item => {
+                        const chip = document.createElement('span');
+                        chip.className = 'chip';
+
+                        const nama = document.createElement('span');
+                        nama.textContent = item.querySelector('span').textContent.trim();
+
+                        const hapus = document.createElement('button');
+                        hapus.type = 'button';
+                        hapus.setAttribute('aria-label', 'Batalkan ' + nama.textContent);
+                        hapus.textContent = '×';
+                        hapus.addEventListener('click', () => {
+                            item.querySelector('input').checked = false;
+                            hitungDipilih();
+                        });
+
+                        chip.append(nama, hapus);
+                        daftarTerpilih.appendChild(chip);
+                    });
+                    boxTerpilih.hidden = dipilih.length === 0;
                 }
 
                 cari.addEventListener('input', () => {

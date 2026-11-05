@@ -47,11 +47,11 @@ class PenugasanController extends Controller
             ->get(['id', 'name', 'username']);
 
         return view('admin.tambah-penugasan', [
-            'mitra'       => $mitra,
-            'koordinator' => $koordinator,
-            'daftarRo'    => config('penugasan.ro'),
-            'daftarKro'   => config('penugasan.kro'),
+            'mitra'          => $mitra,
+            'koordinator'    => $koordinator,
+            'daftarKro'      => config('penugasan.kro'),
             'daftarKomponen' => config('penugasan.komponen'),
+            'daftarRoPulsa'  => config('penugasan.ro_pulsa'),
             'daftarSatuan'   => config('penugasan.satuan'),
         ]);
     }
@@ -68,38 +68,39 @@ class PenugasanController extends Controller
         $data = $request->validate([
             'uraian_pekerjaan'    => 'required|string|max:255',
             'koordinator_id'      => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'koordinator')->where('is_active', true)],
-            'ro'                  => ['nullable', Rule::in(config('penugasan.ro'))],
-            'kro_ro'              => ['nullable', Rule::in(config('penugasan.kro'))],
-            'komponen'            => ['nullable', Rule::in(config('penugasan.komponen'))],
+            'kro_ro'              => ['nullable', 'required_with:komponen', Rule::in(config('penugasan.kro'))],
+            'komponen'            => ['nullable', 'required_with:kro_ro', Rule::in(config('penugasan.komponen'))],
             'volume'              => 'required|numeric|gt:0|max:99999999',
             'satuan'              => ['required', Rule::in(config('penugasan.satuan'))],
             'harga_satuan'        => 'required|integer|min:1',
             'tanggal_mulai'       => 'required|date',
             'tanggal_selesai'     => 'required|date|after_or_equal:tanggal_mulai',
             'paket_data_pulsa'    => 'nullable|boolean',
-            'ro_paket_data_pulsa' => ['nullable', Rule::in(config('penugasan.ro'))],
+            'ro_paket_data_pulsa' => ['nullable', 'required_if:paket_data_pulsa,1', Rule::in(config('penugasan.ro_pulsa'))],
             'mitra_id'            => 'required|array|min:1',
             'mitra_id.*'          => 'integer|exists:mitra,id',
         ], [
-            'uraian_pekerjaan.required'      => 'Uraian pekerjaan wajib diisi.',
-            'koordinator_id.required'        => 'Pilih koordinator yang memberi tugas.',
-            'koordinator_id.exists'          => 'Koordinator yang dipilih tidak valid atau tidak aktif.',
-            'ro.in'                          => 'Pilihan RO tidak valid.',
-            'kro_ro.in'                      => 'Pilihan KRO/RO tidak valid.',
-            'ro_paket_data_pulsa.in'         => 'Pilihan RO paket data / pulsa tidak valid.',
-            'volume.required'                => 'Volume wajib diisi.',
-            'volume.numeric'                 => 'Volume harus berupa angka.',
-            'volume.gt'                      => 'Volume harus lebih dari 0.',
-            'satuan.required'                => 'Satuan wajib dipilih.',
-            'satuan.in'                      => 'Pilihan satuan tidak valid.',
-            'komponen.in'                    => 'Pilihan komponen tidak valid.',
-            'harga_satuan.required'          => 'Harga satuan wajib diisi.',
-            'harga_satuan.min'               => 'Harga satuan harus lebih dari 0.',
-            'tanggal_mulai.required'         => 'Tanggal mulai wajib diisi.',
-            'tanggal_selesai.required'       => 'Tanggal selesai wajib diisi.',
-            'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
-            'mitra_id.required'              => 'Pilih minimal satu mitra.',
-            'mitra_id.min'                   => 'Pilih minimal satu mitra.',
+            'uraian_pekerjaan.required'       => 'Uraian pekerjaan wajib diisi.',
+            'koordinator_id.required'         => 'Pilih koordinator yang memberi tugas.',
+            'koordinator_id.exists'           => 'Koordinator yang dipilih tidak valid atau tidak aktif.',
+            'kro_ro.in'                       => 'Pilihan KRO tidak valid.',
+            'kro_ro.required_with'            => 'KRO wajib dipilih jika Komponen diisi.',
+            'komponen.in'                     => 'Pilihan komponen tidak valid.',
+            'komponen.required_with'          => 'Komponen wajib dipilih jika KRO diisi.',
+            'ro_paket_data_pulsa.in'          => 'Pilihan RO paket data / pulsa tidak valid.',
+            'ro_paket_data_pulsa.required_if' => 'Pilih RO paket data / pulsa.',
+            'volume.required'                 => 'Volume wajib diisi.',
+            'volume.numeric'                  => 'Volume harus berupa angka.',
+            'volume.gt'                       => 'Volume harus lebih dari 0.',
+            'satuan.required'                 => 'Satuan wajib dipilih.',
+            'satuan.in'                       => 'Pilihan satuan tidak valid.',
+            'harga_satuan.required'           => 'Harga satuan wajib diisi.',
+            'harga_satuan.min'                => 'Harga satuan harus lebih dari 0.',
+            'tanggal_mulai.required'          => 'Tanggal mulai wajib diisi.',
+            'tanggal_selesai.required'        => 'Tanggal selesai wajib diisi.',
+            'tanggal_selesai.after_or_equal'  => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
+            'mitra_id.required'               => 'Pilih minimal satu mitra.',
+            'mitra_id.min'                    => 'Pilih minimal satu mitra.',
         ]);
 
         // Bulan kontrak mengikuti tanggal mulai
@@ -107,13 +108,18 @@ class PenugasanController extends Controller
         $jumlah  = (int) round(((float) $data['volume']) * ((int) $data['harga_satuan']));
         $pulsa   = $request->boolean('paket_data_pulsa');
 
+        // RO normal = KRO + Komponen
+        $ro = (!empty($data['kro_ro']) && !empty($data['komponen']))
+            ? $data['kro_ro'] . '.' . $data['komponen']
+            : null;
+
         $koordinatorId = (int) $data['koordinator_id'];
 
         $dibuat   = 0;
         $dilewati = [];
 
         try {
-            DB::transaction(function () use ($data, $tanggal, $jumlah, $pulsa, $koordinatorId, &$dibuat, &$dilewati) {
+            DB::transaction(function () use ($data, $tanggal, $jumlah, $pulsa, $ro, $koordinatorId, &$dibuat, &$dilewati) {
                 $daftarMitra = Mitra::with('user')
                     ->whereIn('id', $data['mitra_id'])
                     ->whereHas('user', fn ($u) => $u->where('is_active', true))
@@ -144,7 +150,7 @@ class PenugasanController extends Controller
                         'koordinator_id'      => $koordinatorId,
                         'urutan'              => (int) $kontrak->pekerjaan()->max('urutan') + 1,
                         'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
-                        'ro'                  => $data['ro'] ?? null,
+                        'ro'                  => $ro,
                         'kro_ro'              => $data['kro_ro'] ?? null,
                         'komponen'            => $data['komponen'] ?? null,
                         'volume'              => $data['volume'],
