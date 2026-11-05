@@ -51,7 +51,7 @@
         <div class="card stat">
             <h2>
                 <svg>
-                    <use href="#i-cal" />
+                    <use href="#i-user" />
                 </svg>
                 Koordinator Non Aktif
             </h2>

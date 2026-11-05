@@ -67,6 +67,14 @@
             <path d="M2 20c.6-3.5 3.2-5.5 7-5.5s6.4 2 7 5.5" />
             <path d="M15.5 4.8a3.5 3.5 0 010 6.4M18 14.8c2 .7 3.6 2.4 4 5.2" />
         </symbol>
+        <symbol id="i-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <line x1="2" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="22" y2="12" />
+            <circle cx="12" cy="12" r="2.5" />
+        </symbol>
+
     </svg>
 
     <div class="app" id="app">

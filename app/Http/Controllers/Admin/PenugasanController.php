@@ -488,7 +488,7 @@ class PenugasanController extends Controller
             $keterangan[] = 'Tugas: ' . implode(', ', $tugas);
         }
 
-        $html = view('admin.export-penugasan-pdf', [
+        $html = view('admin.export-penugasan', [
             'daftar'     => $daftar,
             'keterangan' => $keterangan,
             'tanggal'    => now()->translatedFormat('d F Y H:i'),

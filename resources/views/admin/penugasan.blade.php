@@ -59,29 +59,29 @@
             <h2><svg>
                     <use href="#i-ring" />
                 </svg> Progres Pembayaran</h2>
-            <p class="num">{{ $persen }}%</p>
-            <div class="progress"><span style="width: {{ $persen }}%"></span></div>
+            <p class="num hijau">{{ $persen }}%</p>
+            {{-- <div class="progress"><span style="width: {{ $persen }}%"></span></div> --}}
         </div>
 
         <div class="card stat">
             <h2><svg>
-                    <use href="#i-chart" />
+                    <use href="#i-cash" />
                 </svg> Total Honor</h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['total'], 0, ',', '.') }}</p>
         </div>
 
         <div class="card stat">
             <h2><svg>
-                    <use href="#i-list" />
+                    <use href="#i-cash" />
                 </svg> Sudah Dibayar</h2>
-            <p class="num kecil hijau">Rp {{ number_format($ringkasan['dibayar'], 0, ',', '.') }}</p>
+            <p class="num kecil">Rp {{ number_format($ringkasan['dibayar'], 0, ',', '.') }}</p>
         </div>
 
         <div class="card stat">
             <h2><svg>
-                    <use href="#i-cal" />
+                    <use href="#i-cash" />
                 </svg> Belum Dibayar</h2>
-            <p class="num kecil oranye">Rp {{ number_format($ringkasan['belum'], 0, ',', '.') }}</p>
+            <p class="num kecil">Rp {{ number_format($ringkasan['belum'], 0, ',', '.') }}</p>
         </div>
     </section>
 
@@ -369,7 +369,6 @@
         <div class="pop-field">
             <span class="pop-label">Aksi</span>
             <div class="pop-actions">
-                <small class="pop-sub" id="popKunci" hidden></small>
                 <button type="button" class="pop-btn pop-btn-del" id="popHapus">
                     Hapus Tugas
                     <svg viewBox="0 0 24 24">
@@ -382,6 +381,13 @@
                         <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
                     </svg>
                 </button>
+            </div>
+
+            <div class="pop-warning" id="popKunci" role="alert" hidden>
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3l10 18H2L12 3zM12 10v4M12 17.5v.01" />
+                </svg>
+                <span id="popKunciTeks"></span>
             </div>
         </div>
     </div>
@@ -734,9 +740,8 @@
                     const terkunci = !!info.terkunci;
                     popEdit.disabled = terkunci;
                     popHapus.disabled = terkunci;
-                    const kunci = document.getElementById('popKunci');
-                    kunci.textContent = info.alasan || '';
-                    kunci.hidden = !terkunci;
+                    document.getElementById('popKunciTeks').textContent = info.alasan || '';
+                    document.getElementById('popKunci').hidden = !terkunci;
 
                     aktif = btn;
                     btn.setAttribute('aria-expanded', 'true');

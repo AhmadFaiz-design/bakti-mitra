@@ -38,7 +38,7 @@
                         </svg>
                         Progres Tugas Mitra
                     </h2>
-                    <p class="num">32%</p>
+                    <p class="num hijau">32%</p>
                 </div>
 
                 <div class="card stat">
@@ -64,7 +64,7 @@
                 <div class="card stat">
                     <h2>
                         <svg>
-                            <use href="#i-cal" />
+                            <use href="#i-user" />
                         </svg>
                         Mitra Non Aktif
                     </h2>

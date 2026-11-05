@@ -44,14 +44,14 @@
                             <h2><svg>
                                     <use href="#i-ring" />
                                 </svg>Progres Tugas Mitra</h2>
-                            <p class="num" style="font-size:34px;font-weight:600;margin:10px 0">32 %</p>
+                            <p class="num" style="font-size:28px;font-weight:600;margin:10px 0">32 %</p>
                             <div class="progress"><span></span></div>
                         </div>
                         <div class="card stat">
                             <h2><svg>
                                     <use href="#i-user" />
                                 </svg>Total Mitra</h2>
-                            <p class="num">{{ $totalMitra }}</p><span class="badge lime">{{ $mitraAktif }} Mitra
+                            <p class="num">{{ $totalMitra }}</p><span class="badge lime margintop">{{ $mitraAktif }} Mitra
                                 Aktif</span>
                         </div>
                         <div class="card stat">
