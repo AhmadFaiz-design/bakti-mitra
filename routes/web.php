@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PenugasanController;
 
+
 /*
  | Halaman awal selalu diarahkan ke /login.
  | Jika pengguna sudah login, AuthController@showLogin meneruskannya
@@ -35,17 +36,22 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/tambah-mitra', [MitraController::class, 'store'])->name('tambahmitra.simpan');
         Route::get('/exportPDF', [MitraController::class, 'export'])->name('mitra.export');
         Route::get('/mitra/{mitra}/edit', [MitraController::class, 'edit'])
-        ->whereNumber('mitra')->name('mitra.edit');
+            ->whereNumber('mitra')->name('mitra.edit');
         Route::put('/mitra/{mitra}', [MitraController::class, 'update'])
-        ->whereNumber('mitra')->name('mitra.update');
+            ->whereNumber('mitra')->name('mitra.update');
         Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
-        ->whereNumber('mitra')->name('mitra.destroy');
+            ->whereNumber('mitra')->name('mitra.destroy');
 
         // Koordinator
-        Route::view('/data-koor', 'admin.manajemen-koor')->name('datakoor');
+        Route::get('/data-koor', [KoordinatorController::class, 'index'])->name('datakoor');
         Route::get('/tambah-koor', [KoordinatorController::class, 'create'])->name('tambahkoor');
-        // Route::get('/tambah-koor', fn() => view('admin.tambah-mitra'))->name('admin.tambahkoor');
         Route::post('/tambah-koor', [KoordinatorController::class, 'store'])->name('tambahkoor.simpan');
+        Route::get('/koordinator/{koordinator}/edit', [KoordinatorController::class, 'edit'])
+            ->whereNumber('koordinator')->name('koordinator.edit');
+        Route::put('/koordinator/{koordinator}', [KoordinatorController::class, 'update'])
+            ->whereNumber('koordinator')->name('koordinator.update');
+        Route::delete('/koordinator/{koordinator}', [KoordinatorController::class, 'destroy'])
+            ->whereNumber('koordinator')->name('koordinator.destroy');
 
         // Penugasan
         Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');

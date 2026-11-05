@@ -1,271 +1,425 @@
-        <!-- KONTEN -->
+<x-admin.main>
+    {{-- HEADER HALAMAN --}}
+    <header class="page-heading">
+        <div>
+            <h1>Koordinator BPS Kota Kendari</h1>
+            <p>Manajemen Data Koordinator BPS Kota Kendari</p>
+        </div>
 
-        <x-admin.main>
-            {{-- HEADER HALAMAN --}}
-            <header class="page-heading">
-                <div>
-                    <h1>Koordinator BPS Kota Kendari</h1>
-                    <p>Manajemen Data Koordinator BPS Kota Kendari</p>
+        <div class="header-actions">
+            <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
+                <svg>
+                    <use href="#i-cal" />
+                </svg>
+            </button>
+
+            <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
+                <svg>
+                    <use href="#i-bell" />
+                </svg>
+            </button>
+
+            <div class="header-user">
+                <span>{{ auth()->user()->name }}</span>
+                <div class="avatar" style="width:48px;height:48px">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                 </div>
+            </div>
+        </div>
+    </header>
 
-                <div class="header-actions">
-                    <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                        <svg>
-                            <use href="#i-cal" />
-                        </svg>
-                    </button>
+    {{-- KARTU STATISTIK --}}
+    <section class="stats-koor">
+        <div class="card stat">
+            <h2>
+                <svg>
+                    <use href="#i-user" />
+                </svg>
+                Total Koordinator
+            </h2>
+            <p class="num">{{ $total }}</p>
+        </div>
+        <div class="card stat">
+            <h2>
+                <svg>
+                    <use href="#i-user" />
+                </svg>
+                Koordinator Aktif
+            </h2>
+            <p class="num">{{ $aktif }}</p>
+        </div>
+        <div class="card stat">
+            <h2>
+                <svg>
+                    <use href="#i-cal" />
+                </svg>
+                Koordinator Non Aktif
+            </h2>
+            <p class="num">{{ $nonaktif }}</p>
+        </div>
+    </section>
 
-                    <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                        <svg>
-                            <use href="#i-bell" />
-                        </svg>
-                    </button>
+    {{-- PENCARIAN, EXPORT, STATUS, URUTAN --}}
+    <section class="mitra-toolbar">
+        {{-- Pencarian (dikirim ke server saat menekan Enter) --}}
+        <form id="formKoor" method="GET" action="{{ route('admin.datakoor') }}" style="display: contents">
+            <input type="hidden" name="status" value="{{ $status }}">
+            <label class="mitra-search">
+                <svg>
+                    <use href="#i-search" />
+                </svg>
+                <input id="searchKoor" type="search" name="q" value="{{ $q }}"
+                    placeholder="Cari nama atau NIP koordinator..." autocomplete="off">
+            </label>
+        </form>
 
-                    <div class="header-user">
-                        <span>Alyssa</span>
-                        <div class="avatar" style="width:48px;height:48px">
-                            A
-                        </div>
-                    </div>
-                </div>
-            </header>
+        <button type="button" class="outline-btn" id="exportKoor"
+            onclick="popup({ jenis: 'info', judul: 'Belum tersedia', pesan: 'Fitur export koordinator belum dibuat.' })">
+            <svg>
+                <use href="#i-download" />
+            </svg>
+            Export
+        </button>
 
-            {{-- KARTU STATISTIK --}}
-            <section class="stats-koor">
-                <div class="card stat">
-                    <h2>
-                        <svg>
-                            <use href="#i-user" />
-                        </svg>
-                        Total Koordinator
-                    </h2>
-                    <p class="num">123</p>
-                </div>
-                <div class="card stat">
-                    <h2>
-                        <svg>
-                            <use href="#i-user" />
-                        </svg>
-                        Koordinator Aktif
-                    </h2>
-                    <p class="num">13</p>
-                </div>
-                <div class="card stat">
-                    <h2>
-                        <svg>
-                            <use href="#i-cal" />
-                        </svg>
-                        Koordinator Non Aktif
-                    </h2>
-                    <p class="num">110</p>
-                </div>
-            </section>
+        <div class="status-switch" aria-label="Filter status koordinator">
+            <button type="button" class="{{ $status === 'active' ? 'active' : '' }}" data-status="active"
+                aria-pressed="{{ $status === 'active' ? 'true' : 'false' }}"
+                onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'active', 'page' => null]) }}'">
+                Active
+            </button>
 
-            {{-- PENCARIAN, EXPORT, STATUS, FILTER --}}
-            <section class="mitra-toolbar">
-                <label class="mitra-search">
-                    <svg>
-                        <use href="#i-search" />
+            <button type="button" class="{{ $status === 'inactive' ? 'active' : '' }}" data-status="inactive"
+                aria-pressed="{{ $status === 'inactive' ? 'true' : 'false' }}"
+                onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'inactive', 'page' => null]) }}'">
+                Inactive
+            </button>
+        </div>
+
+        {{-- Urutan: dikirim bersama form pencarian --}}
+        <select name="sort" form="formKoor" class="outline-btn" aria-label="Urutkan koordinator"
+            onchange="this.form.submit()">
+            <option value="name" @selected($sort === 'name')>Nama A–Z</option>
+            <option value="pekerjaan-desc" @selected($sort === 'pekerjaan-desc')>Pekerjaan terbanyak</option>
+            <option value="mitra-desc" @selected($sort === 'mitra-desc')>Mitra terbanyak</option>
+        </select>
+    </section>
+
+    {{-- TABEL KOORDINATOR --}}
+    <section class="table-card">
+        <div class="table-heading">
+            <h2>
+                <svg>
+                    <use href="#i-user" />
+                </svg>
+                List Koordinator
+            </h2>
+
+            <a href="{{ route('admin.tambahkoor') }}" class="primary-btn" style="text-decoration:none">
+                <svg>
+                    <use href="#i-plus" />
+                </svg>
+                Add Koordinator
+            </a>
+        </div>
+
+        <div class="table-scroll">
+            <table class="mitra-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" class="check-mitra" id="selectAll"
+                                aria-label="Pilih semua koordinator">
+                        </th>
+                        <th>Profile</th>
+                        <th>Nama</th>
+                        <th>NIP / ID</th>
+                        <th>Jumlah Pekerjaan</th>
+                        <th>Jumlah Mitra</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+
+                <tbody id="koorTableBody">
+                    @forelse ($daftarKoordinator as $k)
+                        @php
+                            $jumlahPekerjaan = (int) $k->jumlah_pekerjaan;
+                            $jumlahMitra = (int) $k->jumlah_mitra;
+                            $tugas = $pekerjaanPerKoordinator[$k->id] ?? [];
+                        @endphp
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="check-mitra row-check"
+                                    aria-label="Pilih {{ $k->name }}">
+                            </td>
+
+                            <td>
+                                <div class="profile-avatar">
+                                    {{ strtoupper(substr($k->name, 0, 1)) }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="profile-name">{{ $k->name }}</span>
+                            </td>
+
+                            <td class="id-cell">{{ $k->username }}</td>
+
+                            <td>
+                                <span class="profile-name">{{ $jumlahPekerjaan }} pekerjaan</span>
+                            </td>
+
+                            <td>
+                                <span class="profile-name">{{ $jumlahMitra }} mitra</span>
+                            </td>
+
+                            <td>
+                                @if ($k->is_active)
+                                    <span class="status-badge active">Aktif</span>
+                                @else
+                                    <span class="status-badge inactive">Tidak Aktif</span>
+                                @endif
+                            </td>
+
+                            <td class="action-cell">
+                                <button type="button" class="action-btn" aria-label="Detail {{ $k->name }}"
+                                    aria-haspopup="true" aria-expanded="false" data-nama="{{ $k->name }}"
+                                    data-username="{{ $k->username }}" data-pekerjaan="{{ $jumlahPekerjaan }}"
+                                    data-mitra="{{ $jumlahMitra }}" data-tugas="{{ json_encode($tugas) }}"
+                                    data-edit-url="{{ route('admin.koordinator.edit', $k->id) }}"
+                                    data-delete-url="{{ route('admin.koordinator.destroy', $k->id) }}">
+                                    &#8942;
+                                </button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" style="text-align:center;padding:24px">
+                                @if ($q !== '')
+                                    Tidak ada koordinator yang cocok dengan "{{ $q }}".
+                                @else
+                                    Belum ada koordinator pada status ini.
+                                @endif
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-footer">
+            <span>
+                @if ($daftarKoordinator->total() > 0)
+                    Menampilkan {{ $daftarKoordinator->firstItem() }}–{{ $daftarKoordinator->lastItem() }}
+                    dari {{ $daftarKoordinator->total() }} koordinator
+                @else
+                    Tidak ada data
+                @endif
+            </span>
+
+            @if ($daftarKoordinator->hasPages())
+                <span style="display:flex;gap:8px;align-items:center">
+                    @unless ($daftarKoordinator->onFirstPage())
+                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftarKoordinator->url(1) }}"
+                            aria-label="Halaman pertama" title="Halaman pertama">&lt;&lt;</a>
+                        <a class="outline-btn" style="text-decoration:none"
+                            href="{{ $daftarKoordinator->previousPageUrl() }}" aria-label="Halaman sebelumnya"
+                            title="Halaman sebelumnya">&lt;</a>
+                    @endunless
+
+                    <span>Halaman {{ $daftarKoordinator->currentPage() }} dari
+                        {{ $daftarKoordinator->lastPage() }}</span>
+
+                    @if ($daftarKoordinator->hasMorePages())
+                        <a class="outline-btn" style="text-decoration:none"
+                            href="{{ $daftarKoordinator->nextPageUrl() }}" aria-label="Halaman berikutnya"
+                            title="Halaman berikutnya">&gt;</a>
+                        <a class="outline-btn" style="text-decoration:none"
+                            href="{{ $daftarKoordinator->url($daftarKoordinator->lastPage()) }}"
+                            aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
+                    @endif
+                </span>
+            @endif
+        </div>
+    </section>
+
+    {{-- POPOVER DETAIL KOORDINATOR (satu untuk semua baris) --}}
+    <div class="mitra-popover" id="koorPopover" role="dialog" aria-label="Detail koordinator">
+        <div class="pop-field">
+            <span class="pop-label">Name</span>
+            <strong class="pop-name" id="popNama"></strong>
+        </div>
+
+        <div class="pop-row">
+            <div class="pop-field">
+                <span class="pop-label">NIP / ID</span>
+                <strong class="pop-value" id="popUsername"></strong>
+            </div>
+            <div class="pop-field">
+                <span class="pop-label">Jumlah Mitra</span>
+                <strong class="pop-value" id="popMitra"></strong>
+            </div>
+        </div>
+
+        <div class="pop-field">
+            <span class="pop-label">Jumlah Pekerjaan</span>
+            <strong class="pop-value" id="popPekerjaan"></strong>
+        </div>
+
+        <div class="pop-field">
+            <span class="pop-label">Pekerjaan</span>
+            <div class="pop-chips" id="popTugas"></div>
+        </div>
+
+        <div class="pop-field">
+            <span class="pop-label">Aksi</span>
+            <div class="pop-actions">
+                <button type="button" class="pop-btn pop-btn-del" id="popHapus">
+                    Hapus Akun
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
                     </svg>
-                    <input id="searchMitra" type="search" placeholder="Cari nama mitra atau lainnya..."
-                        autocomplete="off">
-                </label>
-
-                <button type="button" class="outline-btn" id="exportMitra">
-                    <svg>
-                        <use href="#i-download" />
-                    </svg>
-                    Export
                 </button>
+                <button type="button" class="pop-btn pop-btn-edit" id="popEdit">
+                    Edit Akun
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
-                <div class="status-switch" aria-label="Filter status mitra">
-                    <button type="button" class="active" data-status="active" aria-pressed="true">
-                        Active
-                    </button>
+    <form id="hapusKoorForm" method="POST" style="display:none">
+        @csrf
+        @method('DELETE')
+    </form>
 
-                    <button type="button" data-status="inactive" aria-pressed="false">
-                        Inactive
-                    </button>
-                </div>
+    @push('scripts')
+        <script>
+            /* Pilih semua baris pada halaman ini */
+            const pilihSemua = document.getElementById('selectAll');
+            if (pilihSemua) {
+                pilihSemua.addEventListener('change', e => {
+                    document.querySelectorAll('#koorTableBody .row-check')
+                        .forEach(cb => cb.checked = e.target.checked);
+                });
+            }
 
-                <div class="filter-wrap">
-                    <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false">
-                        <svg>
-                            <use href="#i-filter" />
-                        </svg>
-                        Filter
-                    </button>
+            /* Popover detail koordinator */
+            (function() {
+                const pop = document.getElementById('koorPopover');
+                const tbody = document.getElementById('koorTableBody');
+                let aktif = null;
 
-                    <div class="filter-menu" id="filterMenu">
-                        <button type="button" data-sort="name">
-                            Nama A–Z
-                        </button>
-                        <button type="button" data-sort="honor-desc">
-                            Honor tertinggi
-                        </button>
-                        <button type="button" data-sort="honor-asc">
-                            Honor terendah
-                        </button>
-                    </div>
-                </div>
-            </section>
+                function tutup() {
+                    pop.classList.remove('open');
+                    if (aktif) aktif.setAttribute('aria-expanded', 'false');
+                    aktif = null;
+                }
 
-            {{-- TABEL MITRA --}}
-            <section class="table-card">
-                <div class="table-heading">
-                    <h2>
-                        <svg>
-                            <use href="#i-user" />
-                        </svg>
-                        List Koordinator
-                    </h2>
+                function posisi(btn) {
+                    const r = btn.getBoundingClientRect();
+                    const gap = 8,
+                        margin = 8;
+                    const w = pop.offsetWidth,
+                        h = pop.offsetHeight;
 
-                    <button type="button" class="primary-btn"
-                        onclick="alert('Form tambah mitra akan dibuat pada tahap berikutnya.')">
-                        <svg>
-                            <use href="#i-plus" />
-                        </svg>
-                        Add Mitra
-                    </button>
-                </div>
+                    let left = r.left - w - gap;
+                    if (left < margin) left = r.right + gap;
+                    left = Math.min(left, window.innerWidth - w - margin);
+                    left = Math.max(left, margin);
 
-                <div class="table-scroll">
-                    <table class="mitra-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <input type="checkbox" class="check-mitra" id="selectAll"
-                                        aria-label="Pilih semua mitra">
-                                </th>
-                                <th>Profile</th>
-                                <th>Nama</th>
-                                <th>Sobat ID</th>
-                                <th>NIK</th>
-                                <th>Total Honor</th>
-                                <th>Status</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
+                    let top = r.top;
+                    top = Math.min(top, window.innerHeight - h - margin);
+                    top = Math.max(top, margin);
 
-                        <tbody id="mitraTableBody">
-                            @php
-                                $mitraContoh = [
-                                    [
-                                        'nama' => 'Nicholas Saputra',
-                                        'sobat_id' => '123412341234',
-                                        'nik' => '1234123412341234',
-                                        'honor' => 4500000,
-                                        'status' => 'inactive',
-                                    ],
-                                    [
-                                        'nama' => 'Andi Pratama',
-                                        'sobat_id' => '123412341235',
-                                        'nik' => '1234123412341235',
-                                        'honor' => 2500000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Siti Rahma',
-                                        'sobat_id' => '123412341236',
-                                        'nik' => '1234123412341236',
-                                        'honor' => 1800000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Muhammad Akbar',
-                                        'sobat_id' => '123412341237',
-                                        'nik' => '1234123412341237',
-                                        'honor' => 3200000,
-                                        'status' => 'inactive',
-                                    ],
-                                    [
-                                        'nama' => 'Nur Aisyah',
-                                        'sobat_id' => '123412341238',
-                                        'nik' => '1234123412341238',
-                                        'honor' => 1500000,
-                                        'status' => 'active',
-                                    ],
-                                    [
-                                        'nama' => 'Rizky Ramadhan',
-                                        'sobat_id' => '123412341239',
-                                        'nik' => '1234123412341239',
-                                        'honor' => 2800000,
-                                        'status' => 'inactive',
-                                    ],
-                                ];
-                            @endphp
+                    pop.style.left = left + 'px';
+                    pop.style.top = top + 'px';
+                }
 
-                            @foreach ($mitraContoh as $mitra)
-                                <tr data-status="{{ $mitra['status'] }}" data-name="{{ strtolower($mitra['nama']) }}"
-                                    data-honor="{{ $mitra['honor'] }}">
+                function buka(btn) {
+                    if (aktif && aktif !== btn) aktif.setAttribute('aria-expanded', 'false');
 
-                                    <td>
-                                        <input type="checkbox" class="check-mitra row-check"
-                                            aria-label="Pilih {{ $mitra['nama'] }}">
-                                    </td>
+                    document.getElementById('popNama').textContent = btn.dataset.nama;
+                    document.getElementById('popUsername').textContent = btn.dataset.username;
+                    document.getElementById('popMitra').textContent = btn.dataset.mitra + ' mitra';
+                    document.getElementById('popPekerjaan').textContent = btn.dataset.pekerjaan + ' pekerjaan';
 
-                                    <td>
-                                        <div class="profile-avatar">
-                                            {{ strtoupper(substr($mitra['nama'], 0, 1)) }}
-                                        </div>
-                                    </td>
+                    const wadah = document.getElementById('popTugas');
+                    wadah.innerHTML = '';
+                    let tugas = [];
+                    try {
+                        tugas = JSON.parse(btn.dataset.tugas || '[]');
+                    } catch (e) {}
 
-                                    <td>
-                                        <span class="profile-name">
-                                            {{ $mitra['nama'] }}
-                                        </span>
-                                    </td>
+                    if (tugas.length === 0) {
+                        const kosong = document.createElement('span');
+                        kosong.className = 'pop-empty';
+                        kosong.textContent = 'Belum ada pekerjaan';
+                        wadah.appendChild(kosong);
+                    } else {
+                        tugas.forEach(t => {
+                            const chip = document.createElement('span');
+                            chip.className = 'pop-chip';
+                            chip.textContent = t;
+                            wadah.appendChild(chip);
+                        });
+                    }
 
-                                    <td class="id-cell">
-                                        {{ $mitra['sobat_id'] }}
-                                    </td>
+                    aktif = btn;
+                    btn.setAttribute('aria-expanded', 'true');
+                    pop.classList.add('open');
+                    posisi(btn);
+                }
 
-                                    <td class="id-cell">
-                                        {{ $mitra['nik'] }}
-                                    </td>
+                tbody.addEventListener('click', e => {
+                    const btn = e.target.closest('.action-btn');
+                    if (!btn) return;
+                    e.stopPropagation();
+                    (aktif === btn) ? tutup(): buka(btn);
+                });
 
-                                    <td class="honor-cell">
-                                        Rp {{ number_format($mitra['honor'], 0, ',', '.') }}
-                                    </td>
+                document.addEventListener('click', e => {
+                    if (aktif && !pop.contains(e.target)) tutup();
+                });
+                document.addEventListener('keydown', e => {
+                    if (e.key === 'Escape') tutup();
+                });
+                window.addEventListener('resize', tutup);
+                window.addEventListener('scroll', e => {
+                    if (aktif && !pop.contains(e.target)) tutup();
+                }, true);
 
-                                    <td>
-                                        @if ($mitra['status'] === 'active')
-                                            <span class="status-badge active">
-                                                Aktif
-                                            </span>
-                                        @else
-                                            <span class="status-badge inactive">
-                                                Tidak Aktif
-                                            </span>
-                                        @endif
-                                    </td>
+                /* Tombol edit & hapus */
+                const hapusForm = document.getElementById('hapusKoorForm');
 
-                                    <td class="action-cell">
-                                        <button type="button" class="action-btn"
-                                            aria-label="Aksi {{ $mitra['nama'] }}" onclick="toggleRowMenu(this)">
-                                            &#8942;
-                                        </button>
+                document.getElementById('popEdit').addEventListener('click', () => {
+                    const url = aktif?.dataset.editUrl;
+                    if (url) window.location = url;
+                });
 
-                                        <div class="row-action-menu">
-                                            <button type="button"
-                                                onclick="alert('Detail mitra akan dibuat berikutnya.')">
-                                                Lihat detail
-                                            </button>
-                                            <button type="button"
-                                                onclick="alert('Form edit mitra akan dibuat berikutnya.')">
-                                                Edit mitra
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                document.getElementById('popHapus').addEventListener('click', async () => {
+                    const url = aktif?.dataset.deleteUrl;
+                    const nama = aktif?.dataset.nama;
 
-                <div class="table-footer">
-                    <span id="mitraCount">Menampilkan data mitra</span>
-                    <span>Data contoh — belum terhubung ke database</span>
-                </div>
-            </section>
-        </x-admin.main>
+                    tutup(); // tutup popover aksi lebih dulu
+                    if (!url) return;
+
+                    const lanjut = await popup({
+                        jenis: 'hapus',
+                        judul: 'Hapus akun koordinator?',
+                        pesan: 'Akun "' + nama + '" akan dihapus permanen dan tidak bisa dikembalikan.',
+                        tombolOk: 'Ya, hapus',
+                        tombolBatal: 'Batal'
+                    });
+
+                    if (lanjut) {
+                        hapusForm.action = url;
+                        hapusForm.submit();
+                    }
+                });
+            })();
+        </script>
+    @endpush
+</x-admin.main>
