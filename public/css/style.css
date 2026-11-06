@@ -2660,3 +2660,234 @@ svg {
     width: 16px;
     height: 16px;
 }
+
+/* ========================================
+   DASHBOARD: TAMBAHAN DATA REAL
+======================================== */
+
+.chart-note {
+    margin: -6px 0 14px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+/* Batang & label tetap proporsional meski jumlah mitra sedikit */
+.chart,
+.labels {
+    justify-content: space-around;
+}
+
+.bar,
+.labels span {
+    max-width: 72px;
+}
+
+/* Daftar: kolom nama, wilayah, status */
+.list .nama {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list .wil {
+    flex: none;
+    width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.list .badge {
+    flex: none;
+}
+
+.task .judul {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .list .wil {
+        display: none;
+    }
+}
+
+/* ========================================
+   DASHBOARD: KARTU TAMBAHAN
+======================================== */
+
+/* Baris 4 kartu ringkasan */
+.dash-mini {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.dash-mini .card {
+    min-width: 0;
+}
+
+.dash-mini .num {
+    margin: 10px 0 12px;
+    font-size: clamp(20px, 1.9vw, 28px);
+    font-weight: 600;
+}
+
+/* Subjudul di Aktivitas Penugasan */
+.task .judul small {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+/* Perlu Perhatian */
+.perhatian-list,
+.wil-list {
+    list-style: none;
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.perhatian {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+a.perhatian:hover {
+    filter: brightness(.97);
+}
+
+.perhatian .p-ic {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .7);
+}
+
+.perhatian .p-ic svg {
+    width: 18px;
+    height: 18px;
+}
+
+.perhatian .p-teks {
+    flex: 1;
+    min-width: 0;
+}
+
+.perhatian .p-teks strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.perhatian .p-teks small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.perhatian .p-jml {
+    flex: none;
+    min-width: 32px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .8);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.perhatian.merah {
+    background: #FDE8E9;
+}
+
+.perhatian.merah .p-ic,
+.perhatian.merah .p-jml {
+    color: #E5484D;
+}
+
+.perhatian.kuning {
+    background: #FFF6DB;
+}
+
+.perhatian.kuning .p-ic,
+.perhatian.kuning .p-jml {
+    color: #8A5A00;
+}
+
+.perhatian.ungu {
+    background: var(--tint);
+}
+
+.perhatian.ungu .p-ic,
+.perhatian.ungu .p-jml {
+    color: var(--primary-dark);
+}
+
+.perhatian-list .kosong,
+.wil-list .kosong {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* Sebaran wilayah */
+.wil-list li {
+    display: grid;
+    grid-template-columns: minmax(90px, 160px) 1fr 40px;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.wil-list .w-nama {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wil-list .w-track {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--tint);
+}
+
+.wil-list .w-track span {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--primary);
+}
+
+.wil-list b {
+    font-weight: 600;
+    text-align: right;
+}
+
+@media (max-width: 1200px) {
+    .dash-mini {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .dash-mini {
+        grid-template-columns: 1fr;
+    }
+}
