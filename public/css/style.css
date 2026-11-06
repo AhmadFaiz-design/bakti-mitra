@@ -804,7 +804,7 @@ svg {
     color: var(--primary-dark);
     background: var(--tint);
 }
-
+/*
 .status-switch {
     display: flex;
     align-items: center;
@@ -828,7 +828,7 @@ svg {
 .status-switch button.active {
     background: var(--primary);
     color: var(--white);
-}
+} */
 
 /* .filter-wrap {
     position: relative;
@@ -1034,6 +1034,21 @@ svg {
     color: var(--muted);
 }
 
+.status-badge.tersedia {
+    background: #E7F7ED;
+    color: #218653;
+}
+
+.status-badge.bertugas {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.status-badge.penuh {
+    background: #FDE8E9;
+    color: #E5484D;
+}
+
 .action-cell {
     position: relative;
 }
@@ -1110,10 +1125,18 @@ svg {
     text-align: center;
 }
 
-/* Responsif */
+/* Varian 5 kartu (halaman Data Mitra) */
+.stats-mitra.stats-mitra-5 {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+}
+
 @media (max-width: 1200px) {
-    .stats-mitra {
+    .stats-mitra.stats-mitra-5 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stats-mitra.stats-mitra-5 .hero {
+        grid-column: 1 / -1;
     }
 }
 
@@ -2534,4 +2557,106 @@ svg {
 
 .hijau {
     color: var(--lime);
+}
+
+/* ========================================
+   DROPDOWN STATUS
+======================================== */
+
+.dd {
+    position: relative;
+}
+
+.dd-btn {
+    gap: 6px;
+}
+
+.dd-btn .dd-label {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.dd-btn strong {
+    font-weight: 600;
+}
+
+.dd-btn .dd-chev {
+    width: 16px;
+    height: 16px;
+    transition: transform .2s ease;
+}
+
+.dd-btn[aria-expanded="true"] {
+    border-color: var(--primary);
+    background: var(--tint);
+}
+
+.dd-btn[aria-expanded="true"] .dd-chev {
+    transform: rotate(180deg);
+}
+
+.dd-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 100%;
+    width: max-content;
+    padding: 6px;
+    border: 1px solid var(--tint);
+    border-radius: 14px;
+    background: var(--white);
+    box-shadow: 0 10px 30px rgba(31, 26, 61, .12);
+}
+
+.dd-menu[hidden] {
+    display: none;
+}
+
+.dd-item {
+    padding: 10px 12px;
+    border-radius: 9px;
+    color: var(--ink);
+    font: 500 13px 'Poppins', sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dd-item:hover {
+    background: var(--tint);
+}
+
+.dd-item.active {
+    background: var(--primary);
+    color: var(--white);
+}
+
+/* Tombol hapus (aksi massal) */
+.danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 13px;
+    background: #E5484D;
+    color: var(--white);
+    font: 500 12px 'Poppins', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.danger-btn:hover {
+    background: #C93A3F;
+}
+
+.danger-btn svg {
+    width: 16px;
+    height: 16px;
 }

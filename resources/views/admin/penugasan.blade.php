@@ -106,15 +106,7 @@
             Export
         </button>
 
-        <div class="status-switch" aria-label="Filter status pembayaran">
-            @foreach (['semua' => 'Semua', 'belum' => 'Belum Dibayar', 'lunas' => 'Sudah Dibayar'] as $kode => $label)
-                <button type="button" class="{{ $status === $kode ? 'active' : '' }}"
-                    aria-pressed="{{ $status === $kode ? 'true' : 'false' }}"
-                    onclick="window.location='{{ request()->fullUrlWithQuery(['status' => $kode, 'page' => null]) }}'">
-                    {{ $label }}
-                </button>
-            @endforeach
-        </div>
+        <x-admin.status-dropdown :options="['semua' => 'Semua', 'belum' => 'Belum Dibayar', 'lunas' => 'Sudah Dibayar']" :current="$status" label="Pembayaran" />
 
         <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
             <svg>
@@ -163,6 +155,12 @@
                 <button type="button" class="primary-btn" data-aksi="bayar">Tandai Dibayar</button>
                 <button type="button" class="outline-btn" data-aksi="batal">Tandai Belum Dibayar</button>
                 <button type="button" class="outline-btn" id="bulkReset">Batal pilih</button>
+                <button type="button" class="danger-btn" id="bulkHapus">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                    </svg>
+                    Hapus
+                </button>
             </div>
         </div>
 
@@ -580,6 +578,16 @@
         {!! $hiddenFilter !!}
         <div id="bulkIds"></div>
     </form>
+    <form id="bulkHapusForm" method="POST" action="{{ route('admin.penugasan.hapus-massal') }}"
+        style="display:none">
+        @csrf
+        @method('DELETE')
+        <input type="hidden" name="semua_hasil" id="bulkHapusSemuaHasil" value="0">
+        <input type="hidden" name="q" value="{{ $q }}">
+        <input type="hidden" name="status" value="{{ $status }}">
+        {!! $hiddenFilter !!}
+        <div id="bulkHapusIds"></div>
+    </form>
 
     @push('scripts')
         <script>
@@ -596,6 +604,41 @@
                 let semuaHasil = false;
 
                 const baris = () => [...document.querySelectorAll('#penugasanBody .row-check')];
+
+                document.getElementById('bulkHapus').addEventListener('click', async () => {
+                    const dipilih = baris().filter(c => c.checked);
+                    const jumlah = semuaHasil ? TOTAL : dipilih.length;
+                    if (jumlah === 0) return;
+
+                    const teks = jumlah + ' tugas akan dihapus permanen dan tidak bisa dikembalikan. ' +
+                        'Tugas yang honornya sudah dibayar atau kontraknya sudah diverifikasi tidak akan dihapus.';
+
+                    const lanjut = typeof popup === 'function' ?
+                        await popup({
+                            jenis: 'hapus',
+                            judul: 'Hapus ' + jumlah + ' tugas?',
+                            pesan: teks,
+                            tombolOk: 'Ya, hapus',
+                            tombolBatal: 'Batal'
+                        }) :
+                        confirm(teks);
+
+                    if (!lanjut) return;
+
+                    document.getElementById('bulkHapusSemuaHasil').value = semuaHasil ? '1' : '0';
+                    const wadah = document.getElementById('bulkHapusIds');
+                    wadah.innerHTML = '';
+                    if (!semuaHasil) {
+                        dipilih.forEach(c => {
+                            const i = document.createElement('input');
+                            i.type = 'hidden';
+                            i.name = 'ids[]';
+                            i.value = c.value;
+                            wadah.appendChild(i);
+                        });
+                    }
+                    document.getElementById('bulkHapusForm').submit();
+                });
 
                 function segarkan() {
                     const cek = baris();

@@ -40,6 +40,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             ->whereNumber('mitra')->name('mitra.update');
         Route::delete('/mitra/{mitra}', [MitraController::class, 'destroy'])
             ->whereNumber('mitra')->name('mitra.destroy');
+        Route::delete('/mitra/hapus-massal', [MitraController::class, 'destroyMassal'])->name('mitra.hapus-massal');
 
         // Koordinator
         Route::get('/data-koor', [KoordinatorController::class, 'index'])->name('datakoor');
@@ -51,6 +52,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             ->whereNumber('koordinator')->name('koordinator.edit');
         Route::put('/koordinator/{koordinator}', [KoordinatorController::class, 'update'])
             ->whereNumber('koordinator')->name('koordinator.update');
+        Route::delete('/koordinator/hapus-massal', [KoordinatorController::class, 'destroyMassal'])->name('koordinator.hapus-massal');
 
         // Penugasan
         Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');
@@ -66,6 +68,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             ->whereNumber('pekerjaan')->name('penugasan.update');
         Route::get('/penugasan/export', [PenugasanController::class, 'export'])->name('penugasan.export');
         Route::post('/penugasan/bayar-massal', [PenugasanController::class, 'bayarMassal'])->name('penugasan.bayar-massal');
+        Route::delete('/penugasan/hapus-massal', [PenugasanController::class, 'hapusMassal'])->name('penugasan.hapus-massal');
     });
 });
 

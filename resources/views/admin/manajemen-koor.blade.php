@@ -1,3 +1,18 @@
+@php
+    $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
+    $adaPekerjaan = request()->filled('pekerjaan_min') || request()->filled('pekerjaan_max');
+    $adaMitra = request()->filled('mitra_min') || request()->filled('mitra_max');
+    $jumlahFilter = (int) $adaPekerjaan + (int) $adaMitra + count($tugasDipilih);
+
+    // Input tersembunyi untuk meneruskan filter ke form pencarian
+    $kunciFilter = ['pekerjaan_min', 'pekerjaan_max', 'mitra_min', 'mitra_max'];
+    $hiddenFilter = collect($kunciFilter)
+        ->filter(fn($k) => request()->filled($k))
+        ->values()
+        ->map(fn($k) => '<input type="hidden" name="' . $k . '" value="' . e(request($k)) . '">')
+        ->merge(collect($tugasDipilih)->map(fn($t) => '<input type="hidden" name="tugas[]" value="' . e($t) . '">'))
+        ->implode('');
+@endphp
 <x-admin.main>
     {{-- HEADER HALAMAN --}}
     <header class="page-heading">
@@ -61,9 +76,10 @@
 
     {{-- PENCARIAN, EXPORT, STATUS, URUTAN --}}
     <section class="mitra-toolbar">
-        {{-- Pencarian (dikirim ke server saat menekan Enter) --}}
         <form id="formKoor" method="GET" action="{{ route('admin.datakoor') }}" style="display: contents">
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+            {!! $hiddenFilter !!}
             <label class="mitra-search">
                 <svg>
                     <use href="#i-search" />
@@ -81,27 +97,17 @@
             Export
         </button>
 
-        <div class="status-switch" aria-label="Filter status koordinator">
-            <button type="button" class="{{ $status === 'active' ? 'active' : '' }}" data-status="active"
-                aria-pressed="{{ $status === 'active' ? 'true' : 'false' }}"
-                onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'active', 'page' => null]) }}'">
-                Active
-            </button>
+        <x-admin.status-dropdown :options="['semua' => 'Semua', 'active' => 'Active', 'inactive' => 'Inactive']" :current="$status" label="Status" />
 
-            <button type="button" class="{{ $status === 'inactive' ? 'active' : '' }}" data-status="inactive"
-                aria-pressed="{{ $status === 'inactive' ? 'true' : 'false' }}"
-                onclick="window.location='{{ request()->fullUrlWithQuery(['status' => 'inactive', 'page' => null]) }}'">
-                Inactive
-            </button>
-        </div>
-
-        {{-- Urutan: dikirim bersama form pencarian --}}
-        <select name="sort" form="formKoor" class="outline-btn" aria-label="Urutkan koordinator"
-            onchange="this.form.submit()">
-            <option value="name" @selected($sort === 'name')>Nama A–Z</option>
-            <option value="pekerjaan-desc" @selected($sort === 'pekerjaan-desc')>Pekerjaan terbanyak</option>
-            <option value="mitra-desc" @selected($sort === 'mitra-desc')>Mitra terbanyak</option>
-        </select>
+        <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
+            <svg>
+                <use href="#i-filter" />
+            </svg>
+            Filter
+            @if ($jumlahFilter > 0)
+                <span class="filter-count">{{ $jumlahFilter }}</span>
+            @endif
+        </button>
     </section>
 
     {{-- TABEL KOORDINATOR --}}
@@ -121,6 +127,9 @@
                 Add Koordinator
             </a>
         </div>
+
+        <x-admin.bulk-delete :action="route('admin.koordinator.hapus-massal')" body="koorTableBody" noun="koordinator"
+            catatan="Koordinator yang sudah pernah memberi tugas tidak akan dihapus." />
 
         <div class="table-scroll">
             <table class="mitra-table">
@@ -149,7 +158,7 @@
                         @endphp
                         <tr>
                             <td>
-                                <input type="checkbox" class="check-mitra row-check"
+                                <input type="checkbox" class="check-mitra row-check" value="{{ $k->id }}"
                                     aria-label="Pilih {{ $k->name }}">
                             </td>
 
@@ -290,6 +299,110 @@
         </div>
     </div>
 
+    {{-- PANEL FILTER --}}
+    <div class="filter-overlay" id="filterOverlay"></div>
+
+    <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Data Koordinator"
+        aria-hidden="true">
+        <form method="GET" action="{{ route('admin.datakoor') }}" id="filterForm" class="filter-form">
+            <input type="hidden" name="q" value="{{ $q }}">
+            <input type="hidden" name="status" value="{{ $status }}">
+
+            <div class="filter-body">
+                <h2 class="filter-title">Filter Data Koordinator</h2>
+
+                {{-- JUMLAH PEKERJAAN --}}
+                <div class="filter-section">
+                    <span class="filter-label">Jumlah Pekerjaan</span>
+                    <div class="honor-box">
+                        <div class="honor-two">
+                            <div>
+                                <span class="filter-sub">Dari</span>
+                                <div class="rupiah-input">
+                                    <input type="text" inputmode="numeric" name="pekerjaan_min" data-angka
+                                        value="{{ request('pekerjaan_min') }}" placeholder="0">
+                                </div>
+                            </div>
+                            <div>
+                                <span class="filter-sub">Sampai</span>
+                                <div class="rupiah-input">
+                                    <input type="text" inputmode="numeric" name="pekerjaan_max" data-angka
+                                        value="{{ request('pekerjaan_max') }}" placeholder="10">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- JUMLAH MITRA --}}
+                <div class="filter-section">
+                    <span class="filter-label">Jumlah Mitra</span>
+                    <div class="honor-box">
+                        <div class="honor-two">
+                            <div>
+                                <span class="filter-sub">Dari</span>
+                                <div class="rupiah-input">
+                                    <input type="text" inputmode="numeric" name="mitra_min" data-angka
+                                        value="{{ request('mitra_min') }}" placeholder="0">
+                                </div>
+                            </div>
+                            <div>
+                                <span class="filter-sub">Sampai</span>
+                                <div class="rupiah-input">
+                                    <input type="text" inputmode="numeric" name="mitra_max" data-angka
+                                        value="{{ request('mitra_max') }}" placeholder="50">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- PEKERJAAN --}}
+                <div class="filter-section">
+                    <label class="filter-label" for="filterTugas">Pekerjaan</label>
+                    <div class="select-wrap">
+                        <select id="filterTugas">
+                            <option value="">Pilih Pekerjaan</option>
+                            @foreach ($daftarTugas as $t)
+                                <option value="{{ $t }}">{{ $t }}</option>
+                            @endforeach
+                        </select>
+                        <svg>
+                            <use href="#i-down" />
+                        </svg>
+                    </div>
+                    <div class="filter-chips" id="tugasChips" data-selected='@json($tugasDipilih)'></div>
+                </div>
+
+                {{-- URUTAN --}}
+                <div class="filter-section">
+                    <label class="filter-label" for="filterSort">Urutkan</label>
+                    <div class="select-wrap">
+                        <select name="sort" id="filterSort">
+                            <option value="name" @selected($sort === 'name')>Nama A–Z</option>
+                            <option value="pekerjaan-desc" @selected($sort === 'pekerjaan-desc')>Pekerjaan terbanyak</option>
+                            <option value="mitra-desc" @selected($sort === 'mitra-desc')>Mitra terbanyak</option>
+                        </select>
+                        <svg>
+                            <use href="#i-down" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-footer">
+                <button type="button" class="filter-reset" id="filterReset">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                    </svg>
+                    Reset
+                </button>
+                <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
+                <button type="submit" class="btn-apply">Terapkan</button>
+            </div>
+        </form>
+    </aside>
+
     <form id="hapusKoorForm" method="POST" style="display:none">
         @csrf
         @method('DELETE')
@@ -297,15 +410,6 @@
 
     @push('scripts')
         <script>
-            /* Pilih semua baris pada halaman ini */
-            const pilihSemua = document.getElementById('selectAll');
-            if (pilihSemua) {
-                pilihSemua.addEventListener('change', e => {
-                    document.querySelectorAll('#koorTableBody .row-check')
-                        .forEach(cb => cb.checked = e.target.checked);
-                });
-            }
-
             /* Popover detail koordinator */
             (function() {
                 const pop = document.getElementById('koorPopover');
@@ -418,6 +522,86 @@
                         hapusForm.action = url;
                         hapusForm.submit();
                     }
+                });
+            })();
+
+            /* Filter data koordinator */
+            (function() {
+                const panel = document.getElementById('filterPanel');
+                const overlay = document.getElementById('filterOverlay');
+                const toggle = document.getElementById('filterToggle');
+                const form = document.getElementById('filterForm');
+                const chips = document.getElementById('tugasChips');
+                const selTugas = document.getElementById('filterTugas');
+
+                function buka() {
+                    panel.classList.add('open');
+                    overlay.classList.add('open');
+                    panel.setAttribute('aria-hidden', 'false');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+
+                function tutup() {
+                    panel.classList.remove('open');
+                    overlay.classList.remove('open');
+                    panel.setAttribute('aria-hidden', 'true');
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+
+                toggle.addEventListener('click', buka);
+                overlay.addEventListener('click', tutup);
+                document.getElementById('filterCancel').addEventListener('click', tutup);
+                document.addEventListener('keydown', e => {
+                    if (e.key === 'Escape') tutup();
+                });
+
+                /* Kolom jumlah: hanya angka */
+                form.querySelectorAll('[data-angka]').forEach(i => {
+                    i.addEventListener('input', () => i.value = i.value.replace(/\D/g, ''));
+                });
+
+                /* Pekerjaan: dropdown -> chip */
+                function tambahChip(nama) {
+                    if (!nama || chips.querySelector('[data-nama="' + CSS.escape(nama) + '"]')) return;
+
+                    const chip = document.createElement('span');
+                    chip.className = 'filter-chip';
+                    chip.dataset.nama = nama;
+
+                    const teks = document.createElement('span');
+                    teks.textContent = nama;
+
+                    const hapus = document.createElement('button');
+                    hapus.type = 'button';
+                    hapus.setAttribute('aria-label', 'Hapus ' + nama);
+                    hapus.textContent = '×';
+                    hapus.addEventListener('click', () => chip.remove());
+
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'tugas[]';
+                    hidden.value = nama;
+
+                    chip.append(teks, hapus, hidden);
+                    chips.appendChild(chip);
+                }
+
+                selTugas.addEventListener('change', () => {
+                    tambahChip(selTugas.value);
+                    selTugas.value = '';
+                });
+
+                try {
+                    JSON.parse(chips.dataset.selected || '[]').forEach(tambahChip);
+                } catch (e) {}
+
+                /* Reset */
+                document.getElementById('filterReset').addEventListener('click', () => {
+                    form.querySelectorAll('[data-angka]').forEach(i => i.value = '');
+                    chips.innerHTML = '';
+                    selTugas.value = '';
+                    document.getElementById('filterSort').value = 'name';
+                    form.submit();
                 });
             })();
         </script>

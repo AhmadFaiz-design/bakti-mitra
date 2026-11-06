@@ -14,109 +14,147 @@ class KoordinatorController extends Controller
 {
     /** Daftar koordinator beserta jumlah pekerjaan dan mitra yang dikelola */
     /** Daftar koordinator */
-public function index(Request $request)
-{
-    $status = $request->query('status') === 'inactive' ? 'inactive' : 'active';
-    $sort   = in_array($request->query('sort'), ['pekerjaan-desc', 'mitra-desc'])
-        ? $request->query('sort')
-        : 'name';
-    $q = trim((string) $request->query('q', ''));
+    public function index(Request $request)
+    {
+        $status = in_array($request->query('status'), ['active', 'inactive'], true)
+            ? $request->query('status')
+            : 'semua';
+        $sort   = in_array($request->query('sort'), ['pekerjaan-desc', 'mitra-desc'])
+            ? $request->query('sort')
+            : 'name';
+        $q = trim((string) $request->query('q', ''));
 
-    $query = User::query()
-        ->where('role', 'koordinator')
-        ->where('is_active', $status === 'active')
-        ->select('users.*')
-        // jumlah tugas yang diberikan koordinator ini
-        ->selectSub(
-            fn ($s) => $s->from('kontrak_pekerjaan as kp')
-                ->whereColumn('kp.koordinator_id', 'users.id')
-                ->selectRaw('count(distinct kp.uraian_pekerjaan)'),
-            'jumlah_pekerjaan'
-        )
-        // jumlah mitra berbeda yang menerima tugasnya
-        ->selectSub(
-            fn ($s) => $s->from('kontrak_pekerjaan as kp')
-                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
-                ->whereColumn('kp.koordinator_id', 'users.id')
-                ->selectRaw('count(distinct k.mitra_id)'),
-            'jumlah_mitra'
-        );
+        // Jumlah pekerjaan berbeda & jumlah mitra berbeda per koordinator
+        $pekerjaanSql = '(select count(distinct kp.uraian_pekerjaan)
+                      from kontrak_pekerjaan kp
+                      where kp.koordinator_id = users.id)';
+        $mitraSql = '(select count(distinct k.mitra_id)
+                  from kontrak_pekerjaan kp
+                  join kontrak k on k.id = kp.kontrak_id
+                  where kp.koordinator_id = users.id)';
 
-    if ($q !== '') {
-        $query->where(function ($w) use ($q) {
-            $w->where('users.name', 'like', "%{$q}%")
-                ->orWhere('users.username', 'like', "%{$q}%");
-        });
+        $query = User::query()
+            ->where('role', 'koordinator')
+            ->select('users.*')
+            ->selectRaw("$pekerjaanSql as jumlah_pekerjaan")
+            ->selectRaw("$mitraSql as jumlah_mitra");
+
+        if ($status !== 'semua') {
+            $query->where('users.is_active', $status === 'active');
+        }
+
+        // ---- Pencarian ----
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->where('users.name', 'like', "%{$q}%")
+                    ->orWhere('users.username', 'like', "%{$q}%");
+            });
+        }
+
+        // ---- Filter rentang jumlah pekerjaan & jumlah mitra ----
+        $angka = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+
+        foreach ([['pekerjaan', $pekerjaanSql], ['mitra', $mitraSql]] as [$kunci, $sql]) {
+            if ($request->filled($kunci . '_min')) {
+                $query->whereRaw("$sql >= ?", [$angka($request->input($kunci . '_min'))]);
+            }
+            if ($request->filled($kunci . '_max')) {
+                $query->whereRaw("$sql <= ?", [$angka($request->input($kunci . '_max'))]);
+            }
+        }
+
+        // ---- Filter pekerjaan (koordinator yang pernah memberi salah satu pekerjaan terpilih) ----
+        $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
+        if ($tugasDipilih) {
+            $query->whereExists(function ($s) use ($tugasDipilih) {
+                $s->select(DB::raw(1))
+                    ->from('kontrak_pekerjaan as kp')
+                    ->whereColumn('kp.koordinator_id', 'users.id')
+                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
+            });
+        }
+
+        // ---- Urutan ----
+        if ($sort === 'pekerjaan-desc') {
+            $query->orderByDesc('jumlah_pekerjaan')->orderBy('users.name');
+        } elseif ($sort === 'mitra-desc') {
+            $query->orderByDesc('jumlah_mitra')->orderBy('users.name');
+        } else {
+            $query->orderBy('users.name');
+        }
+
+        $daftarKoordinator = $query->paginate(10)->withQueryString();
+        if ($daftarKoordinator->isEmpty() && $daftarKoordinator->currentPage() > 1) {
+            return redirect()->to($request->fullUrlWithQuery(['page' => $daftarKoordinator->lastPage()]));
+        }
+
+        // Nama pekerjaan tiap koordinator di halaman ini (untuk popover)
+        $pekerjaanPerKoordinator = DB::table('kontrak_pekerjaan')
+            ->whereIn('koordinator_id', $daftarKoordinator->pluck('id'))
+            ->whereNotNull('uraian_pekerjaan')
+            ->select('koordinator_id', 'uraian_pekerjaan')
+            ->distinct()
+            ->get()
+            ->groupBy('koordinator_id')
+            ->map(fn($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
+
+        // Pilihan dropdown "Pekerjaan" di panel filter
+        $daftarTugas = DB::table('kontrak_pekerjaan')
+            ->whereNotNull('koordinator_id')
+            ->whereNotNull('uraian_pekerjaan')
+            ->distinct()
+            ->orderBy('uraian_pekerjaan')
+            ->pluck('uraian_pekerjaan');
+
+        // Statistik dari seluruh koordinator
+        $total    = User::where('role', 'koordinator')->count();
+        $aktif    = User::where('role', 'koordinator')->where('is_active', true)->count();
+        $nonaktif = $total - $aktif;
+
+        return view('admin.manajemen-koor', compact(
+            'daftarKoordinator',
+            'pekerjaanPerKoordinator',
+            'daftarTugas',
+            'total',
+            'aktif',
+            'nonaktif',
+            'status',
+            'sort',
+            'q'
+        ));
     }
 
-    if ($sort === 'pekerjaan-desc') {
-        $query->orderByDesc('jumlah_pekerjaan')->orderBy('users.name');
-    } elseif ($sort === 'mitra-desc') {
-        $query->orderByDesc('jumlah_mitra')->orderBy('users.name');
-    } else {
-        $query->orderBy('users.name');
+    /** Hapus akun koordinator */
+    public function destroy(User $koordinator)
+    {
+        if ($koordinator->role !== 'koordinator') {
+            abort(404);
+        }
+
+        if ($koordinator->id === Auth::id()) {
+            return back()->with('gagal', 'Anda tidak bisa menghapus akun Anda sendiri.');
+        }
+
+        // Koordinator yang sudah pernah memberi tugas tidak dihapus, agar riwayat tidak kehilangan pemberi tugasnya
+        $sudahMemberiTugas = DB::table('kontrak_pekerjaan')
+            ->where('koordinator_id', $koordinator->id)
+            ->exists();
+
+        if ($sudahMemberiTugas) {
+            return back()->with(
+                'gagal',
+                'Akun "' . $koordinator->name . '" tidak bisa dihapus karena sudah memberi tugas. '
+                    . 'Nonaktifkan akunnya sebagai gantinya.'
+            );
+        }
+
+        $nama = $koordinator->name;
+        $koordinator->delete();
+
+        return redirect()
+            ->route('admin.datakoor')
+            ->with('sukses', 'Akun koordinator "' . $nama . '" berhasil dihapus.');
     }
-
-    $daftarKoordinator = $query->paginate(10)->withQueryString();
-
-    // Nama pekerjaan tiap koordinator di halaman ini (untuk popover)
-    $pekerjaanPerKoordinator = DB::table('kontrak_pekerjaan')
-        ->whereIn('koordinator_id', $daftarKoordinator->pluck('id'))
-        ->whereNotNull('uraian_pekerjaan')
-        ->select('koordinator_id', 'uraian_pekerjaan')
-        ->distinct()
-        ->get()
-        ->groupBy('koordinator_id')
-        ->map(fn ($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
-
-    // Statistik dari seluruh koordinator
-    $total    = User::where('role', 'koordinator')->count();
-    $aktif    = User::where('role', 'koordinator')->where('is_active', true)->count();
-    $nonaktif = $total - $aktif;
-
-    return view('admin.manajemen-koor', compact(
-        'daftarKoordinator',
-        'pekerjaanPerKoordinator',
-        'total',
-        'aktif',
-        'nonaktif',
-        'status',
-        'sort',
-        'q'
-    ));
-}
-
-/** Hapus akun koordinator */
-public function destroy(User $koordinator)
-{
-    if ($koordinator->role !== 'koordinator') {
-        abort(404);
-    }
-
-    if ($koordinator->id === Auth::id()) {
-        return back()->with('gagal', 'Anda tidak bisa menghapus akun Anda sendiri.');
-    }
-
-    // Koordinator yang sudah pernah memberi tugas tidak dihapus, agar riwayat tidak kehilangan pemberi tugasnya
-    $sudahMemberiTugas = DB::table('kontrak_pekerjaan')
-        ->where('koordinator_id', $koordinator->id)
-        ->exists();
-
-    if ($sudahMemberiTugas) {
-        return back()->with(
-            'gagal',
-            'Akun "' . $koordinator->name . '" tidak bisa dihapus karena sudah memberi tugas. '
-            . 'Nonaktifkan akunnya sebagai gantinya.'
-        );
-    }
-
-    $nama = $koordinator->name;
-    $koordinator->delete();
-
-    return redirect()
-        ->route('admin.datakoor')
-        ->with('sukses', 'Akun koordinator "' . $nama . '" berhasil dihapus.');
-}
 
     /** Form buat akun koordinator */
     public function create()
@@ -221,5 +259,52 @@ public function destroy(User $koordinator)
     private function pastikanKoordinator(User $user): void
     {
         abort_unless($user->role === 'koordinator', 404);
+    }
+    /** Hapus banyak akun koordinator sekaligus */
+    public function destroyMassal(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = collect($request->input('ids'))->map(fn($i) => (int) $i)->all();
+
+        $daftar = User::where('role', 'koordinator')->whereIn('id', $ids)->get();
+
+        // Koordinator yang sudah memberi tugas tidak dihapus, agar riwayat tidak kehilangan pemberi tugasnya
+        $punyaTugas = DB::table('kontrak_pekerjaan')
+            ->whereIn('koordinator_id', $ids)
+            ->distinct()
+            ->pluck('koordinator_id')
+            ->all();
+
+        $dihapus = 0;
+        $dilewati = 0;
+
+        foreach ($daftar as $koordinator) {
+            if (in_array($koordinator->id, $punyaTugas)) {
+                $dilewati++;
+                continue;
+            }
+
+            $koordinator->delete();
+            $dihapus++;
+        }
+
+        if ($dihapus === 0) {
+            return back()->with(
+                'gagal',
+                'Tidak ada akun yang dihapus karena semua koordinator yang dipilih sudah memberi tugas. '
+                    . 'Nonaktifkan akunnya sebagai gantinya.'
+            );
+        }
+
+        $pesan = $dihapus . ' akun koordinator berhasil dihapus.';
+        if ($dilewati > 0) {
+            $pesan .= ' ' . $dilewati . ' akun dilewati karena sudah memberi tugas.';
+        }
+
+        return back()->with('sukses', $pesan);
     }
 }

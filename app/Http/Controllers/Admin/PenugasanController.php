@@ -41,6 +41,9 @@ class PenugasanController extends Controller
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
+        if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
+            return redirect()->to($request->fullUrlWithQuery(['page' => $daftar->lastPage()]));
+        }
 
         // Pilihan dropdown di panel filter
         $daftarWilayah = Mitra::whereNotNull('wilayah')
@@ -128,12 +131,12 @@ class PenugasanController extends Controller
 
         try {
             DB::transaction(function () use ($data, $tanggal, $jumlah, $pulsa, $ro, $koordinatorId, &$dibuat, &$dilewati) {
-                $daftarMitra = Mitra::with('user')
+                $daftar = Mitra::with('user')
                     ->whereIn('id', $data['mitra_id'])
                     ->whereHas('user', fn($u) => $u->where('is_active', true))
                     ->get();
 
-                foreach ($daftarMitra as $mitra) {
+                foreach ($daftar as $mitra) {
                     // Kontrak bulan itu dibuat otomatis jika belum ada
                     $kontrak = Kontrak::firstOrCreate(
                         [
@@ -593,5 +596,55 @@ class PenugasanController extends Controller
             'tanggal_selesai.required'        => 'Tanggal selesai wajib diisi.',
             'tanggal_selesai.after_or_equal'  => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
         ];
+    }
+
+    /** Hapus banyak tugas sekaligus */
+    public function hapusMassal(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'nullable|array',
+            'ids.*' => 'integer',
+        ]);
+
+        // "Pilih semua hasil filter" mengambil seluruh halaman, bukan hanya yang tampil
+        $ids = $request->boolean('semua_hasil')
+            ? $this->filterQuery($request)->pluck('id')
+            : collect((array) $request->input('ids', []))->filter()->values();
+
+        if ($ids->isEmpty()) {
+            return back()->with('gagal', 'Belum ada tugas yang dipilih.');
+        }
+
+        $dihapus = 0;
+        $dilewati = 0;
+
+        KontrakPekerjaan::with('kontrak')
+            ->whereIn('id', $ids)
+            ->chunkById(200, function ($kelompok) use (&$dihapus, &$dilewati) {
+                foreach ($kelompok as $pekerjaan) {
+                    // Tugas yang sudah dibayar atau kontraknya terverifikasi dikunci
+                    if ($this->alasanTerkunci($pekerjaan, 'dihapus')) {
+                        $dilewati++;
+                        continue;
+                    }
+
+                    $pekerjaan->delete();
+                    $dihapus++;
+                }
+            });
+
+        if ($dihapus === 0) {
+            return back()->with(
+                'gagal',
+                'Tidak ada tugas yang dihapus. Semua tugas yang dipilih sudah dibayar atau kontraknya sudah diverifikasi.'
+            );
+        }
+
+        $pesan = $dihapus . ' tugas berhasil dihapus.';
+        if ($dilewati > 0) {
+            $pesan .= ' ' . $dilewati . ' tugas dilewati karena honornya sudah dibayar atau kontraknya sudah diverifikasi.';
+        }
+
+        return back()->with('sukses', $pesan);
     }
 }
