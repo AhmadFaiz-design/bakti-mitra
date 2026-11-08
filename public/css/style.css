@@ -359,7 +359,7 @@ svg {
     font: 500 14px 'Poppins'
 }
 
-.search {
+/* .search {
     margin-left: auto;
     display: flex;
     align-items: center;
@@ -382,7 +382,7 @@ svg {
 
 .search:focus-within {
     border-color: var(--primary)
-}
+} */
 
 .user {
     display: flex;
@@ -478,116 +478,6 @@ svg {
     border-radius: 99px
 }
 
-/* 5. GRAFIK BATANG: murni CSS */
-.chart-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px
-}
-
-.chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 24px;
-    /* justify-content: space-between; */
-    height: 190px;
-    border-bottom: 1px solid var(--ink);
-    padding-left: 44px;
-    position: relative
-}
-
-.axis {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column-reverse;
-    justify-content: space-between;
-    font-size: 13px;
-    color: var(--muted)
-}
-
-.bar {
-    flex: 1;
-    /* max-width: 38px; */
-    height: var(--t);
-    background: var(--tint);
-    border-radius: 99px 99px 0px 0px;
-    display: flex;
-    align-items: flex-end
-}
-
-.bar i {
-    display: block;
-    width: 100%;
-    height: var(--v);
-    background: var(--primary);
-    border-radius: 99px 99px 0px 0px
-}
-
-.bar.top i {
-    background: var(--ink)
-}
-
-.labels {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    padding-left: 44px;
-    margin-top: 10px;
-    font-size: 13px
-}
-
-.labels span {
-    flex: 1;
-    /* max-width: 38px; */
-    text-align: center;
-    overflow: visible;
-    white-space: nowrap;
-    font-size: 11px
-}
-
-/* 6. DUA KARTU BAWAH */
-.bottom {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 16px
-}
-
-.list {
-    list-style: none;
-    margin-top: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px
-}
-
-.list li {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-size: 14px
-}
-
-.list .dot {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: var(--tint)
-}
-
-.list .badge {
-    margin-left: auto
-}
-
-.task {
-    align-items: flex-start;
-    font-size: 13px;
-    line-height: 1.5
-}
 
 /* 7. RESPONSIF */
 @media(max-width:1000px) {
@@ -615,10 +505,6 @@ svg {
 
     .hero {
         grid-column: 1/-1
-    }
-
-    .bottom {
-        grid-template-columns: 1fr
     }
 
     .collapsed .sidebar .label {
@@ -804,55 +690,6 @@ svg {
     color: var(--primary-dark);
     background: var(--tint);
 }
-/*
-.status-switch {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 4px;
-    border: 1px solid #D5D0E5;
-    border-radius: 15px;
-    background: var(--white);
-}
-
-.status-switch button {
-    padding: 7px 12px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--ink);
-    font: 500 13px 'Poppins', sans-serif;
-    cursor: pointer;
-}
-
-.status-switch button.active {
-    background: var(--primary);
-    color: var(--white);
-} */
-
-/* .filter-wrap {
-    position: relative;
-} */
-
-/* .filter-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    z-index: 10;
-    display: none;
-    width: 200px;
-    padding: 8px;
-    border: 1px solid var(--tint);
-    border-radius: 14px;
-    background: var(--white);
-    box-shadow: 0 10px 30px rgba(31, 26, 61, .12);
-} */
-
-/* .filter-menu.open {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    } */
 
 .filter-menu button {
     padding: 10px;
@@ -1489,23 +1326,6 @@ svg {
         max-width: 550px;
     }
 
-    .dash-top {
-        grid-template-columns: 1fr;
-    }
-
-    .dash-top .stats {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .calendar-card {
-        height: auto;
-        min-height: 0;
-    }
-
-    .cal-notes {
-        max-height: 220px;
-    }
-
 }
 
 @media (max-width: 600px) {
@@ -1569,195 +1389,6 @@ svg {
    KALENDER DASHBOARD
 ======================================== */
 
-.dash-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 310px;
-    gap: 16px;
-}
-
-.dash-left {
-    min-width: 0;
-}
-
-/* 3 kartu statistik di kolom kiri (tanpa kartu Tanggal) */
-.dash-top .stats {
-    grid-template-columns: 1.6fr 1fr 1fr;
-}
-
-.calendar-card {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-width: 0;
-    background: var(--white);
-    /* Tinggi mengikuti kolom kiri, bukan isinya sendiri */
-    height: 0;
-    min-height: 100%;
-}
-
-/* Ringkasan: Deadline / Selesai / Berlangsung */
-.cal-summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-
-.cal-summary .box-cal {
-    padding: 6px 12px 4px;
-    border-radius: 12px;
-    background: var(--lime);
-    color: var(--ink);
-}
-
-.cal-summary div {
-    padding: 6px 12px 4px;
-    border-radius: 12px;
-    /* background: var(--tint); */
-    color: var(--ink);
-}
-
-.cal-summary small {
-    display: block;
-    font-size: 12px;
-    font-weight: 200;
-}
-
-.cal-summary strong {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-/* Grid tanggal */
-.cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    row-gap: 8px;
-    padding: 10px 0px;
-    border-radius: 16px;
-    /* background: var(--tint); */
-    text-align: center;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.cal-day {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    margin: 0 auto;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    transition: background .15s ease;
-}
-
-.cal-day:hover {
-    background: var(--tint);
-}
-
-.cal-day.today {
-    background: var(--primary);
-    color: var(--white);
-}
-
-.cal-day.other {
-    opacity: .4;
-}
-
-/* Tanggal yang sedang dipilih */
-.cal-day.selected {
-    box-shadow: 0 0 0 2px var(--primary);
-}
-
-.cal-day:focus-visible {
-    outline: 2px solid var(--primary-dark);
-    outline-offset: 2px;
-}
-
-/* Titik merah penanda deadline */
-.cal-day.has-deadline::after {
-    content: "";
-    position: absolute;
-    bottom: 1px;
-    left: 50%;
-    width: 6px;
-    height: 6px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: #E5484D;
-    /* border: 1px solid var(--white); */
-}
-
-/* Label deadline di keterangan */
-.tag-deadline {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 1px 8px;
-    border-radius: 99px;
-    background: #FDE8E9;
-    color: #E5484D;
-    font-size: 10px;
-    font-weight: 500;
-    vertical-align: middle;
-}
-
-.cal-notes .empty {
-    color: var(--muted);
-}
-
-/* Keterangan: mengisi sisa ruang dan bisa di-scroll */
-.cal-notes {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 6px;
-}
-
-/* Keterangan hari ini */
-.cal-notes h3 {
-    margin-bottom: 4px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.cal-notes p {
-    margin-bottom: 8px;
-    font-size: 11px;
-    line-height: 1.4;
-}
-
-/* Scrollbar tipis */
-.cal-notes::-webkit-scrollbar {
-    width: 5px;
-}
-
-.cal-notes::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 99px;
-}
-
-.cal-notes {
-    scrollbar-width: thin;
-    scrollbar-color: var(--tint) transparent;
-}
-
-@media (max-width: 1000px) {
-    .dash-top {
-        grid-template-columns: 1fr;
-    }
-
-    .dash-top .stats {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
 [x-cloak] {
     display: none !important;
 }
@@ -1768,10 +1399,6 @@ svg {
 
 .dropdown .pill svg {
     transition: transform .2s ease;
-}
-
-.dropdown .pill svg.rotate {
-    transform: rotate(180deg);
 }
 
 .dropdown-menu {
@@ -2662,232 +2289,991 @@ svg {
 }
 
 /* ========================================
-   DASHBOARD: TAMBAHAN DATA REAL
+   DASHBOARD
+   Seluruh aturan dashboard ada di blok ini.
 ======================================== */
 
-.chart-note {
-    margin: -6px 0 14px;
-    font-size: 11px;
-    color: var(--muted);
-}
-
-/* Batang & label tetap proporsional meski jumlah mitra sedikit */
-.chart,
-.labels {
-    justify-content: space-around;
-}
-
-.bar,
-.labels span {
-    max-width: 72px;
-}
-
-/* Daftar: kolom nama, wilayah, status */
-.list .nama {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.list .wil {
-    flex: none;
-    width: 130px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.list .badge {
-    flex: none;
-}
-
-.task .judul {
-    flex: 1;
-    min-width: 0;
-}
-
-@media (max-width: 600px) {
-    .list .wil {
-        display: none;
-    }
-}
-
-/* ========================================
-   DASHBOARD: KARTU TAMBAHAN
-======================================== */
-
-/* Baris 4 kartu ringkasan */
-.dash-mini {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.dash {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    margin-top: 16px;
 }
 
-.dash-mini .card {
-    min-width: 0;
+/* ---------- Header ---------- */
+.dash .topbar {
+    margin-bottom: 0;
+    flex-wrap: nowrap;
 }
 
-.dash-mini .num {
-    margin: 10px 0 12px;
-    font-size: clamp(20px, 1.9vw, 28px);
+.dash .bulan-dd {
+    margin-left: auto;
+}
+
+.dash .user {
+    white-space: nowrap;
+}
+
+.dash .bulan-menu {
+    min-width: 170px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dash .bulan-menu a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.dash .bulan-menu a:hover {
+    background: #f3f4f6;
+}
+
+.dash .bulan-menu a.active {
+    font-weight: 600;
+    background: var(--tint);
+}
+
+/* ---------- Notifikasi ---------- */
+.dash .notif {
+    position: relative;
+}
+
+.dash .bell {
+    position: relative;
+    border: 0;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.dash .bell:hover,
+.dash .bell[aria-expanded="true"] {
+    background: var(--tint);
+}
+
+.dash .bell-dot {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    background: #E5484D;
+}
+
+.dash .notif-pop {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - 28px));
+    max-height: min(440px, calc(100dvh - 120px));
+    overflow: hidden;
+    border: 1px solid var(--tint);
+    border-radius: 20px;
+    background: var(--white);
+    box-shadow: 0 14px 36px rgba(31, 26, 61, .16);
+}
+
+.dash .notif-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--tint);
+}
+
+.dash .notif-head strong {
+    font-size: 14px;
     font-weight: 600;
 }
 
-/* Subjudul di Aktivitas Penugasan */
-.task .judul small {
-    display: block;
-    margin-top: 2px;
+.dash .notif-head span {
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: #FDE8E9;
+    color: #E5484D;
     font-size: 11px;
-    color: var(--muted);
+    font-weight: 500;
 }
 
-/* Perlu Perhatian */
-.perhatian-list,
-.wil-list {
-    list-style: none;
-    margin-top: 18px;
+.dash .notif-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px;
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
 }
 
-.perhatian {
+.dash .notif-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 10px 12px;
     border-radius: 14px;
     color: var(--ink);
     text-decoration: none;
 }
 
-a.perhatian:hover {
-    filter: brightness(.97);
+.dash a.notif-item:hover {
+    background: #F8F6FF;
 }
 
-.perhatian .p-ic {
+.dash .n-ic {
+    flex: none;
     display: grid;
     place-items: center;
-    flex: none;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, .7);
+    background: var(--tint);
+    color: var(--primary-dark);
 }
 
-.perhatian .p-ic svg {
-    width: 18px;
-    height: 18px;
+.dash .n-ic svg {
+    width: 17px;
+    height: 17px;
 }
 
-.perhatian .p-teks {
+.dash .notif-item.merah .n-ic {
+    background: #FDE8E9;
+    color: #E5484D;
+}
+
+.dash .notif-item.kuning .n-ic {
+    background: #FFF6DB;
+    color: #8A5A00;
+}
+
+.dash .n-teks {
     flex: 1;
     min-width: 0;
 }
 
-.perhatian .p-teks strong {
+.dash .n-teks strong {
     display: block;
     font-size: 13px;
     font-weight: 600;
 }
 
-.perhatian .p-teks small {
+.dash .n-teks small {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+}
+
+.dash .n-teks em {
+    display: block;
+    margin-top: 3px;
+    font-style: normal;
+    font-size: 11px;
+    color: #9993AD;
+}
+
+.dash .notif-kosong {
+    padding: 22px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* ---------- Baris atas: kolom kiri + kalender ---------- */
+.dash .dash-top,
+.dash .dash-bottom {
+    display: grid;
+    gap: 16px;
+}
+
+.dash .dash-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.dash .stats {
+    margin-bottom: 0;
+}
+
+/* Kartu Total Mitra & Total Koor: chip menempel di dasar kartu */
+.dash .stats .stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.dash .stats .stat .num {
+    margin-bottom: 12px;
+    /* jarak minimum angka ke chip jika kartu pendek */
+}
+
+.dash .stats .stat .badge {
+    align-self: flex-start;
+    margin-top: auto;
+}
+
+.dash .dash-top .stats {
+    grid-template-columns: 1.6fr 1fr 1fr;
+}
+
+/* ---------- Grafik Progres Mitra ---------- */
+.dash .chart-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.dash .chart-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.dash .chart {
+    position: relative;
+    height: 200px;
+    border-bottom: 1px solid var(--ink);
+}
+
+.dash .axis {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.dash .bars {
+    position: absolute;
+    inset: 0 0 0 44px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.dash .chart.paged .bars {
+    left: 82px;
+    right: 38px;
+}
+
+.dash .bar-slot {
+    flex: 0 0 78px;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.dash .bar {
+    width: 38px;
+    height: var(--t);
+    background: var(--tint);
+    border-radius: 99px 99px 0 0;
+    display: flex;
+    align-items: flex-end;
+}
+
+.dash .bar i {
+    display: block;
+    width: 100%;
+    height: var(--v);
+    background: var(--primary);
+    border-radius: 99px 99px 0 0;
+}
+
+.dash .bar.top i {
+    background: var(--ink);
+}
+
+.dash .chart-labels {
+    flex: none;
+    display: flex;
+    padding-left: 44px;
+    margin-top: 8px;
+}
+
+.dash .lbls {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+
+.dash .chart-labels.paged .lbls {
+    margin: 0 38px;
+}
+
+.dash .lbl {
+    flex: 0 0 78px;
+    display: -webkit-box;
+    overflow: hidden;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.25;
+    word-break: break-word;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.dash .chart-empty {
+    position: absolute;
+    inset: 0 0 0 44px;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.dash .chart-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--ink);
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.dash .chart-nav.prev {
+    left: 48px;
+}
+
+.dash .chart-nav.next {
+    right: 4px;
+}
+
+.dash .chart-nav svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dash .chart-nav:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.dash .chart-nav:disabled {
+    opacity: .35;
+    cursor: default;
+}
+
+.dash .flip {
+    transform: rotate(180deg);
+}
+
+/* ---------- Kalender ---------- */
+.dash .calendar-card {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.4vh, 14px);
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+}
+
+.dash .cal-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.dash .cal-summary>div {
+    padding: 6px 12px 4px;
+    border-radius: 12px;
+    color: var(--ink);
+}
+
+.dash .cal-summary .box-cal {
+    background: var(--lime);
+}
+
+.dash .cal-summary small {
+    display: block;
+    font-size: 12px;
+    font-weight: 200;
+}
+
+.dash .cal-summary strong {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.dash .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: clamp(2px, .8vh, 8px);
+    padding: 4px 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dash .cal-day {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: clamp(24px, 3.6vh, 32px);
+    height: clamp(24px, 3.6vh, 32px);
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.dash .cal-day:hover {
+    background: var(--tint);
+}
+
+.dash .cal-day.today {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.dash .cal-day.other {
+    opacity: .4;
+}
+
+.dash .cal-day.selected {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.dash .cal-day:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 2px;
+}
+
+/* Titik merah penanda deadline */
+.dash .cal-day.has-deadline::after {
+    content: "";
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: #E5484D;
+}
+
+.dash .tag-deadline {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 99px;
+    background: #FDE8E9;
+    color: #E5484D;
+    font-size: 10px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+/* Wadah catatan */
+.dash .cal-notes {
+    flex: 0 1 auto;
+    min-height: 64px;
+    margin-top: auto;
+    padding: 4px 14px;
+    overflow-y: auto;
+    border-radius: 16px;
+    background: var(--bg);
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
+}
+
+.dash .cal-notes::-webkit-scrollbar {
+    width: 5px;
+}
+
+.dash .cal-notes::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 99px;
+}
+
+.dash .note {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 0 11px 16px;
+    border-bottom: 1px solid var(--tint);
+}
+
+.dash .note:last-child {
+    border-bottom: 0;
+}
+
+.dash .note::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 16px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.dash .note.deadline::before {
+    background: #E5484D;
+}
+
+.dash .note-judul {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.dash .note-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.dash .note-mitra {
+    padding: 2px 9px;
+    border-radius: 99px;
+    background: var(--white);
+    color: var(--primary-dark);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.dash .note-kosong {
+    padding: 16px 4px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* ---------- Baris bawah: 4 kartu ---------- */
+.dash .pair {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.dash .dash-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.dash .dash-bottom .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: clamp(12px, 1.8vh, 18px) 20px;
+}
+
+.dash .dash-bottom .card h2 {
+    flex: none;
+    font-size: 15px;
+}
+
+.dash .card-sub {
+    margin-left: auto;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--tint);
+    color: var(--primary-dark);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Scroll tipis, dipakai semua daftar yang bisa digulir */
+.dash .scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #B9AEF8 transparent;
+}
+
+.dash .scroll::-webkit-scrollbar {
+    width: 5px;
+}
+
+.dash .scroll::-webkit-scrollbar-thumb {
+    background: #B9AEF8;
+    border-radius: 99px;
+}
+
+.dash .scroll:hover {
+    scrollbar-color: var(--primary) transparent;
+}
+
+.dash .scroll:hover::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
+/* Status Mitra & Aktivitas Penugasan */
+.dash .list {
+    flex: 1;
+    min-height: 0;
+    margin-top: clamp(16px, 2.8vh, 26px);
+    padding-right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.7vh, 18px);
+    list-style: none;
+}
+
+.dash .list>li {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.dash .list .dot {
+    flex: none;
+    width: clamp(30px, 4.6vh, 42px);
+    height: clamp(30px, 4.6vh, 42px);
+    border-radius: 50%;
+    background: var(--tint);
+}
+
+.dash .list .info,
+.dash .task .judul {
+    flex: 1;
+    min-width: 0;
+}
+
+.dash .list .info strong,
+.dash .task .judul strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dash .list .info small,
+.dash .task .judul small {
+    display: block;
+    overflow: hidden;
+    margin-top: 1px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.dash .list .kanan {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+}
+
+.dash .list .kanan small {
+    font-size: 11px;
+    color: var(--ink);
+}
+
+.dash .task {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.dash .task .mt {
+    flex: none;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Perlu Perhatian */
+.dash .perlu {
+    flex: 3 1 0;
+}
+
+.dash .sebaran {
+    flex: 2 1 0;
+}
+
+.dash .perlu-wrap {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    margin-top: 10px;
+}
+
+.dash .perhatian-list {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0 6px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+}
+
+.dash .perhatian-list>li {
+    flex: none;
+}
+
+.dash .perhatian-list .kosong {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.dash .perhatian {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.dash a.perhatian:hover {
+    filter: brightness(.97);
+}
+
+.dash .perhatian.merah {
+    background: #FDE8E9;
+}
+
+.dash .perhatian.kuning {
+    background: #FFF6DB;
+}
+
+.dash .perhatian.ungu {
+    background: var(--tint);
+}
+
+.dash .perhatian .p-teks {
+    flex: 1;
+    min-width: 0;
+}
+
+.dash .perhatian .p-teks strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dash .perhatian .p-teks small {
     display: block;
     font-size: 11px;
     color: var(--muted);
 }
 
-.perhatian .p-jml {
+.dash .p-tag {
     flex: none;
-    min-width: 32px;
-    padding: 4px 10px;
+    padding: 2px 9px;
     border-radius: 99px;
-    background: rgba(255, 255, 255, .8);
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
+    background: var(--ink);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 500;
 }
 
-.perhatian.merah {
-    background: #FDE8E9;
+/* Sebaran Wilayah */
+.dash .seb-bar {
+    flex: none;
+    display: flex;
+    gap: 3px;
+    height: 12px;
+    margin-top: 10px;
 }
 
-.perhatian.merah .p-ic,
-.perhatian.merah .p-jml {
-    color: #E5484D;
+.dash .seb-bar span {
+    flex: var(--n) 1 0;
+    min-width: 6px;
+    border-radius: 99px;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(31, 26, 61, .08);
 }
 
-.perhatian.kuning {
-    background: #FFF6DB;
+.dash .seb-legend {
+    flex: 1;
+    min-height: 0;
+    margin-top: 10px;
+    padding-right: 4px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px 14px;
+    list-style: none;
 }
 
-.perhatian.kuning .p-ic,
-.perhatian.kuning .p-jml {
-    color: #8A5A00;
+.dash .seb-legend li {
+    min-width: 0;
 }
 
-.perhatian.ungu {
-    background: var(--tint);
-}
-
-.perhatian.ungu .p-ic,
-.perhatian.ungu .p-jml {
-    color: var(--primary-dark);
-}
-
-.perhatian-list .kosong,
-.wil-list .kosong {
-    font-size: 13px;
+.dash .seb-legend .nm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
     color: var(--muted);
 }
 
-/* Sebaran wilayah */
-.wil-list li {
-    display: grid;
-    grid-template-columns: minmax(90px, 160px) 1fr 40px;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
+.dash .seb-legend .nm i {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(31, 26, 61, .12);
 }
 
-.wil-list .w-nama {
+.dash .seb-legend .nm-t {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.wil-list .w-track {
-    height: 10px;
-    overflow: hidden;
-    border-radius: 99px;
-    background: var(--tint);
-}
-
-.wil-list .w-track span {
+.dash .seb-legend .vl {
     display: block;
-    height: 100%;
-    border-radius: 99px;
-    background: var(--primary);
-}
-
-.wil-list b {
+    margin-top: 1px;
+    font-size: 14px;
     font-weight: 600;
-    text-align: right;
+    line-height: 1.25;
 }
 
-@media (max-width: 1200px) {
-    .dash-mini {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+.dash .seb-legend .vl em {
+    margin-left: 6px;
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.dash .seb-kosong {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* ---------- Layar lebar: dua kolom sejajar ---------- */
+@media (min-width: 1001px) {
+    .dash {
+        --kal: clamp(290px, 23vw, 340px);
+    }
+
+    .dash .dash-top,
+    .dash .dash-bottom {
+        grid-template-columns: minmax(0, 1fr) var(--kal);
+    }
+
+    .dash .pair {
+        grid-template-columns: 1.15fr 1fr;
     }
 }
 
-@media (max-width: 600px) {
-    .dash-mini {
+/* ---------- Layar kecil: tumpuk satu kolom ---------- */
+@media (max-width: 1000px) {
+    .dash .topbar {
+        flex-wrap: wrap;
+    }
+
+    .dash .dash-top,
+    .dash .dash-bottom,
+    .dash .pair {
         grid-template-columns: 1fr;
+    }
+
+    .dash .dash-top .stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dash .cal-notes {
+        max-height: 220px;
+    }
+
+    .dash .perlu-wrap {
+        flex: none;
+        height: 220px;
+    }
+}
+
+/* ---------- Satu layar penuh tanpa scroll ---------- */
+@media (min-width: 1001px) and (min-height: 720px) {
+    body:has(.dash) {
+        overflow: hidden;
+    }
+
+    .dash {
+        height: calc(100dvh - 28px);
+    }
+
+    .dash .topbar,
+    .dash .stats {
+        flex: none;
+    }
+
+    .dash .dash-top {
+        flex: 3 1 0;
+        min-height: 0;
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    .dash .dash-bottom {
+        flex: 2 1 0;
+        min-height: 0;
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    .dash .dash-left,
+    .dash .pair,
+    .dash .dash-side {
+        min-height: 0;
+    }
+
+    .dash .chart-card {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .dash .chart {
+        flex: 1;
+        min-height: 80px;
+        height: auto;
     }
 }
