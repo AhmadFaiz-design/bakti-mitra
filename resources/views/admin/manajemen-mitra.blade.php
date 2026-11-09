@@ -350,103 +350,42 @@
                 </div>
                 <div class="filter-overlay" id="filterOverlay"></div>
 
-                <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Data Mitra"
+                <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Mitra"
                     aria-hidden="true">
+                    @php
+                        $opsiWilayah = $daftarWilayah ?? ['Kota Kendari', 'Kab. Konawe Kepulauan'];
+                        $opsiTugas = $daftarTugas ?? ['Susenas', 'Seruti'];
+
+                        $parseRp = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+                        $modeRentang = request('honor_mode') === 'rentang';
+                        $honorDari =
+                            $modeRentang && request()->filled('honor_dari') ? $parseRp(request('honor_dari')) : 0;
+                        $honorSampai =
+                            $modeRentang && request()->filled('honor_sampai')
+                                ? $parseRp(request('honor_sampai'))
+                                : null;
+                        $honorBatas = max((int) ($honorMaks ?? 3500000), $honorDari, (int) $honorSampai);
+                        $honorSampai ??= $honorBatas;
+                    @endphp
+
                     <form method="GET" action="{{ route('admin.datamitra') }}" id="filterForm"
                         class="filter-form">
-                        {{-- pertahankan pencarian, status, dan urutan --}}
                         <input type="hidden" name="q" value="{{ $q }}">
                         <input type="hidden" name="status" value="{{ $status }}">
                         <input type="hidden" name="sort" value="{{ $sort }}">
+                        <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
 
                         <div class="filter-body">
-                            <h2 class="filter-title">Filter Data Mitra</h2>
+                            <h2 class="filter-title">Filter Mitra</h2>
 
-                            {{-- HONOR --}}
-                            <div class="filter-section">
-                                <span class="filter-label">Honor</span>
+                            <x-admin.filter-wilayah :opsi="$opsiWilayah" :dipilih="request('wilayah')" />
 
-                                <div class="honor-box">
-                                    <div class="honor-mode">
-                                        <label><input type="radio" name="honor_mode" value="nominal"
-                                                {{ $honorMode === 'nominal' ? 'checked' : '' }}> Nominal</label>
-                                        <label><input type="radio" name="honor_mode" value="rentang"
-                                                {{ $honorMode === 'rentang' ? 'checked' : '' }}> Rentang</label>
-                                    </div>
+                            <x-admin.filter-tugas judul="Pekerjaan" placeholder="Cari Pekerjaan" :opsi="$opsiTugas"
+                                :dipilih="$tugasDipilih" />
 
-                                    {{-- Mode nominal: satu kolom --}}
-                                    <div class="honor-fields" id="honorNominal">
-                                        <span class="filter-sub">Jumlah</span>
-                                        <div class="rupiah-input">
-                                            <span>Rp</span>
-                                            <input type="text" inputmode="numeric" name="honor_jumlah" data-rupiah
-                                                value="{{ request('honor_jumlah') }}" placeholder="100.000">
-                                        </div>
-                                    </div>
-
-                                    {{-- Mode rentang: dua kolom --}}
-                                    <div class="honor-fields" id="honorRentang">
-                                        <div class="honor-two">
-                                            <div>
-                                                <span class="filter-sub">Dari</span>
-                                                <div class="rupiah-input">
-                                                    <span>Rp</span>
-                                                    <input type="text" inputmode="numeric" name="honor_dari"
-                                                        data-rupiah value="{{ request('honor_dari') }}"
-                                                        placeholder="100.000">
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span class="filter-sub">Sampai</span>
-                                                <div class="rupiah-input">
-                                                    <span>Rp</span>
-                                                    <input type="text" inputmode="numeric" name="honor_sampai"
-                                                        data-rupiah value="{{ request('honor_sampai') }}"
-                                                        placeholder="100.000">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- WILAYAH --}}
-                            <div class="filter-section">
-                                <label class="filter-label" for="filterWilayah">Wilayah</label>
-                                <div class="select-wrap">
-                                    <select name="wilayah" id="filterWilayah">
-                                        <option value="">Pilih Wilayah</option>
-                                        @foreach ($daftarWilayah ?? ['Kota Kendari', 'Kab. Konawe Kepulauan'] as $w)
-                                            <option value="{{ $w }}"
-                                                {{ request('wilayah') === $w ? 'selected' : '' }}>
-                                                {{ $w }}</option>
-                                        @endforeach
-                                    </select>
-                                    <svg>
-                                        <use href="#i-down" />
-                                    </svg>
-                                </div>
-                            </div>
-
-                            {{-- TUGAS --}}
-                            <div class="filter-section">
-                                <label class="filter-label" for="filterTugas">Tugas</label>
-                                <div class="select-wrap">
-                                    <select id="filterTugas">
-                                        <option value="">Pilih Tugas</option>
-                                        @foreach ($daftarTugas ?? ['Susenas', 'Seruti'] as $t)
-                                            <option value="{{ $t }}">{{ $t }}</option>
-                                        @endforeach
-                                    </select>
-                                    <svg>
-                                        <use href="#i-down" />
-                                    </svg>
-                                </div>
-
-                                <div class="filter-chips" id="tugasChips"
-                                    data-selected='@json($tugasDipilih)'>
-                                </div>
-                            </div>
+                            <x-admin.filter-range judul="Rentang Honor" :max="$honorBatas" :dari="$honorDari"
+                                :sampai="$honorSampai" nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000"
+                                :rupiah="true" mode-id="honorMode" />
                         </div>
 
                         <div class="filter-footer">
@@ -462,6 +401,9 @@
                         </div>
                     </form>
                 </aside>
+
+                <x-admin.filter-js />
+                <x-admin.export-js button="exportMitra" />
 
                 <div class="modal-overlay" id="exportOverlay"></div>
 
@@ -662,139 +604,6 @@
                                     hapusForm.submit();
                                 }
                             });
-                        })();
-                        /* Filter data mitra */
-                        (function() {
-                            const panel = document.getElementById('filterPanel');
-                            const overlay = document.getElementById('filterOverlay');
-                            const toggle = document.getElementById('filterToggle');
-                            const form = document.getElementById('filterForm');
-                            const chips = document.getElementById('tugasChips');
-                            const selTugas = document.getElementById('filterTugas');
-
-                            /* Buka / tutup panel */
-                            function buka() {
-                                panel.classList.add('open');
-                                overlay.classList.add('open');
-                                panel.setAttribute('aria-hidden', 'false');
-                                toggle.setAttribute('aria-expanded', 'true');
-                            }
-
-                            function tutup() {
-                                panel.classList.remove('open');
-                                overlay.classList.remove('open');
-                                panel.setAttribute('aria-hidden', 'true');
-                                toggle.setAttribute('aria-expanded', 'false');
-                            }
-                            toggle.addEventListener('click', buka);
-                            overlay.addEventListener('click', tutup);
-                            document.getElementById('filterCancel').addEventListener('click', tutup);
-                            document.addEventListener('keydown', e => {
-                                if (e.key === 'Escape') tutup();
-                            });
-
-                            /* Mode honor: nominal <-> rentang */
-                            const boxNominal = document.getElementById('honorNominal');
-                            const boxRentang = document.getElementById('honorRentang');
-
-                            function aturMode() {
-                                const mode = form.querySelector('input[name="honor_mode"]:checked').value;
-                                const nominal = mode === 'nominal';
-                                boxNominal.hidden = !nominal;
-                                boxRentang.hidden = nominal;
-                                // input yang tersembunyi dinonaktifkan agar tidak ikut terkirim
-                                boxNominal.querySelectorAll('input').forEach(i => i.disabled = !nominal);
-                                boxRentang.querySelectorAll('input').forEach(i => i.disabled = nominal);
-                            }
-                            form.querySelectorAll('input[name="honor_mode"]').forEach(r => r.addEventListener('change', aturMode));
-                            aturMode();
-
-                            /* Format rupiah: 1500000 -> 1.500.000 */
-                            const formatRp = v => v.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                            form.querySelectorAll('[data-rupiah]').forEach(input => {
-                                input.value = formatRp(input.value);
-                                input.addEventListener('input', () => input.value = formatRp(input.value));
-                            });
-                            // buang titik sebelum dikirim ke server
-                            form.addEventListener('submit', () => {
-                                form.querySelectorAll('[data-rupiah]').forEach(i => i.value = i.value.replace(/\./g, ''));
-                            });
-
-                            /* Tugas: pilih dari dropdown -> muncul sebagai chip */
-                            function tambahChip(nama) {
-                                if (!nama || chips.querySelector('[data-nama="' + CSS.escape(nama) + '"]')) return;
-
-                                const chip = document.createElement('span');
-                                chip.className = 'filter-chip';
-                                chip.dataset.nama = nama;
-
-                                const teks = document.createElement('span');
-                                teks.textContent = nama;
-
-                                const hapus = document.createElement('button');
-                                hapus.type = 'button';
-                                hapus.setAttribute('aria-label', 'Hapus ' + nama);
-                                hapus.textContent = '×';
-                                hapus.addEventListener('click', () => chip.remove());
-
-                                const hidden = document.createElement('input');
-                                hidden.type = 'hidden';
-                                hidden.name = 'tugas[]';
-                                hidden.value = nama;
-
-                                chip.append(teks, hapus, hidden);
-                                chips.appendChild(chip);
-                            }
-
-                            selTugas.addEventListener('change', () => {
-                                tambahChip(selTugas.value);
-                                selTugas.value = '';
-                            });
-
-                            // pulihkan chip dari filter yang sedang aktif
-                            try {
-                                JSON.parse(chips.dataset.selected || '[]').forEach(tambahChip);
-                            } catch (e) {}
-
-                            /* Reset: kosongkan semua pilihan lalu terapkan */
-                            document.getElementById('filterReset').addEventListener('click', () => {
-                                form.querySelectorAll('[data-rupiah]').forEach(i => i.value = '');
-                                form.querySelector('input[name="honor_mode"][value="nominal"]').checked = true;
-                                document.getElementById('filterWilayah').value = '';
-                                chips.innerHTML = '';
-                                selTugas.value = '';
-                                aturMode();
-                                form.submit();
-                            });
-                        })();
-                        /* Export data mitra */
-                        (function() {
-                            const modal = document.getElementById('exportModal');
-                            const overlay = document.getElementById('exportOverlay');
-                            const tombol = document.getElementById('exportMitra');
-                            const form = document.getElementById('exportForm');
-
-                            function buka() {
-                                modal.classList.add('open');
-                                overlay.classList.add('open');
-                                modal.setAttribute('aria-hidden', 'false');
-                            }
-
-                            function tutup() {
-                                modal.classList.remove('open');
-                                overlay.classList.remove('open');
-                                modal.setAttribute('aria-hidden', 'true');
-                            }
-
-                            tombol.addEventListener('click', buka);
-                            overlay.addEventListener('click', tutup);
-                            document.getElementById('exportCancel').addEventListener('click', tutup);
-                            document.addEventListener('keydown', e => {
-                                if (e.key === 'Escape') tutup();
-                            });
-
-                            // File diunduh oleh browser, halaman tetap di tempat. Tutup modal setelahnya.
-                            form.addEventListener('submit', () => setTimeout(tutup, 400));
                         })();
                     </script>
                 @endpush

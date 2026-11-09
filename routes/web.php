@@ -44,6 +44,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
         // Koordinator
         Route::get('/data-koor', [KoordinatorController::class, 'index'])->name('datakoor');
+        Route::get('/data-koor/export', [KoordinatorController::class, 'export'])->name('koordinator.export');
         Route::get('/tambah-koor', [KoordinatorController::class, 'create'])->name('tambahkoor');
         Route::post('/tambah-koor', [KoordinatorController::class, 'store'])->name('tambahkoor.simpan');
         Route::delete('/koordinator/{koordinator}', [KoordinatorController::class, 'destroy'])

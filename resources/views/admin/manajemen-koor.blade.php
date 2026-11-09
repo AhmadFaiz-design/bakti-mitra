@@ -89,8 +89,7 @@
             </label>
         </form>
 
-        <button type="button" class="outline-btn" id="exportKoor"
-            onclick="popup({ jenis: 'info', judul: 'Belum tersedia', pesan: 'Fitur export koordinator belum dibuat.' })">
+        <button type="button" class="outline-btn" id="exportKoor">
             <svg>
                 <use href="#i-download" />
             </svg>
@@ -302,92 +301,36 @@
     {{-- PANEL FILTER --}}
     <div class="filter-overlay" id="filterOverlay"></div>
 
-    <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Data Koordinator"
-        aria-hidden="true">
+    <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Koordinator" aria-hidden="true">
+        @php
+            $maksPekerjaan = max(
+                (int) ($maksPekerjaan ?? 10),
+                (int) request('pekerjaan_min'),
+                (int) request('pekerjaan_max'),
+            );
+            $maksMitra = max((int) ($maksMitra ?? 50), (int) request('mitra_min'), (int) request('mitra_max'));
+
+            $pekerjaanDari = (int) request('pekerjaan_min', 0);
+            $pekerjaanSampai = request()->filled('pekerjaan_max') ? (int) request('pekerjaan_max') : $maksPekerjaan;
+            $mitraDari = (int) request('mitra_min', 0);
+            $mitraSampai = request()->filled('mitra_max') ? (int) request('mitra_max') : $maksMitra;
+        @endphp
+
         <form method="GET" action="{{ route('admin.datakoor') }}" id="filterForm" class="filter-form">
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="sort" value="{{ $sort }}">
 
             <div class="filter-body">
-                <h2 class="filter-title">Filter Data Koordinator</h2>
+                <h2 class="filter-title">Filter Koordinator</h2>
 
-                {{-- JUMLAH PEKERJAAN --}}
-                <div class="filter-section">
-                    <span class="filter-label">Jumlah Pekerjaan</span>
-                    <div class="honor-box">
-                        <div class="honor-two">
-                            <div>
-                                <span class="filter-sub">Dari</span>
-                                <div class="rupiah-input">
-                                    <input type="text" inputmode="numeric" name="pekerjaan_min" data-angka
-                                        value="{{ request('pekerjaan_min') }}" placeholder="0">
-                                </div>
-                            </div>
-                            <div>
-                                <span class="filter-sub">Sampai</span>
-                                <div class="rupiah-input">
-                                    <input type="text" inputmode="numeric" name="pekerjaan_max" data-angka
-                                        value="{{ request('pekerjaan_max') }}" placeholder="10">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas" :dipilih="$tugasDipilih" />
 
-                {{-- JUMLAH MITRA --}}
-                <div class="filter-section">
-                    <span class="filter-label">Jumlah Mitra</span>
-                    <div class="honor-box">
-                        <div class="honor-two">
-                            <div>
-                                <span class="filter-sub">Dari</span>
-                                <div class="rupiah-input">
-                                    <input type="text" inputmode="numeric" name="mitra_min" data-angka
-                                        value="{{ request('mitra_min') }}" placeholder="0">
-                                </div>
-                            </div>
-                            <div>
-                                <span class="filter-sub">Sampai</span>
-                                <div class="rupiah-input">
-                                    <input type="text" inputmode="numeric" name="mitra_max" data-angka
-                                        value="{{ request('mitra_max') }}" placeholder="50">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <x-admin.filter-range judul="Rentang Pekerjaan" :max="$maksPekerjaan" :dari="$pekerjaanDari" :sampai="$pekerjaanSampai"
+                    nama-dari="pekerjaan_min" nama-sampai="pekerjaan_max" />
 
-                {{-- PEKERJAAN --}}
-                <div class="filter-section">
-                    <label class="filter-label" for="filterTugas">Pekerjaan</label>
-                    <div class="select-wrap">
-                        <select id="filterTugas">
-                            <option value="">Pilih Pekerjaan</option>
-                            @foreach ($daftarTugas as $t)
-                                <option value="{{ $t }}">{{ $t }}</option>
-                            @endforeach
-                        </select>
-                        <svg>
-                            <use href="#i-down" />
-                        </svg>
-                    </div>
-                    <div class="filter-chips" id="tugasChips" data-selected='@json($tugasDipilih)'></div>
-                </div>
-
-                {{-- URUTAN --}}
-                <div class="filter-section">
-                    <label class="filter-label" for="filterSort">Urutkan</label>
-                    <div class="select-wrap">
-                        <select name="sort" id="filterSort">
-                            <option value="name" @selected($sort === 'name')>Nama A–Z</option>
-                            <option value="pekerjaan-desc" @selected($sort === 'pekerjaan-desc')>Pekerjaan terbanyak</option>
-                            <option value="mitra-desc" @selected($sort === 'mitra-desc')>Mitra terbanyak</option>
-                        </select>
-                        <svg>
-                            <use href="#i-down" />
-                        </svg>
-                    </div>
-                </div>
+                <x-admin.filter-range judul="Rentang Mitra" :max="$maksMitra" :dari="$mitraDari" :sampai="$mitraSampai"
+                    nama-dari="mitra_min" nama-sampai="mitra_max" />
             </div>
 
             <div class="filter-footer">
@@ -402,6 +345,60 @@
             </div>
         </form>
     </aside>
+
+    <x-admin.filter-js />
+    <x-admin.export-js button="exportKoor" />
+
+    <div class="modal-overlay" id="exportOverlay"></div>
+
+    <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
+        aria-hidden="true">
+        <form method="GET" action="{{ route('admin.koordinator.export') }}" id="exportForm">
+            {{-- bawa pencarian dan semua filter yang sedang aktif --}}
+            <input type="hidden" name="q" value="{{ $q }}">
+            <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+            {!! $hiddenFilter !!}
+
+            <h2 id="exportTitle" class="export-title">Export Data Koordinator</h2>
+            <p class="export-sub">Data yang diexport berdasarkan hasil filter</p>
+
+            <div class="export-options">
+                <label class="export-option">
+                    <input type="radio" name="format" value="csv" checked>
+                    <svg class="export-icon" viewBox="0 0 32 32">
+                        <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                        <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                            fill="currentColor" stroke="none">CSV</text>
+                    </svg>
+                    <span class="export-text">
+                        <strong>CSV</strong>
+                        <small>Dokumen diekspor dengan format CSV</small>
+                    </span>
+                    <span class="export-radio"></span>
+                </label>
+
+                <label class="export-option">
+                    <input type="radio" name="format" value="pdf">
+                    <svg class="export-icon" viewBox="0 0 32 32">
+                        <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                        <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                            fill="currentColor" stroke="none">PDF</text>
+                    </svg>
+                    <span class="export-text">
+                        <strong>PDF</strong>
+                        <small>Dokumen diekspor dengan format PDF</small>
+                    </span>
+                    <span class="export-radio"></span>
+                </label>
+            </div>
+
+            <div class="export-footer">
+                <button type="button" class="btn-cancel" id="exportCancel">Cancel</button>
+                <button type="submit" class="btn-apply">Download</button>
+            </div>
+        </form>
+    </div>
 
     <form id="hapusKoorForm" method="POST" style="display:none">
         @csrf
@@ -522,86 +519,6 @@
                         hapusForm.action = url;
                         hapusForm.submit();
                     }
-                });
-            })();
-
-            /* Filter data koordinator */
-            (function() {
-                const panel = document.getElementById('filterPanel');
-                const overlay = document.getElementById('filterOverlay');
-                const toggle = document.getElementById('filterToggle');
-                const form = document.getElementById('filterForm');
-                const chips = document.getElementById('tugasChips');
-                const selTugas = document.getElementById('filterTugas');
-
-                function buka() {
-                    panel.classList.add('open');
-                    overlay.classList.add('open');
-                    panel.setAttribute('aria-hidden', 'false');
-                    toggle.setAttribute('aria-expanded', 'true');
-                }
-
-                function tutup() {
-                    panel.classList.remove('open');
-                    overlay.classList.remove('open');
-                    panel.setAttribute('aria-hidden', 'true');
-                    toggle.setAttribute('aria-expanded', 'false');
-                }
-
-                toggle.addEventListener('click', buka);
-                overlay.addEventListener('click', tutup);
-                document.getElementById('filterCancel').addEventListener('click', tutup);
-                document.addEventListener('keydown', e => {
-                    if (e.key === 'Escape') tutup();
-                });
-
-                /* Kolom jumlah: hanya angka */
-                form.querySelectorAll('[data-angka]').forEach(i => {
-                    i.addEventListener('input', () => i.value = i.value.replace(/\D/g, ''));
-                });
-
-                /* Pekerjaan: dropdown -> chip */
-                function tambahChip(nama) {
-                    if (!nama || chips.querySelector('[data-nama="' + CSS.escape(nama) + '"]')) return;
-
-                    const chip = document.createElement('span');
-                    chip.className = 'filter-chip';
-                    chip.dataset.nama = nama;
-
-                    const teks = document.createElement('span');
-                    teks.textContent = nama;
-
-                    const hapus = document.createElement('button');
-                    hapus.type = 'button';
-                    hapus.setAttribute('aria-label', 'Hapus ' + nama);
-                    hapus.textContent = '×';
-                    hapus.addEventListener('click', () => chip.remove());
-
-                    const hidden = document.createElement('input');
-                    hidden.type = 'hidden';
-                    hidden.name = 'tugas[]';
-                    hidden.value = nama;
-
-                    chip.append(teks, hapus, hidden);
-                    chips.appendChild(chip);
-                }
-
-                selTugas.addEventListener('change', () => {
-                    tambahChip(selTugas.value);
-                    selTugas.value = '';
-                });
-
-                try {
-                    JSON.parse(chips.dataset.selected || '[]').forEach(tambahChip);
-                } catch (e) {}
-
-                /* Reset */
-                document.getElementById('filterReset').addEventListener('click', () => {
-                    form.querySelectorAll('[data-angka]').forEach(i => i.value = '');
-                    chips.innerHTML = '';
-                    selTugas.value = '';
-                    document.getElementById('filterSort').value = 'name';
-                    form.submit();
                 });
             })();
         </script>

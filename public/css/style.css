@@ -691,7 +691,7 @@ svg {
     background: var(--tint);
 }
 
-.filter-menu button {
+/* .filter-menu button {
     padding: 10px;
     border: 0;
     border-radius: 8px;
@@ -704,7 +704,7 @@ svg {
 
 .filter-menu button:hover {
     background: var(--tint);
-}
+} */
 
 /* Kartu tabel */
 .table-card {
@@ -1565,7 +1565,7 @@ svg {
 }
 
 /* ========================================
-   PANEL FILTER MITRA
+   PANEL FILTER (Mitra, Koordinator, Penugasan)
 ======================================== */
 
 .filter-count {
@@ -1628,157 +1628,137 @@ svg {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 26px 22px 12px;
+    padding: 24px 22px 14px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
 }
 
+/* Judul + ikon filter (ikon dibuat lewat CSS) */
 .filter-title {
-    font-size: 20px;
-    font-weight: 600;
-}
-
-.filter-section {
+    flex: none;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.filter-label {
-    font-size: 15px;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
     font-weight: 500;
 }
 
-.filter-sub {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    color: var(--muted);
+.filter-title::before {
+    content: "";
+    flex: none;
+    width: 20px;
+    height: 20px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M4 7h16M7 12h10M10 17h4'/></svg>") center / contain no-repeat;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M4 7h16M7 12h10M10 17h4'/></svg>") center / contain no-repeat;
 }
 
-/* Kotak honor */
-.honor-box {
+/* Kartu bagian: judul berlatar ungu muda, isi putih */
+.filter-section {
+    flex: none;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-    border-radius: 18px;
-    background: var(--bg);
+    padding-bottom: 16px;
+    border: 1px solid var(--tint);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--white);
+    color: var(--ink);
 }
 
-.honor-mode {
-    display: flex;
-    gap: 22px;
+.filter-section> :not(.filter-label) {
+    margin-left: 22px;
+    margin-right: 22px;
+}
+
+.filter-section>*+* {
+    margin-top: 12px;
+}
+
+.filter-section>.filter-label+* {
+    margin-top: 16px;
+}
+
+.filter-label {
+    display: block;
+    padding: 7px 22px;
+    background: var(--tint);
+    color: var(--ink);
     font-size: 13px;
+    font-weight: 500;
 }
 
-.honor-mode label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-}
-
-.honor-mode input {
-    accent-color: var(--primary);
-    width: 16px;
-    height: 16px;
-}
-
-.honor-fields[hidden] {
-    display: none;
-}
-
-.honor-two {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.rupiah-input {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 46px;
-    padding: 0 14px;
-    border: 1px solid var(--ink);
-    border-radius: 14px;
-    background: var(--white);
-    font-size: 14px;
-}
-
-.rupiah-input:focus-within {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(138, 121, 241, .12);
-}
-
-.rupiah-input input {
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--ink);
-    font: 400 14px 'Poppins', sans-serif;
-}
-
-/* Dropdown */
-.select-wrap {
-    position: relative;
-}
-
-.select-wrap select {
-    width: 100%;
-    height: 46px;
-    padding: 0 40px 0 16px;
-    border: 1px solid var(--ink);
-    border-radius: 14px;
-    background: var(--white);
-    color: var(--ink);
-    font: 400 14px 'Poppins', sans-serif;
-    appearance: none;
-    cursor: pointer;
-    outline: none;
-}
-
-.select-wrap select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(138, 121, 241, .12);
-}
-
-.select-wrap svg {
-    position: absolute;
-    top: 50%;
-    right: 14px;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: var(--muted);
-}
-
-/* Chip tugas */
+/* Chip pilihan (Wilayah) & chip terpilih (Tugas, Koordinator) */
+.chip-group,
 .filter-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 4px;
 }
 
+.filter-chips:empty {
+    display: none;
+}
+
+.chip-opt,
 .filter-chip {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 12px;
+    gap: 6px;
+    height: 28px;
+    padding: 0 14px;
+    border: 1px solid #D5D0E5;
     border-radius: 99px;
-    background: var(--tint);
-    font-size: 12px;
-    font-weight: 500;
+    background: var(--white);
+    color: var(--ink);
+    font: 500 12px 'Poppins', sans-serif;
+}
+
+.chip-opt {
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.chip-opt svg {
+    display: none;
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.4;
+}
+
+.chip-opt:hover {
+    border-color: var(--primary);
+}
+
+.chip-opt.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--white);
+}
+
+.chip-opt.selected svg {
+    display: block;
+}
+
+.chip-opt:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 2px;
+}
+
+/* Tombol × berada di kiri teks */
+.filter-chip {
+    flex-direction: row-reverse;
+    padding: 0 14px 0 10px;
 }
 
 .filter-chip button {
+    padding: 0;
     border: 0;
     background: transparent;
-    color: var(--muted);
+    color: var(--ink);
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -1788,13 +1768,216 @@ svg {
     color: #E5484D;
 }
 
+/* Kolom cari + daftar saran */
+.tugas-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--primary);
+    border-radius: 99px;
+    background: var(--white);
+    color: var(--ink);
+}
+
+.tugas-search:focus-within {
+    box-shadow: 0 0 0 3px rgba(138, 121, 241, .15);
+}
+
+.tugas-search svg {
+    width: 15px;
+    height: 15px;
+}
+
+.tugas-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 400 13px 'Poppins', sans-serif;
+}
+
+.tugas-search input::placeholder {
+    color: var(--ink);
+    opacity: .85;
+}
+
+.tugas-saran {
+    max-height: 168px;
+    padding: 6px;
+    list-style: none;
+    overflow-y: auto;
+    border: 1px solid var(--tint);
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: 0 6px 18px rgba(31, 26, 61, .08);
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
+}
+
+.tugas-saran[hidden] {
+    display: none;
+}
+
+.tugas-saran button {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    font: 500 12px 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+.tugas-saran button:hover,
+.tugas-saran button.aktif {
+    background: var(--tint);
+}
+
+.tugas-saran .kosong {
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* Slider rentang (Rentang Honor, Pekerjaan, Mitra) */
+.range {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.range-slider {
+    --lo-n: 0;
+    --hi-n: 1;
+    position: relative;
+    height: 20px;
+}
+
+.range-slider::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--primary);
+    border-radius: 99px;
+    background: var(--white);
+}
+
+/* Isi ungu melebar 10px di luar titik tengah thumb, jadi thumb selalu tampak di dalam isi */
+.range-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc((100% - 20px) * var(--lo-n));
+    right: calc((100% - 20px) * (1 - var(--hi-n)));
+    border-radius: 99px;
+    background: var(--primary);
+}
+
+.range-slider input[type="range"] {
+    position: absolute;
+    top: 0;
+    left: 5px;
+    width: calc(100% - 10px);
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    pointer-events: none;
+    outline: none;
+}
+
+.range-slider input[type="range"]::-webkit-slider-runnable-track {
+    height: 20px;
+    border: 0;
+    background: transparent;
+}
+
+.range-slider input[type="range"]::-moz-range-track {
+    height: 20px;
+    border: 0;
+    background: transparent;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--white);
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--white);
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.range-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--lime);
+}
+
+.range-slider input[type="range"]:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--lime);
+}
+
+.range-values {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.range-pill {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 48%;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid #D5D0E5;
+    border-radius: 99px;
+    background: var(--white);
+    color: var(--ink);
+    font: 500 12px 'Poppins', sans-serif;
+    cursor: text;
+}
+
+.range-pill:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 121, 241, .15);
+}
+
+.range-pill input {
+    min-width: 2ch;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
 /* Footer tombol */
 .filter-footer {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 16px 22px 20px;
-    border-top: 1px solid var(--tint);
+    padding: 14px 22px 20px;
 }
 
 .filter-reset {
@@ -1816,36 +1999,6 @@ svg {
 
 .filter-reset:hover {
     color: #E5484D;
-}
-
-.btn-cancel,
-.btn-apply {
-    height: 42px;
-    padding: 0 20px;
-    border-radius: 99px;
-    font: 500 13px 'Poppins', sans-serif;
-    cursor: pointer;
-    transition: .15s ease;
-}
-
-.btn-cancel {
-    border: 1px solid #D5D0E5;
-    background: var(--white);
-    color: var(--ink);
-}
-
-.btn-cancel:hover {
-    background: var(--tint);
-}
-
-.btn-apply {
-    border: 0;
-    background: var(--primary);
-    color: var(--white);
-}
-
-.btn-apply:hover {
-    background: var(--primary-dark);
 }
 
 /* ========================================
@@ -1995,6 +2148,49 @@ svg {
     .export-modal {
         padding: 24px 18px 20px;
     }
+}
+
+
+/* Tombol Cancel/Terapkan juga dipakai modal Export */
+.btn-cancel,
+.btn-apply {
+    height: 42px;
+    padding: 0 20px;
+    border-radius: 99px;
+    font: 500 13px 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.btn-cancel {
+    border: 1px solid #D5D0E5;
+    background: var(--white);
+    color: var(--ink);
+}
+
+.btn-cancel:hover {
+    background: var(--tint);
+}
+
+/* Di panel filter, Cancel tanpa kotak (sesuai desain) */
+.filter-footer .btn-cancel {
+    border-color: transparent;
+    background: transparent;
+}
+
+.filter-footer .btn-cancel:hover {
+    background: transparent;
+    color: var(--primary-dark);
+}
+
+.btn-apply {
+    border: 0;
+    background: var(--primary);
+    color: var(--white);
+}
+
+.btn-apply:hover {
+    background: var(--primary-dark);
 }
 
 /* ========================================

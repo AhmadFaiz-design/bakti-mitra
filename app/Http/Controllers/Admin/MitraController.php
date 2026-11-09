@@ -17,6 +17,15 @@ class MitraController extends Controller
 
     public function index(Request $request)
     {
+        // ---- Batas atas slider honor (total honor tertinggi, dibulatkan ke atas per Rp100.000) ----
+        $honorTertinggi = (int) DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->select(DB::raw('SUM(kp.jumlah) as total'))
+            ->groupBy('k.mitra_id')
+            ->orderByDesc('total')
+            ->value('total');
+
+        $honorMaks = max(100000, (int) (ceil($honorTertinggi / 100000) * 100000));
         $status = in_array($request->query('status'), ['tersedia', 'bertugas', 'penuh'], true)
             ? $request->query('status')
             : 'semua';

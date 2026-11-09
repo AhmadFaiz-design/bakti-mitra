@@ -22,6 +22,7 @@ class PenugasanController extends Controller
     /** Daftar semua tugas yang sudah diberikan */
     public function index(Request $request)
     {
+        $honorMaks = max(100000, (int) (ceil(((int) DB::table('kontrak_pekerjaan')->max('jumlah')) / 100000) * 100000));
         $q      = trim((string) $request->query('q', ''));
         $status = in_array($request->query('status'), ['belum', 'lunas'], true)
             ? $request->query('status')

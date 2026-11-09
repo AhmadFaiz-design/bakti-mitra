@@ -394,110 +394,33 @@
     <div class="filter-overlay" id="filterOverlay"></div>
 
     <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Penugasan" aria-hidden="true">
+        @php
+            $parseRp = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+            $modeRentang = request('honor_mode') === 'rentang';
+            $honorDari = $modeRentang && request()->filled('honor_dari') ? $parseRp(request('honor_dari')) : 0;
+            $honorSampai = $modeRentang && request()->filled('honor_sampai') ? $parseRp(request('honor_sampai')) : null;
+            $honorBatas = max((int) ($honorMaks ?? 2500000), $honorDari, (int) $honorSampai);
+            $honorSampai ??= $honorBatas;
+        @endphp
+
         <form method="GET" action="{{ route('admin.penugasan') }}" id="filterForm" class="filter-form">
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
 
             <div class="filter-body">
                 <h2 class="filter-title">Filter Penugasan</h2>
 
-                {{-- HONOR --}}
-                <div class="filter-section">
-                    <span class="filter-label">Honor</span>
+                <x-admin.filter-wilayah :opsi="$daftarWilayah" :dipilih="request('wilayah')" />
 
-                    <div class="honor-box">
-                        <div class="honor-mode">
-                            <label><input type="radio" name="honor_mode" value="nominal"
-                                    {{ $honorMode === 'nominal' ? 'checked' : '' }}> Nominal</label>
-                            <label><input type="radio" name="honor_mode" value="rentang"
-                                    {{ $honorMode === 'rentang' ? 'checked' : '' }}> Rentang</label>
-                        </div>
+                <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
+                    :banyak="false" :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])" :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
 
-                        <div class="honor-fields" id="honorNominal">
-                            <span class="filter-sub">Jumlah</span>
-                            <div class="rupiah-input">
-                                <span>Rp</span>
-                                <input type="text" inputmode="numeric" name="honor_jumlah" data-rupiah
-                                    value="{{ request('honor_jumlah') }}" placeholder="100.000">
-                            </div>
-                        </div>
+                <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas" :dipilih="$tugasDipilih" />
 
-                        <div class="honor-fields" id="honorRentang">
-                            <div class="honor-two">
-                                <div>
-                                    <span class="filter-sub">Dari</span>
-                                    <div class="rupiah-input">
-                                        <span>Rp</span>
-                                        <input type="text" inputmode="numeric" name="honor_dari" data-rupiah
-                                            value="{{ request('honor_dari') }}" placeholder="100.000">
-                                    </div>
-                                </div>
-                                <div>
-                                    <span class="filter-sub">Sampai</span>
-                                    <div class="rupiah-input">
-                                        <span>Rp</span>
-                                        <input type="text" inputmode="numeric" name="honor_sampai" data-rupiah
-                                            value="{{ request('honor_sampai') }}" placeholder="100.000">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- WILAYAH --}}
-                <div class="filter-section">
-                    <label class="filter-label" for="filterWilayah">Wilayah</label>
-                    <div class="select-wrap">
-                        <select name="wilayah" id="filterWilayah">
-                            <option value="">Pilih Wilayah</option>
-                            @foreach ($daftarWilayah as $w)
-                                <option value="{{ $w }}"
-                                    {{ request('wilayah') === $w ? 'selected' : '' }}>
-                                    {{ $w }}</option>
-                            @endforeach
-                        </select>
-                        <svg>
-                            <use href="#i-down" />
-                        </svg>
-                    </div>
-                </div>
-
-                {{-- KOORDINATOR --}}
-                <div class="filter-section">
-                    <label class="filter-label" for="filterKoordinator">Koordinator</label>
-                    <div class="select-wrap">
-                        <select name="koordinator" id="filterKoordinator">
-                            <option value="">Pilih Koordinator</option>
-                            @foreach ($daftarKoordinator as $k)
-                                <option value="{{ $k->id }}"
-                                    {{ (string) request('koordinator') === (string) $k->id ? 'selected' : '' }}>
-                                    {{ $k->name }}</option>
-                            @endforeach
-                        </select>
-                        <svg>
-                            <use href="#i-down" />
-                        </svg>
-                    </div>
-                </div>
-
-                {{-- TUGAS --}}
-                <div class="filter-section">
-                    <label class="filter-label" for="filterTugas">Tugas</label>
-                    <div class="select-wrap">
-                        <select id="filterTugas">
-                            <option value="">Pilih Tugas</option>
-                            @foreach ($daftarTugas as $t)
-                                <option value="{{ $t }}">{{ $t }}</option>
-                            @endforeach
-                        </select>
-                        <svg>
-                            <use href="#i-down" />
-                        </svg>
-                    </div>
-
-                    <div class="filter-chips" id="tugasChips" data-selected='@json($tugasDipilih)'></div>
-                </div>
+                <x-admin.filter-range judul="Rentang Honor" :max="$honorBatas" :dari="$honorDari" :sampai="$honorSampai"
+                    nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000" :rupiah="true"
+                    mode-id="honorMode" />
             </div>
 
             <div class="filter-footer">
@@ -512,6 +435,8 @@
             </div>
         </form>
     </aside>
+
+    <x-admin.filter-js />
 
     {{-- MODAL EXPORT --}}
     <div class="modal-overlay" id="exportOverlay"></div>
@@ -865,107 +790,6 @@
                         hapusForm.action = url;
                         hapusForm.submit();
                     }
-                });
-            })();
-
-            /* ===== Filter ===== */
-            (function() {
-                const panel = document.getElementById('filterPanel');
-                const overlay = document.getElementById('filterOverlay');
-                const toggle = document.getElementById('filterToggle');
-                const form = document.getElementById('filterForm');
-                const chips = document.getElementById('tugasChips');
-                const selTugas = document.getElementById('filterTugas');
-
-                function buka() {
-                    panel.classList.add('open');
-                    overlay.classList.add('open');
-                    panel.setAttribute('aria-hidden', 'false');
-                    toggle.setAttribute('aria-expanded', 'true');
-                }
-
-                function tutup() {
-                    panel.classList.remove('open');
-                    overlay.classList.remove('open');
-                    panel.setAttribute('aria-hidden', 'true');
-                    toggle.setAttribute('aria-expanded', 'false');
-                }
-                toggle.addEventListener('click', buka);
-                overlay.addEventListener('click', tutup);
-                document.getElementById('filterCancel').addEventListener('click', tutup);
-                document.addEventListener('keydown', e => {
-                    if (e.key === 'Escape') tutup();
-                });
-
-                /* Mode honor: nominal <-> rentang */
-                const boxNominal = document.getElementById('honorNominal');
-                const boxRentang = document.getElementById('honorRentang');
-
-                function aturMode() {
-                    const nominal = form.querySelector('input[name="honor_mode"]:checked').value === 'nominal';
-                    boxNominal.hidden = !nominal;
-                    boxRentang.hidden = nominal;
-                    boxNominal.querySelectorAll('input').forEach(i => i.disabled = !nominal);
-                    boxRentang.querySelectorAll('input').forEach(i => i.disabled = nominal);
-                }
-                form.querySelectorAll('input[name="honor_mode"]').forEach(r => r.addEventListener('change', aturMode));
-                aturMode();
-
-                /* Format rupiah */
-                const formatRp = v => v.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                form.querySelectorAll('[data-rupiah]').forEach(input => {
-                    input.value = formatRp(input.value);
-                    input.addEventListener('input', () => input.value = formatRp(input.value));
-                });
-                form.addEventListener('submit', () => {
-                    form.querySelectorAll('[data-rupiah]').forEach(i => i.value = i.value.replace(/\./g, ''));
-                });
-
-                /* Tugas: dropdown -> chip */
-                function tambahChip(nama) {
-                    if (!nama || chips.querySelector('[data-nama="' + CSS.escape(nama) + '"]')) return;
-
-                    const chip = document.createElement('span');
-                    chip.className = 'filter-chip';
-                    chip.dataset.nama = nama;
-
-                    const teks = document.createElement('span');
-                    teks.textContent = nama;
-
-                    const hapus = document.createElement('button');
-                    hapus.type = 'button';
-                    hapus.setAttribute('aria-label', 'Hapus ' + nama);
-                    hapus.textContent = '×';
-                    hapus.addEventListener('click', () => chip.remove());
-
-                    const hidden = document.createElement('input');
-                    hidden.type = 'hidden';
-                    hidden.name = 'tugas[]';
-                    hidden.value = nama;
-
-                    chip.append(teks, hapus, hidden);
-                    chips.appendChild(chip);
-                }
-
-                selTugas.addEventListener('change', () => {
-                    tambahChip(selTugas.value);
-                    selTugas.value = '';
-                });
-
-                try {
-                    JSON.parse(chips.dataset.selected || '[]').forEach(tambahChip);
-                } catch (e) {}
-
-                /* Reset */
-                document.getElementById('filterReset').addEventListener('click', () => {
-                    form.querySelectorAll('[data-rupiah]').forEach(i => i.value = '');
-                    form.querySelector('input[name="honor_mode"][value="nominal"]').checked = true;
-                    document.getElementById('filterWilayah').value = '';
-                    document.getElementById('filterKoordinator').value = '';
-                    chips.innerHTML = '';
-                    selTugas.value = '';
-                    aturMode();
-                    form.submit();
                 });
             })();
 

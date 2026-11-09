@@ -234,7 +234,7 @@
                     <h2><svg>
                             <use href="#i-user" />
                         </svg>Status Mitra
-                        <span class="card-sub">{{ $statusMitraLabel }}</span>
+                        {{-- <span class="card-sub">{{ $statusMitraLabel }}</span> --}}
                     </h2>
                     <ul class="list scroll longgar">
                         @forelse ($statusMitra as $m)
@@ -317,7 +317,7 @@
                     <h2><svg>
                             <use href="#i-cal" />
                         </svg>Sebaran Wilayah
-                        <span class="card-sub">{{ $totalSebaran }} mitra</span>
+                        {{-- <span class="card-sub">{{ $totalSebaran }} mitra</span> --}}
                     </h2>
 
                     @if ($sebaran->isEmpty())
@@ -499,71 +499,6 @@
 
                 tampilkan(dipilih);
             })();
-
-            /* Perlu Perhatian: efek pudar di bawah jika masih ada isi yang bisa di-scroll */
-            // (function() {
-            //     const l = document.getElementById('perhatianList');
-            //     if (!l) return;
-
-            //     const cek = () => {
-            //         const lebih = l.scrollHeight > l.clientHeight + 1;
-            //         const habis = l.scrollTop + l.clientHeight >= l.scrollHeight - 2;
-            //         l.classList.toggle('more', lebih && !habis);
-            //     };
-
-            //     l.addEventListener('scroll', cek);
-            //     window.addEventListener('resize', cek);
-            //     if ('ResizeObserver' in window) new ResizeObserver(cek).observe(l);
-            //     cek();
-            // })();
-
-            // /* Daftar dipangkas otomatis agar muat di kartu (tanpa scroll, tanpa baris terpotong) */
-            // (function() {
-            //     const dash = document.querySelector('.dash');
-            //     let rafId = null;
-
-            //     function fit(list) {
-            //         const items = [...list.children];
-            //         items.forEach(li => li.hidden = false);
-            //         for (let i = items.length - 1; i > 0 && list.scrollHeight > list.clientHeight + 1; i--) {
-            //             items[i].hidden = true;
-            //         }
-            //     }
-
-            //     function jalan() {
-            //         cancelAnimationFrame(rafId);
-            //         rafId = requestAnimationFrame(() => document.querySelectorAll('.dash .fit').forEach(fit));
-            //     }
-
-            //     jalan();
-            //     window.addEventListener('resize', jalan);
-            //     if (document.fonts && document.fonts.ready) document.fonts.ready.then(jalan);
-            //     if ('ResizeObserver' in window && dash) new ResizeObserver(jalan).observe(dash);
-            // })();
-
-            // /* Perlu Perhatian: tombol panah hanya muncul jika isinya tidak muat */
-            // (function() {
-            //     const list = document.getElementById('perhatianList');
-            //     const btn = document.getElementById('perhatianNext');
-            //     if (!list || !btn) return;
-
-            //     const perlu = () => {
-            //         btn.hidden = !(list.scrollHeight > list.clientHeight + 1);
-            //     };
-
-            //     btn.addEventListener('click', () => {
-            //         const bawah = list.scrollTop + list.clientHeight;
-            //         const target = [...list.children].find(li => li.offsetTop + li.offsetHeight > bawah + 1);
-            //         list.scrollTo({
-            //             top: target ? target.offsetTop : 0,
-            //             behavior: 'smooth'
-            //         });
-            //     });
-
-            //     window.addEventListener('resize', perlu);
-            //     if ('ResizeObserver' in window) new ResizeObserver(perlu).observe(list);
-            //     perlu();
-            // })();
         </script>
     @endpush
 </x-admin.main>
