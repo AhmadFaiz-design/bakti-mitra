@@ -1,0 +1,75 @@
+/* Tema Koordinator: teal + amber */
+:root {
+    --primary: #14A89A;
+    --primary-dark: #0B6B62;
+    --ink: #0E2F2C;
+    --bg: #EEF8F6;
+    --tint: #D3EEE9;
+    --white: #fff;
+    --lime: #FFB547;
+    --muted: #5E7D79;
+    --radius: 24px;
+}
+
+/* ---- Warna ungu yang tertulis langsung di style.css ---- */
+.sidebar,
+.menu a,
+.menu button,
+.toggle,
+.sidebar-collapse {
+    color: #BFE6E0;
+}
+
+.menu .active,
+.menu a:hover,
+.toggle:hover {
+    color: var(--white);
+}
+
+.has-sub.open > .sub-toggle {
+    color: var(--ink);
+}
+
+.mitra-search:focus-within,
+.rupiah-input:focus-within,
+.form-group input:focus,
+.form-group select:focus {
+    box-shadow: 0 0 0 3px rgba(20, 168, 154, .14);
+}
+
+.mitra-search,
+.outline-btn,
+.status-switch,
+.dd-btn {
+    border-color: #C9E3DF;
+}
+
+.mitra-table tbody tr:hover,
+.dash a.notif-item:hover {
+    background: #F1FAF8;
+}
+
+.mitra-table td {
+    border-bottom-color: #E4F3F0;
+}
+
+/* Scrollbar dashboard */
+.dash .scroll,
+.dash .notif-list,
+.dash .cal-notes {
+    scrollbar-color: #8FD9CF transparent;
+}
+
+.dash .scroll::-webkit-scrollbar-thumb {
+    background: #8FD9CF;
+}
+
+.dash .scroll:hover::-webkit-scrollbar-thumb,
+.dash .cal-notes::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
+/* Tombol Perlu Perhatian ungu */
+.dash .perhatian.ungu {
+    background: var(--tint);
+}

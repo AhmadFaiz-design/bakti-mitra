@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\MitraImportController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PenugasanController;
+use App\Http\Controllers\Koordinator\DashboardController as KoordinatorDashboardController;
+use App\Http\Controllers\Koordinator\PenugasanController as KoordinatorPenugasanController;
 
 /*
  | Halaman awal selalu diarahkan ke /login.
@@ -78,8 +80,10 @@ Route::middleware(['auth', 'role:koordinator'])->group(function () {
     Route::redirect('/koordinator', '/koordinator/dashboard');
 
     Route::prefix('koordinator')->name('koordinator.')->group(function () {
-        Route::view('/dashboard', 'koordinator.dashboard')->name('dashboard');
-    });
+    Route::get('/dashboard', [KoordinatorDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/mitra', [KoordinatorPenugasanController::class, 'index'])->name('datamitra');
+    Route::get('/mitra/export', [KoordinatorPenugasanController::class, 'export'])->name('penugasan.export');
+});
 });
 
 /* ========================= MITRA ========================= */

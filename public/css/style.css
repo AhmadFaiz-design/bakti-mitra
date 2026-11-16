@@ -47,7 +47,7 @@ svg {
     --sb: 260px;
     display: grid;
     grid-template-columns: var(--sb) 1fr;
-    gap: 24px;
+    gap: 14px;
     margin: auto;
     transition: grid-template-columns .3s ease
 }
@@ -2533,160 +2533,6 @@ svg {
     background: var(--tint);
 }
 
-/* ---------- Notifikasi ---------- */
-.dash .notif {
-    position: relative;
-}
-
-.dash .bell {
-    position: relative;
-    border: 0;
-    color: var(--ink);
-    cursor: pointer;
-    transition: background .15s ease;
-}
-
-.dash .bell:hover,
-.dash .bell[aria-expanded="true"] {
-    background: var(--tint);
-}
-
-.dash .bell-dot {
-    position: absolute;
-    top: 9px;
-    right: 10px;
-    width: 10px;
-    height: 10px;
-    border: 2px solid var(--white);
-    border-radius: 50%;
-    background: #E5484D;
-}
-
-.dash .notif-pop {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    z-index: 70;
-    display: flex;
-    flex-direction: column;
-    width: min(360px, calc(100vw - 28px));
-    max-height: min(440px, calc(100dvh - 120px));
-    overflow: hidden;
-    border: 1px solid var(--tint);
-    border-radius: 20px;
-    background: var(--white);
-    box-shadow: 0 14px 36px rgba(31, 26, 61, .16);
-}
-
-.dash .notif-head {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px 10px;
-    border-bottom: 1px solid var(--tint);
-}
-
-.dash .notif-head strong {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.dash .notif-head span {
-    padding: 2px 10px;
-    border-radius: 99px;
-    background: #FDE8E9;
-    color: #E5484D;
-    font-size: 11px;
-    font-weight: 500;
-}
-
-.dash .notif-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin: 0;
-    padding: 8px;
-    list-style: none;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--tint) transparent;
-}
-
-.dash .notif-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    color: var(--ink);
-    text-decoration: none;
-}
-
-.dash a.notif-item:hover {
-    background: #F8F6FF;
-}
-
-.dash .n-ic {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--tint);
-    color: var(--primary-dark);
-}
-
-.dash .n-ic svg {
-    width: 17px;
-    height: 17px;
-}
-
-.dash .notif-item.merah .n-ic {
-    background: #FDE8E9;
-    color: #E5484D;
-}
-
-.dash .notif-item.kuning .n-ic {
-    background: #FFF6DB;
-    color: #8A5A00;
-}
-
-.dash .n-teks {
-    flex: 1;
-    min-width: 0;
-}
-
-.dash .n-teks strong {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.dash .n-teks small {
-    display: block;
-    margin-top: 1px;
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--muted);
-}
-
-.dash .n-teks em {
-    display: block;
-    margin-top: 3px;
-    font-style: normal;
-    font-size: 11px;
-    color: #9993AD;
-}
-
-.dash .notif-kosong {
-    padding: 22px 12px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--muted);
-}
-
 /* ---------- Baris atas: kolom kiri + kalender ---------- */
 .dash .dash-top,
 .dash .dash-bottom {
@@ -3472,4 +3318,173 @@ svg {
         min-height: 80px;
         height: auto;
     }
+}
+
+/* ========================================
+   NOTIFIKASI (dashboard & halaman lain)
+======================================== */
+
+.notif {
+    position: relative;
+}
+
+.notif .bell {
+    position: relative;
+    border: 0;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.notif .bell:hover,
+.notif .bell[aria-expanded="true"] {
+    background: var(--tint);
+}
+
+.bell-dot {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    background: #E5484D;
+}
+
+.notif-pop {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - 28px));
+    max-height: min(440px, calc(100dvh - 120px));
+    overflow: hidden;
+    border: 1px solid var(--tint);
+    border-radius: 20px;
+    background: var(--white);
+    box-shadow: 0 14px 36px rgba(31, 26, 61, .16);
+}
+
+.notif-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--tint);
+}
+
+.notif-head strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.notif-head span {
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: #FDE8E9;
+    color: #E5484D;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.notif-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--tint) transparent;
+}
+
+.notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+a.notif-item:hover {
+    background: var(--bg);
+}
+
+.n-ic {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.n-ic svg {
+    width: 17px;
+    height: 17px;
+}
+
+.notif-item.merah .n-ic {
+    background: #FDE8E9;
+    color: #E5484D;
+}
+
+.notif-item.kuning .n-ic {
+    background: #FFF6DB;
+    color: #8A5A00;
+}
+
+.n-teks {
+    flex: 1;
+    min-width: 0;
+}
+
+.n-teks strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.n-teks small {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+}
+
+.n-teks em {
+    display: block;
+    margin-top: 3px;
+    font-style: normal;
+    font-size: 11px;
+    color: #9993AD;
+}
+
+.notif-kosong {
+    padding: 22px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* ========================================
+   TABEL PENUGASAN KOORDINATOR
+======================================== */
+
+/* Tabel ini tidak punya kolom checkbox, jadi kolom pertama tidak dipersempit */
+.penugasan-koor th:first-child,
+.penugasan-koor td:first-child {
+    width: auto;
+    padding-left: 10px;
+    padding-right: 10px;
 }
