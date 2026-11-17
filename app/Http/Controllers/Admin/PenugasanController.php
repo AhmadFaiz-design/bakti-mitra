@@ -6,51 +6,75 @@ use App\Http\Controllers\Controller;
 use App\Models\Kontrak;
 use App\Models\KontrakPekerjaan;
 use App\Models\Mitra;
+use App\Models\Penugasan;
 use App\Models\User;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Auth;
 
 class PenugasanController extends Controller
 {
-    /** Daftar semua tugas yang sudah diberikan */
+    /** Daftar tugas (1 baris = 1 penugasan, tidak duplikat meski banyak mitra) */
     public function index(Request $request)
     {
-        $honorMaks = max(100000, (int) (ceil(((int) DB::table('kontrak_pekerjaan')->max('jumlah')) / 100000) * 100000));
-        $q      = trim((string) $request->query('q', ''));
-        $status = in_array($request->query('status'), ['belum', 'lunas'], true)
+        $maxTotalPerTugas = (int) (DB::table('kontrak_pekerjaan')
+            ->whereNotNull('penugasan_id')
+            ->selectRaw('COALESCE(SUM(jumlah), 0) as total')
+            ->groupBy('penugasan_id')
+            ->orderByDesc('total')
+            ->value('total') ?? 0);
+
+        $honorMaks = max(100000, (int) (ceil($maxTotalPerTugas / 100000) * 100000));
+        $q = trim((string) $request->query('q', ''));
+        $status = in_array($request->query('status'), ['kosong', 'belum', 'lunas'], true)
             ? $request->query('status')
-            : 'semua'; // semua | belum | lunas
+            : 'semua';
 
         $query = $this->filterQuery($request);
 
-        // Ringkasan honor mengikuti pencarian/filter yang sedang aktif
+        // Ringkasan honor dari seluruh petugas pada tugas hasil filter
+        $penugasanIdsSub = (clone $query)->select('penugasan.id');
+        $ringkasanQuery = KontrakPekerjaan::whereIn('penugasan_id', $penugasanIdsSub);
+
         $ringkasan = [
-            'total'   => (int) (clone $query)->sum('jumlah'),
-            'dibayar' => (int) (clone $query)->where('honor_dibayar', true)->sum('jumlah'),
+            'total'   => (int) (clone $ringkasanQuery)->sum('jumlah'),
+            'dibayar' => (int) (clone $ringkasanQuery)->where('honor_dibayar', true)->sum('jumlah'),
         ];
         $ringkasan['belum'] = $ringkasan['total'] - $ringkasan['dibayar'];
 
         $daftar = $query
-            ->with('kontrak.mitra.user', 'koordinator')
+            ->with([
+                'koordinator:id,name,username',
+                'pekerjaan' => fn($p) => $p
+                    ->with([
+                        'kontrak:id,mitra_id,cek_kontrak,cek_spj',
+                        'kontrak.mitra:id,user_id,wilayah',
+                        'kontrak.mitra.user:id,name,username',
+                    ])
+                    ->orderBy('id'),
+            ])
+            ->withCount('pekerjaan')
+            ->withCount(['pekerjaan as pekerjaan_dibayar_count' => fn($p) => $p->where('honor_dibayar', true)])
+            ->withSum('pekerjaan as total_volume', 'volume')
+            ->withSum('pekerjaan as total_honor', 'jumlah')
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
+
         if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftar->lastPage()]));
         }
 
-        // Pilihan dropdown di panel filter
         $daftarWilayah = Mitra::whereNotNull('wilayah')
             ->distinct()->orderBy('wilayah')->pluck('wilayah');
 
-        $daftarTugas = KontrakPekerjaan::whereNotNull('uraian_pekerjaan')
+        $daftarTugas = Penugasan::whereNotNull('uraian_pekerjaan')
             ->distinct()->orderBy('uraian_pekerjaan')->pluck('uraian_pekerjaan');
 
         $daftarKoordinator = User::where('role', 'koordinator')
@@ -61,14 +85,290 @@ class PenugasanController extends Controller
             'q',
             'status',
             'ringkasan',
+            'honorMaks',
             'daftarWilayah',
             'daftarTugas',
             'daftarKoordinator'
         ));
     }
 
-    /** Admin menandai honor sudah / belum dibayar */
-    public function ubahStatusBayar(Request $request, KontrakPekerjaan $pekerjaan)
+    /** Form buat tugas baru (tanpa input volume & tanpa pilih mitra) */
+    public function create()
+    {
+        return view('admin.tambah-penugasan', [
+            'koordinator'    => $this->daftarKoordinator(),
+            'daftarKro'      => config('penugasan.kro'),
+            'daftarKomponen' => config('penugasan.komponen'),
+            'daftarRoPulsa'  => config('penugasan.ro_pulsa'),
+            'daftarSatuan'   => config('penugasan.satuan'),
+        ]);
+    }
+
+    /** Simpan tugas induk baru */
+    public function store(Request $request)
+    {
+        $this->rapikanHarga($request);
+        $data = $request->validate($this->aturanTugas(), $this->pesanTugas());
+
+        $pulsa = $request->boolean('paket_data_pulsa');
+        $ro    = $this->gabungRo($data);
+
+        try {
+            $penugasan = Penugasan::create([
+                'koordinator_id'      => (int) $data['koordinator_id'],
+                'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
+                'ro'                  => $ro,
+                'kro_ro'              => $data['kro_ro'] ?? null,
+                'komponen'            => $data['komponen'] ?? null,
+                'satuan'              => $data['satuan'],
+                'harga_satuan'        => (int) $data['harga_satuan'],
+                'paket_data_pulsa'    => $pulsa,
+                'ro_paket_data_pulsa' => $pulsa ? ($data['ro_paket_data_pulsa'] ?? null) : null,
+                'tanggal_mulai'       => $data['tanggal_mulai'],
+                'tanggal_selesai'     => $data['tanggal_selesai'],
+                'dibuat_oleh'         => Auth::id(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('gagal', 'Gagal menyimpan tugas: ' . $e->getMessage());
+        }
+
+        if ($request->boolean('lanjut_assign')) {
+            return redirect()
+                ->route('admin.penugasan.assign', $penugasan)
+                ->with('sukses', 'Tugas "' . $penugasan->uraian_pekerjaan . '" berhasil dibuat. Silakan assign petugas dan volumenya.');
+        }
+
+        return redirect()
+            ->route('admin.penugasan')
+            ->with('sukses', 'Tugas "' . $penugasan->uraian_pekerjaan . '" berhasil dibuat. Klik "Assign Petugas" untuk menambahkan mitra.');
+    }
+
+    /** Halaman Assign Petugas (pilih mitra + isi volume masing-masing) */
+    public function assignForm(Penugasan $penugasan)
+    {
+        $penugasan->load([
+            'koordinator:id,name,username',
+            'pekerjaan' => fn($q) => $q->with([
+                'kontrak:id,mitra_id,cek_kontrak,cek_spj',
+                'kontrak.mitra:id,user_id,wilayah',
+                'kontrak.mitra.user:id,name,username',
+            ])->orderBy('id'),
+        ]);
+
+        $sudahAssignMitraIds = $penugasan->pekerjaan
+            ->pluck('kontrak.mitra_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        $mitraTersedia = Mitra::with('user:id,name,username,is_active')
+            ->whereHas('user', fn($u) => $u->where('is_active', true))
+            ->when($sudahAssignMitraIds, fn($q) => $q->whereNotIn('id', $sudahAssignMitraIds))
+            ->get()
+            ->sortBy(fn($m) => strtolower($m->user->name))
+            ->values();
+
+        return view('admin.assign-petugas', compact('penugasan', 'mitraTersedia'));
+    }
+
+    /** Simpan assign beberapa mitra beserta volume masing-masing */
+    public function assignStore(Request $request, Penugasan $penugasan)
+    {
+        $volumes = collect((array) $request->input('volumes', []))
+            ->map(fn($v) => is_string($v) ? str_replace(',', '.', trim($v)) : $v)
+            ->all();
+        $request->merge(['volumes' => $volumes]);
+
+        $data = $request->validate(
+            [
+                'mitra_id'   => 'required|array|min:1',
+                'mitra_id.*' => 'integer|exists:mitra,id',
+                'volumes'    => 'required|array',
+            ],
+            [
+                'mitra_id.required' => 'Pilih minimal satu mitra yang akan ditugaskan.',
+                'mitra_id.min'      => 'Pilih minimal satu mitra yang akan ditugaskan.',
+            ]
+        );
+
+        $errors = [];
+        foreach ($data['mitra_id'] as $mitraId) {
+            $vol = $volumes[$mitraId] ?? null;
+            if ($vol === null || $vol === '' || !is_numeric($vol) || (float) $vol <= 0 || (float) $vol > 99999999) {
+                $errors["volumes.$mitraId"] = 'Volume untuk setiap mitra yang dipilih harus berupa angka lebih dari 0.';
+            }
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        $tanggal     = Carbon::parse($penugasan->tanggal_mulai);
+        $hargaSatuan = (int) $penugasan->harga_satuan;
+
+        $dibuat   = 0;
+        $dilewati = [];
+        $terkunci = [];
+
+        try {
+            DB::transaction(function () use ($penugasan, $data, $volumes, $tanggal, $hargaSatuan, &$dibuat, &$dilewati, &$terkunci) {
+                $daftar = Mitra::with('user')
+                    ->whereIn('id', $data['mitra_id'])
+                    ->whereHas('user', fn($u) => $u->where('is_active', true))
+                    ->get();
+
+                foreach ($daftar as $mitra) {
+                    $sudahDiTugasIni = $penugasan->pekerjaan()
+                        ->whereHas('kontrak', fn($k) => $k->where('mitra_id', $mitra->id))
+                        ->exists();
+
+                    if ($sudahDiTugasIni) {
+                        $dilewati[] = $mitra->user->name;
+                        continue;
+                    }
+
+                    $kontrak = Kontrak::firstOrCreate(
+                        [
+                            'mitra_id'      => $mitra->id,
+                            'periode_tahun' => $tanggal->year,
+                            'periode_bulan' => $tanggal->month,
+                        ],
+                        ['dibuat_oleh' => Auth::id()]
+                    );
+
+                    if ($kontrak->cek_kontrak || $kontrak->cek_spj) {
+                        $terkunci[] = $mitra->user->name;
+                        continue;
+                    }
+
+                    $kembarPadaKontrak = $kontrak->pekerjaan()
+                        ->where('uraian_pekerjaan', $penugasan->uraian_pekerjaan)
+                        ->exists();
+
+                    if ($kembarPadaKontrak) {
+                        $dilewati[] = $mitra->user->name;
+                        continue;
+                    }
+
+                    $vol    = (float) $volumes[$mitra->id];
+                    $jumlah = (int) round($vol * $hargaSatuan);
+
+                    $kontrak->pekerjaan()->create([
+                        'penugasan_id'        => $penugasan->id,
+                        'koordinator_id'      => $penugasan->koordinator_id,
+                        'urutan'              => (int) $kontrak->pekerjaan()->max('urutan') + 1,
+                        'uraian_pekerjaan'    => $penugasan->uraian_pekerjaan,
+                        'ro'                  => $penugasan->ro,
+                        'kro_ro'              => $penugasan->kro_ro,
+                        'komponen'            => $penugasan->komponen,
+                        'volume'              => $vol,
+                        'satuan'              => $penugasan->satuan,
+                        'harga_satuan'        => $hargaSatuan,
+                        'jumlah'              => $jumlah,
+                        'paket_data_pulsa'    => (bool) $penugasan->paket_data_pulsa,
+                        'ro_paket_data_pulsa' => $penugasan->ro_paket_data_pulsa,
+                        'tanggal_mulai'       => $penugasan->tanggal_mulai,
+                        'tanggal_selesai'     => $penugasan->tanggal_selesai,
+                    ]);
+
+                    $dibuat++;
+                }
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('gagal', 'Gagal mengassign petugas: ' . $e->getMessage());
+        }
+
+        if ($dibuat === 0) {
+            $detail = [];
+            if ($dilewati) {
+                $detail[] = count($dilewati) . ' mitra sudah punya tugas yang sama pada bulan tersebut';
+            }
+            if ($terkunci) {
+                $detail[] = count($terkunci) . ' mitra kontraknya sudah diverifikasi';
+            }
+
+            return back()->withInput()->with(
+                'gagal',
+                'Tidak ada petugas yang berhasil diassign' . ($detail ? ' (' . implode('; ', $detail) . ').' : '.')
+            );
+        }
+
+        $pesan = $dibuat . ' mitra berhasil ditugaskan.';
+        if ($dilewati) {
+            $pesan .= ' ' . count($dilewati) . ' mitra dilewati karena sudah memiliki tugas yang sama.';
+        }
+        if ($terkunci) {
+            $pesan .= ' ' . count($terkunci) . ' mitra dilewati karena kontrak bulan tersebut sudah diverifikasi.';
+        }
+
+        return redirect()
+            ->route('admin.penugasan.assign', $penugasan)
+            ->with('sukses', $pesan);
+    }
+
+    /** Ubah volume 1 mitra pada halaman Assign Petugas */
+    public function updatePetugas(Request $request, Penugasan $penugasan, KontrakPekerjaan $pekerjaan)
+    {
+        abort_if((int) $pekerjaan->penugasan_id !== (int) $penugasan->id, 404);
+
+        $pekerjaan->load('kontrak.mitra.user');
+        if ($alasan = $this->alasanTerkunci($pekerjaan, 'diubah')) {
+            return back()->with('gagal', $alasan);
+        }
+
+        $request->merge([
+            'volume' => str_replace(',', '.', trim((string) $request->input('volume'))),
+        ]);
+
+        $data = $request->validate([
+            'volume' => 'required|numeric|gt:0|max:99999999',
+        ], [
+            'volume.required' => 'Volume wajib diisi.',
+            'volume.numeric'  => 'Volume harus berupa angka.',
+            'volume.gt'       => 'Volume harus lebih dari 0.',
+        ]);
+
+        $vol    = (float) $data['volume'];
+        $jumlah = (int) round($vol * (int) $pekerjaan->harga_satuan);
+        $nama   = $pekerjaan->kontrak?->mitra?->user?->name ?? 'mitra';
+
+        $pekerjaan->update([
+            'volume' => $vol,
+            'jumlah' => $jumlah,
+        ]);
+
+        return redirect()
+            ->route('admin.penugasan.assign', $penugasan)
+            ->with('sukses', 'Volume untuk ' . $nama . ' berhasil diperbarui.');
+    }
+
+    /** Hapus / keluarkan 1 mitra dari tugas */
+    public function hapusPetugas(Penugasan $penugasan, KontrakPekerjaan $pekerjaan)
+    {
+        abort_if((int) $pekerjaan->penugasan_id !== (int) $penugasan->id, 404);
+
+        $pekerjaan->load('kontrak.mitra.user');
+        if ($alasan = $this->alasanTerkunci($pekerjaan, 'dihapus')) {
+            return back()->with('gagal', $alasan);
+        }
+
+        $nama = $pekerjaan->kontrak?->mitra?->user?->name ?? 'mitra';
+        $pekerjaan->delete();
+
+        return redirect()
+            ->route('admin.penugasan.assign', $penugasan)
+            ->with('sukses', $nama . ' berhasil dikeluarkan dari tugas.');
+    }
+
+    /** Toggle bayar honor untuk 1 mitra (dipanggil via fetch di Assign Petugas) */
+    public function ubahStatusBayarPekerjaan(Request $request, KontrakPekerjaan $pekerjaan)
     {
         $dibayar = $request->boolean('dibayar');
 
@@ -84,17 +384,42 @@ class PenugasanController extends Controller
         ]);
     }
 
-    /** Form beri tugas */
-    public function create()
+    /** Toggle bayar seluruh mitra pada 1 Penugasan (dipanggil via fetch dari popover) */
+    public function ubahStatusBayar(Request $request, Penugasan $penugasan)
     {
-        $mitra = Mitra::with('user:id,name,username,is_active')
-            ->whereHas('user', fn($u) => $u->where('is_active', true))
-            ->get()
-            ->sortBy(fn($m) => strtolower($m->user->name))
-            ->values();
+        if ($penugasan->pekerjaan()->count() === 0) {
+            return response()->json([
+                'message' => 'Belum ada petugas yang diassign pada tugas ini.',
+            ], 422);
+        }
 
-        return view('admin.tambah-penugasan', [
-            'mitra'          => $mitra,
+        $dibayar = $request->boolean('dibayar');
+
+        $penugasan->pekerjaan()
+            ->where('honor_dibayar', !$dibayar)
+            ->update([
+                'honor_dibayar' => $dibayar,
+                'dibayar_pada'  => $dibayar ? now() : null,
+                'dibayar_oleh'  => $dibayar ? Auth::id() : null,
+            ]);
+
+        return response()->json([
+            'dibayar'      => $dibayar,
+            'dibayar_pada' => $dibayar ? now()->format('d/m/Y H:i') : null,
+        ]);
+    }
+
+    /** Form edit tugas induk */
+    public function edit(Penugasan $penugasan)
+    {
+        $penugasan->load('pekerjaan.kontrak');
+
+        if ($alasan = $this->alasanTugasTerkunci($penugasan, 'diubah')) {
+            return redirect()->route('admin.penugasan')->with('gagal', $alasan);
+        }
+
+        return view('admin.edit-penugasan', [
+            'penugasan'      => $penugasan,
             'koordinator'    => $this->daftarKoordinator(),
             'daftarKro'      => config('penugasan.kro'),
             'daftarKomponen' => config('penugasan.komponen'),
@@ -103,201 +428,97 @@ class PenugasanController extends Controller
         ]);
     }
 
-    /** Simpan: satu tugas diberikan ke banyak mitra sekaligus */
-    public function store(Request $request)
+    /** Simpan perubahan tugas induk dan sinkronkan ke seluruh mitra pada tugas ini */
+    public function update(Request $request, Penugasan $penugasan)
     {
-        $this->rapikanInput($request);
+        $penugasan->load('pekerjaan.kontrak.mitra.user');
 
-        $data = $request->validate(
-            $this->aturan() + [
-                'mitra_id'   => 'required|array|min:1',
-                'mitra_id.*' => 'integer|exists:mitra,id',
-            ],
-            $this->pesan() + [
-                'mitra_id.required' => 'Pilih minimal satu mitra.',
-                'mitra_id.min'      => 'Pilih minimal satu mitra.',
-            ]
-        );
+        if ($alasan = $this->alasanTugasTerkunci($penugasan, 'diubah')) {
+            return redirect()->route('admin.penugasan')->with('gagal', $alasan);
+        }
 
-        // Bulan kontrak mengikuti tanggal mulai
-        $tanggal = Carbon::parse($data['tanggal_mulai']);
-        $jumlah  = (int) round(((float) $data['volume']) * ((int) $data['harga_satuan']));
-        $pulsa   = $request->boolean('paket_data_pulsa');
-        $ro      = $this->gabungRo($data);
+        $this->rapikanHarga($request);
+        $data = $request->validate($this->aturanTugas(), $this->pesanTugas());
 
-        $koordinatorId = (int) $data['koordinator_id'];
-
-        $dibuat   = 0;
-        $dilewati = [];
+        $tanggal     = Carbon::parse($data['tanggal_mulai']);
+        $pulsa       = $request->boolean('paket_data_pulsa');
+        $ro          = $this->gabungRo($data);
+        $hargaSatuan = (int) $data['harga_satuan'];
 
         try {
-            DB::transaction(function () use ($data, $tanggal, $jumlah, $pulsa, $ro, $koordinatorId, &$dibuat, &$dilewati) {
-                $daftar = Mitra::with('user')
-                    ->whereIn('id', $data['mitra_id'])
-                    ->whereHas('user', fn($u) => $u->where('is_active', true))
-                    ->get();
+            DB::transaction(function () use ($penugasan, $data, $tanggal, $pulsa, $ro, $hargaSatuan) {
+                $penugasan->update([
+                    'koordinator_id'      => (int) $data['koordinator_id'],
+                    'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
+                    'ro'                  => $ro,
+                    'kro_ro'              => $data['kro_ro'] ?? null,
+                    'komponen'            => $data['komponen'] ?? null,
+                    'satuan'              => $data['satuan'],
+                    'harga_satuan'        => $hargaSatuan,
+                    'paket_data_pulsa'    => $pulsa,
+                    'ro_paket_data_pulsa' => $pulsa ? ($data['ro_paket_data_pulsa'] ?? null) : null,
+                    'tanggal_mulai'       => $data['tanggal_mulai'],
+                    'tanggal_selesai'     => $data['tanggal_selesai'],
+                ]);
 
-                foreach ($daftar as $mitra) {
-                    // Kontrak bulan itu dibuat otomatis jika belum ada
+                foreach ($penugasan->pekerjaan as $pekerjaan) {
+                    $kontrakLama = $pekerjaan->kontrak;
+
                     $kontrak = Kontrak::firstOrCreate(
                         [
-                            'mitra_id'      => $mitra->id,
+                            'mitra_id'      => $kontrakLama->mitra_id,
                             'periode_tahun' => $tanggal->year,
                             'periode_bulan' => $tanggal->month,
                         ],
                         ['dibuat_oleh' => Auth::id()]
                     );
 
-                    // Lewati jika mitra sudah punya tugas yang sama pada bulan itu
-                    $sudahAda = $kontrak->pekerjaan()
-                        ->where('uraian_pekerjaan', $data['uraian_pekerjaan'])
-                        ->exists();
+                    $pindah = $kontrak->getKey() !== $kontrakLama->getKey();
 
-                    if ($sudahAda) {
-                        $dilewati[] = $mitra->user->name;
-                        continue;
+                    if ($pindah && ($kontrak->cek_kontrak || $kontrak->cek_spj)) {
+                        $namaMitra = $kontrakLama->mitra?->user?->name ?? 'mitra';
+                        throw ValidationException::withMessages([
+                            'tanggal_mulai' => 'Kontrak ' . $namaMitra . ' pada bulan '
+                                . $tanggal->translatedFormat('F Y')
+                                . ' sudah diverifikasi, tugas tidak bisa dipindahkan ke sana.',
+                        ]);
                     }
 
-                    $kontrak->pekerjaan()->create([
-                        'koordinator_id'      => $koordinatorId,
-                        'urutan'              => (int) $kontrak->pekerjaan()->max('urutan') + 1,
+                    $kembar = $kontrak->pekerjaan()
+                        ->where('uraian_pekerjaan', $data['uraian_pekerjaan'])
+                        ->where('id', '!=', $pekerjaan->id)
+                        ->exists();
+
+                    if ($kembar) {
+                        $namaMitra = $kontrakLama->mitra?->user?->name ?? 'mitra';
+                        throw ValidationException::withMessages([
+                            'uraian_pekerjaan' => $namaMitra . ' sudah memiliki tugas dengan uraian yang sama pada bulan tersebut.',
+                        ]);
+                    }
+
+                    if ($pindah) {
+                        $pekerjaan->kontrak()->associate($kontrak);
+                        $pekerjaan->urutan = (int) $kontrak->pekerjaan()->max('urutan') + 1;
+                    }
+
+                    $pekerjaan->forceFill([
+                        'koordinator_id'      => (int) $data['koordinator_id'],
                         'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
                         'ro'                  => $ro,
                         'kro_ro'              => $data['kro_ro'] ?? null,
                         'komponen'            => $data['komponen'] ?? null,
-                        'volume'              => $data['volume'],
                         'satuan'              => $data['satuan'],
-                        'harga_satuan'        => $data['harga_satuan'],
-                        'jumlah'              => $jumlah,
+                        'harga_satuan'        => $hargaSatuan,
+                        'jumlah'              => (int) round(((float) $pekerjaan->volume) * $hargaSatuan),
                         'paket_data_pulsa'    => $pulsa,
                         'ro_paket_data_pulsa' => $pulsa ? ($data['ro_paket_data_pulsa'] ?? null) : null,
                         'tanggal_mulai'       => $data['tanggal_mulai'],
                         'tanggal_selesai'     => $data['tanggal_selesai'],
-                    ]);
-
-                    $dibuat++;
+                    ])->save();
                 }
-            });
-        } catch (\Throwable $e) {
-            report($e);
-
-            return back()
-                ->withInput()
-                ->with('gagal', 'Gagal menyimpan penugasan: ' . $e->getMessage());
-        }
-
-        if ($dibuat === 0) {
-            return back()->withInput()->with(
-                'gagal',
-                'Tidak ada tugas yang dibuat. Mitra yang dipilih sudah memiliki tugas "'
-                    . $data['uraian_pekerjaan'] . '" pada bulan itu, atau akunnya tidak aktif.'
-            );
-        }
-
-        $pesan = 'Tugas "' . $data['uraian_pekerjaan'] . '" berhasil diberikan kepada ' . $dibuat . ' mitra.';
-        if ($dilewati) {
-            $pesan .= ' ' . count($dilewati) . ' mitra dilewati karena sudah memiliki tugas yang sama.';
-        }
-
-        return redirect()->route('admin.penugasan')->with('sukses', $pesan);
-    }
-
-    /** Form edit satu tugas */
-    public function edit(KontrakPekerjaan $pekerjaan)
-    {
-        $pekerjaan->load('kontrak.mitra.user');
-
-        if ($alasan = $this->alasanTerkunci($pekerjaan, 'diubah')) {
-            return redirect()->route('admin.penugasan')->with('gagal', $alasan);
-        }
-
-        return view('admin.edit-penugasan', [
-            'pekerjaan'      => $pekerjaan,
-            'user'           => $pekerjaan->kontrak?->mitra?->user,
-            'koordinator'    => $this->daftarKoordinator(),
-            'daftarKro'      => config('penugasan.kro'),
-            'daftarKomponen' => config('penugasan.komponen'),
-            'daftarRoPulsa'  => config('penugasan.ro_pulsa'),
-            'daftarSatuan'   => config('penugasan.satuan'),
-        ]);
-    }
-
-    /** Simpan perubahan satu tugas */
-    public function update(Request $request, KontrakPekerjaan $pekerjaan)
-    {
-        $pekerjaan->load('kontrak.mitra.user');
-
-        if ($alasan = $this->alasanTerkunci($pekerjaan, 'diubah')) {
-            return redirect()->route('admin.penugasan')->with('gagal', $alasan);
-        }
-
-        $this->rapikanInput($request);
-        $data = $request->validate($this->aturan(), $this->pesan());
-
-        $tanggal = Carbon::parse($data['tanggal_mulai']);
-        $jumlah  = (int) round(((float) $data['volume']) * ((int) $data['harga_satuan']));
-        $pulsa   = $request->boolean('paket_data_pulsa');
-        $ro      = $this->gabungRo($data);
-        $nama    = $pekerjaan->kontrak?->mitra?->user?->name ?? 'mitra';
-
-        try {
-            DB::transaction(function () use ($pekerjaan, $data, $tanggal, $jumlah, $pulsa, $ro) {
-                $kontrakLama = $pekerjaan->kontrak;
-
-                // Bulan kontrak mengikuti tanggal mulai; jika bulannya berubah, tugas pindah kontrak
-                $kontrak = Kontrak::firstOrCreate(
-                    [
-                        'mitra_id'      => $kontrakLama->mitra_id,
-                        'periode_tahun' => $tanggal->year,
-                        'periode_bulan' => $tanggal->month,
-                    ],
-                    ['dibuat_oleh' => Auth::id()]
-                );
-
-                $pindah = $kontrak->getKey() !== $kontrakLama->getKey();
-
-                if ($pindah && ($kontrak->cek_kontrak || $kontrak->cek_spj)) {
-                    throw ValidationException::withMessages([
-                        'tanggal_mulai' => 'Kontrak mitra pada bulan '
-                            . $tanggal->translatedFormat('F Y')
-                            . ' sudah diverifikasi, tugas tidak bisa dipindahkan ke sana.',
-                    ]);
-                }
-
-                $kembar = $kontrak->pekerjaan()
-                    ->where('uraian_pekerjaan', $data['uraian_pekerjaan'])
-                    ->where('id', '!=', $pekerjaan->id)
-                    ->exists();
-
-                if ($kembar) {
-                    throw ValidationException::withMessages([
-                        'uraian_pekerjaan' => 'Mitra ini sudah punya tugas dengan uraian yang sama pada bulan itu.',
-                    ]);
-                }
-
-                if ($pindah) {
-                    $pekerjaan->kontrak()->associate($kontrak);
-                    $pekerjaan->urutan = (int) $kontrak->pekerjaan()->max('urutan') + 1;
-                }
-
-                $pekerjaan->forceFill([
-                    'koordinator_id'      => (int) $data['koordinator_id'],
-                    'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
-                    'ro'                  => $ro,
-                    'kro_ro'              => $data['kro_ro'] ?? null,
-                    'komponen'            => $data['komponen'] ?? null,
-                    'volume'              => $data['volume'],
-                    'satuan'              => $data['satuan'],
-                    'harga_satuan'        => $data['harga_satuan'],
-                    'jumlah'              => $jumlah,
-                    'paket_data_pulsa'    => $pulsa,
-                    'ro_paket_data_pulsa' => $pulsa ? ($data['ro_paket_data_pulsa'] ?? null) : null,
-                    'tanggal_mulai'       => $data['tanggal_mulai'],
-                    'tanggal_selesai'     => $data['tanggal_selesai'],
-                ])->save();
             });
         } catch (ValidationException $e) {
-            throw $e; // ditampilkan sebagai pesan kesalahan form
+            throw $e;
         } catch (\Throwable $e) {
             report($e);
 
@@ -308,20 +529,24 @@ class PenugasanController extends Controller
 
         return redirect()
             ->route('admin.penugasan')
-            ->with('sukses', 'Tugas "' . $data['uraian_pekerjaan'] . '" untuk ' . $nama . ' berhasil diperbarui.');
+            ->with('sukses', 'Tugas "' . $data['uraian_pekerjaan'] . '" berhasil diperbarui.');
     }
 
-    /** Hapus satu tugas milik satu mitra */
-    public function destroy(KontrakPekerjaan $pekerjaan)
+    /** Hapus 1 tugas beserta seluruh penugasan mitranya (jika belum ada yang terkunci) */
+    public function destroy(Penugasan $penugasan)
     {
-        $pekerjaan->load('kontrak');
+        $penugasan->load('pekerjaan.kontrak');
 
-        if ($alasan = $this->alasanTerkunci($pekerjaan, 'dihapus')) {
+        if ($alasan = $this->alasanTugasTerkunci($penugasan, 'dihapus')) {
             return back()->with('gagal', $alasan);
         }
 
-        $nama = $pekerjaan->uraian_pekerjaan;
-        $pekerjaan->delete();
+        $nama = $penugasan->uraian_pekerjaan;
+
+        DB::transaction(function () use ($penugasan) {
+            $penugasan->pekerjaan()->delete();
+            $penugasan->delete();
+        });
 
         return redirect()
             ->route('admin.penugasan')
@@ -329,26 +554,32 @@ class PenugasanController extends Controller
     }
 
     /**
-     * Query penugasan dengan pencarian, status, dan semua filter.
-     * Dipakai oleh index(), export(), dan bayarMassal().
+     * Query penugasan induk dengan pencarian, status, dan semua filter.
      */
     private function filterQuery(Request $request): Builder
     {
         $q      = trim((string) $request->input('q', ''));
         $status = $request->input('status');
 
-        $query = KontrakPekerjaan::query()
+        $query = Penugasan::query()
             ->when($q !== '', fn($query) => $query->where(function ($w) use ($q) {
                 $w->where('uraian_pekerjaan', 'like', "%{$q}%")
                     ->orWhere('ro', 'like', "%{$q}%")
-                    ->orWhereHas('kontrak.mitra.user', fn($u) => $u
+                    ->orWhereHas('koordinator', fn($k) => $k
+                        ->where('name', 'like', "%{$q}%")
+                        ->orWhere('username', 'like', "%{$q}%"))
+                    ->orWhereHas('pekerjaan.kontrak.mitra.user', fn($u) => $u
                         ->where('name', 'like', "%{$q}%")
                         ->orWhere('username', 'like', "%{$q}%"));
             }))
-            ->when($status === 'lunas', fn($query) => $query->where('honor_dibayar', true))
-            ->when($status === 'belum', fn($query) => $query->where('honor_dibayar', false));
+            ->when($status === 'kosong', fn($query) => $query->doesntHave('pekerjaan'))
+            ->when($status === 'lunas', fn($query) => $query
+                ->has('pekerjaan')
+                ->whereDoesntHave('pekerjaan', fn($p) => $p->where('honor_dibayar', false)))
+            ->when($status === 'belum', fn($query) => $query
+                ->whereHas('pekerjaan', fn($p) => $p->where('honor_dibayar', false)));
 
-        // Honor per tugas: nominal (sama dengan) atau rentang
+        // Filter rentang total honor tugas
         $parse = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
         $min = $max = null;
 
@@ -358,20 +589,31 @@ class PenugasanController extends Controller
         } elseif ($request->filled('honor_jumlah')) {
             $min = $max = $parse($request->input('honor_jumlah'));
         }
-        if ($min !== null) $query->where('jumlah', '>=', $min);
-        if ($max !== null) $query->where('jumlah', '<=', $max);
 
-        // Wilayah mitra
-        if ($request->filled('wilayah')) {
-            $query->whereHas('kontrak.mitra', fn($m) => $m->where('wilayah', $request->input('wilayah')));
+        if ($min !== null) {
+            $query->whereRaw(
+                '(SELECT COALESCE(SUM(jumlah), 0) FROM kontrak_pekerjaan WHERE kontrak_pekerjaan.penugasan_id = penugasan.id) >= ?',
+                [$min]
+            );
+        }
+        if ($max !== null) {
+            $query->whereRaw(
+                '(SELECT COALESCE(SUM(jumlah), 0) FROM kontrak_pekerjaan WHERE kontrak_pekerjaan.penugasan_id = penugasan.id) <= ?',
+                [$max]
+            );
         }
 
-        // Koordinator pemberi tugas
+        // Wilayah mitra pada tugas
+        if ($request->filled('wilayah')) {
+            $query->whereHas('pekerjaan.kontrak.mitra', fn($m) => $m->where('wilayah', $request->input('wilayah')));
+        }
+
+        // Koordinator
         if ($request->filled('koordinator')) {
             $query->where('koordinator_id', (int) $request->input('koordinator'));
         }
 
-        // Tugas (cocok dengan salah satu yang dipilih)
+        // Tugas
         $tugas = array_values(array_filter((array) $request->input('tugas', [])));
         if ($tugas) {
             $query->whereIn('uraian_pekerjaan', $tugas);
@@ -380,7 +622,7 @@ class PenugasanController extends Controller
         return $query;
     }
 
-    /** Tandai banyak tugas sekaligus: sudah / belum dibayar */
+    /** Tandai banyak tugas sekaligus: seluruh mitra pada tugas tsb dibayar / belum dibayar */
     public function bayarMassal(Request $request)
     {
         $request->validate([
@@ -391,50 +633,100 @@ class PenugasanController extends Controller
 
         $dibayar = $request->input('aksi') === 'bayar';
 
-        // "Pilih semua hasil filter" mengambil seluruh halaman, bukan hanya yang tampil
+        $penugasanIds = $request->boolean('semua_hasil')
+            ? $this->filterQuery($request)->pluck('penugasan.id')
+            : collect((array) $request->input('ids', []))->filter()->values();
+
+        if ($penugasanIds->isEmpty()) {
+            return back()->with('gagal', 'Belum ada tugas yang dipilih.');
+        }
+
+        $jumlah = KontrakPekerjaan::whereIn('penugasan_id', $penugasanIds)
+            ->where('honor_dibayar', !$dibayar)
+            ->update([
+                'honor_dibayar' => $dibayar,
+                'dibayar_pada'  => $dibayar ? now() : null,
+                'dibayar_oleh'  => $dibayar ? Auth::id() : null,
+            ]);
+
+        if ($jumlah === 0) {
+            return back()->with('gagal', 'Tidak ada data honor petugas yang berubah (belum ada petugas atau semua sudah berstatus '
+                . ($dibayar ? 'dibayar).' : 'belum dibayar).'));
+        }
+
+        return back()->with('sukses', $jumlah . ' penugasan mitra berhasil ditandai '
+            . ($dibayar ? 'sudah dibayar.' : 'belum dibayar.'));
+    }
+
+    /** Hapus banyak tugas sekaligus */
+    public function hapusMassal(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'nullable|array',
+            'ids.*' => 'integer',
+        ]);
+
         $ids = $request->boolean('semua_hasil')
-            ? $this->filterQuery($request)->pluck('id')
+            ? $this->filterQuery($request)->pluck('penugasan.id')
             : collect((array) $request->input('ids', []))->filter()->values();
 
         if ($ids->isEmpty()) {
             return back()->with('gagal', 'Belum ada tugas yang dipilih.');
         }
 
-        $target = KontrakPekerjaan::whereIn('id', $ids)
-            ->where('honor_dibayar', ! $dibayar); // hanya yang statusnya memang berubah
+        $dihapus  = 0;
+        $dilewati = 0;
 
-        $jumlah = $target->update([
-            'honor_dibayar' => $dibayar,
-            'dibayar_pada'  => $dibayar ? now() : null,
-            'dibayar_oleh'  => $dibayar ? Auth::id() : null,
-        ]);
+        Penugasan::with('pekerjaan.kontrak')
+            ->whereIn('id', $ids)
+            ->chunkById(100, function ($kelompok) use (&$dihapus, &$dilewati) {
+                foreach ($kelompok as $penugasan) {
+                    if ($this->alasanTugasTerkunci($penugasan, 'dihapus')) {
+                        $dilewati++;
+                        continue;
+                    }
 
-        if ($jumlah === 0) {
-            return back()->with('gagal', 'Semua tugas yang dipilih sudah berstatus '
-                . ($dibayar ? 'dibayar.' : 'belum dibayar.'));
+                    DB::transaction(function () use ($penugasan) {
+                        $penugasan->pekerjaan()->delete();
+                        $penugasan->delete();
+                    });
+                    $dihapus++;
+                }
+            });
+
+        if ($dihapus === 0) {
+            return back()->with(
+                'gagal',
+                'Tidak ada tugas yang dihapus. Semua tugas yang dipilih memiliki honor sudah dibayar atau kontrak sudah diverifikasi.'
+            );
         }
 
-        return back()->with('sukses', $jumlah . ' tugas berhasil ditandai '
-            . ($dibayar ? 'sudah dibayar.' : 'belum dibayar.'));
+        $pesan = $dihapus . ' tugas berhasil dihapus.';
+        if ($dilewati > 0) {
+            $pesan .= ' ' . $dilewati . ' tugas dilewati karena memiliki petugas yang honornya sudah dibayar atau kontraknya sudah diverifikasi.';
+        }
+
+        return back()->with('sukses', $pesan);
     }
 
     /** Export hasil filter ke CSV atau PDF */
     public function export(Request $request)
     {
-        $format   = $request->input('format') === 'pdf' ? 'pdf' : 'csv';
-        $daftar   = $this->filterQuery($request)
+        $format       = $request->input('format') === 'pdf' ? 'pdf' : 'csv';
+        $penugasanIds = $this->filterQuery($request)->pluck('penugasan.id');
+
+        $daftar = KontrakPekerjaan::whereIn('penugasan_id', $penugasanIds)
             ->with('kontrak.mitra.user', 'koordinator')
             ->latest('id')
             ->get();
-        $namaFile = 'penugasan-mitra-' . now()->format('Ymd-His');
 
+        $namaFile = 'penugasan-mitra-' . now()->format('Ymd-His');
         $tgl = fn($d) => $d ? Carbon::parse($d)->format('d/m/Y') : '-';
 
-        // ================= CSV =================
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($daftar, $tgl) {
                 $out = fopen('php://output', 'w');
-                fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
+                fwrite($out, "\xEF\xBB\xBF");
 
                 fputcsv($out, [
                     'No',
@@ -457,7 +749,7 @@ class PenugasanController extends Controller
                     fputcsv($out, [
                         $i + 1,
                         $user?->name,
-                        '="' . $user?->username . '"', // cegah Excel mengubah angka panjang
+                        '="' . $user?->username . '"',
                         $p->uraian_pekerjaan,
                         $p->ro,
                         $p->koordinator?->name,
@@ -474,9 +766,13 @@ class PenugasanController extends Controller
             }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
         }
 
-        // ================= PDF =================
-        $statusLabel = ['lunas' => 'Sudah Dibayar', 'belum' => 'Belum Dibayar'][$request->input('status')] ?? 'Semua';
-        $keterangan  = ['Status: ' . $statusLabel];
+        $statusLabel = [
+            'kosong' => 'Belum Ada Petugas',
+            'lunas'  => 'Sudah Dibayar',
+            'belum'  => 'Belum Dibayar',
+        ][$request->input('status')] ?? 'Semua';
+
+        $keterangan = ['Status: ' . $statusLabel];
 
         if (trim((string) $request->input('q')) !== '') {
             $keterangan[] = 'Pencarian: "' . trim($request->input('q')) . '"';
@@ -514,7 +810,7 @@ class PenugasanController extends Controller
         ]);
     }
 
-    /* ===================== Bagian bersama ===================== */
+    /* ===================== Helper ===================== */
 
     private function daftarKoordinator()
     {
@@ -524,16 +820,13 @@ class PenugasanController extends Controller
             ->get(['id', 'name', 'username']);
     }
 
-    /** Rapikan isian: "2,5" -> 2.5 dan "1.500.000" -> 1500000 */
-    private function rapikanInput(Request $request): void
+    private function rapikanHarga(Request $request): void
     {
         $request->merge([
-            'volume'       => str_replace(',', '.', (string) $request->input('volume')),
             'harga_satuan' => preg_replace('/\D/', '', (string) $request->input('harga_satuan')),
         ]);
     }
 
-    /** RO normal = KRO + Komponen */
     private function gabungRo(array $data): ?string
     {
         return (!empty($data['kro_ro']) && !empty($data['komponen']))
@@ -541,30 +834,46 @@ class PenugasanController extends Controller
             : null;
     }
 
-    /** Tugas yang honornya sudah dibayar atau kontraknya sudah diverifikasi dikunci */
     private function alasanTerkunci(KontrakPekerjaan $pekerjaan, string $kataKerja): ?string
     {
         if ($pekerjaan->honor_dibayar) {
-            return 'Tugas ini tidak bisa ' . $kataKerja
+            return 'Data ini tidak bisa ' . $kataKerja
                 . ' karena honornya sudah ditandai dibayar. Batalkan centang pembayaran dulu.';
         }
 
         $kontrak = $pekerjaan->kontrak;
         if ($kontrak && ($kontrak->cek_kontrak || $kontrak->cek_spj)) {
-            return 'Tugas ini tidak bisa ' . $kataKerja . ' karena kontraknya sudah diverifikasi.';
+            return 'Data ini tidak bisa ' . $kataKerja . ' karena kontraknya sudah diverifikasi.';
         }
 
         return null;
     }
 
-    private function aturan(): array
+    private function alasanTugasTerkunci(Penugasan $penugasan, string $kataKerja): ?string
+    {
+        foreach ($penugasan->pekerjaan as $p) {
+            if ($p->honor_dibayar) {
+                return 'Tugas ini tidak bisa ' . $kataKerja
+                    . ' karena sudah ada petugas yang honornya dibayar. Batalkan status pembayaran dulu di menu Assign Petugas.';
+            }
+
+            $kontrak = $p->kontrak;
+            if ($kontrak && ($kontrak->cek_kontrak || $kontrak->cek_spj)) {
+                return 'Tugas ini tidak bisa ' . $kataKerja
+                    . ' karena kontrak salah satu petugas pada tugas ini sudah diverifikasi.';
+            }
+        }
+
+        return null;
+    }
+
+    private function aturanTugas(): array
     {
         return [
             'uraian_pekerjaan'    => 'required|string|max:255',
             'koordinator_id'      => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'koordinator')->where('is_active', true)],
             'kro_ro'              => ['nullable', 'required_with:komponen', Rule::in(config('penugasan.kro'))],
             'komponen'            => ['nullable', 'required_with:kro_ro', Rule::in(config('penugasan.komponen'))],
-            'volume'              => 'required|numeric|gt:0|max:99999999',
             'satuan'              => ['required', Rule::in(config('penugasan.satuan'))],
             'harga_satuan'        => 'required|integer|min:1',
             'tanggal_mulai'       => 'required|date',
@@ -574,11 +883,11 @@ class PenugasanController extends Controller
         ];
     }
 
-    private function pesan(): array
+    private function pesanTugas(): array
     {
         return [
             'uraian_pekerjaan.required'       => 'Uraian pekerjaan wajib diisi.',
-            'koordinator_id.required'         => 'Pilih koordinator yang memberi tugas.',
+            'koordinator_id.required'         => 'Pilih koordinator yang memegang tugas.',
             'koordinator_id.exists'           => 'Koordinator yang dipilih tidak valid atau tidak aktif.',
             'kro_ro.in'                       => 'Pilihan KRO tidak valid.',
             'kro_ro.required_with'            => 'KRO wajib dipilih jika Komponen diisi.',
@@ -586,9 +895,6 @@ class PenugasanController extends Controller
             'komponen.required_with'          => 'Komponen wajib dipilih jika KRO diisi.',
             'ro_paket_data_pulsa.in'          => 'Pilihan RO paket data / pulsa tidak valid.',
             'ro_paket_data_pulsa.required_if' => 'Pilih RO paket data / pulsa.',
-            'volume.required'                 => 'Volume wajib diisi.',
-            'volume.numeric'                  => 'Volume harus berupa angka.',
-            'volume.gt'                       => 'Volume harus lebih dari 0.',
             'satuan.required'                 => 'Satuan wajib dipilih.',
             'satuan.in'                       => 'Pilihan satuan tidak valid.',
             'harga_satuan.required'           => 'Harga satuan wajib diisi.',
@@ -597,55 +903,5 @@ class PenugasanController extends Controller
             'tanggal_selesai.required'        => 'Tanggal selesai wajib diisi.',
             'tanggal_selesai.after_or_equal'  => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
         ];
-    }
-
-    /** Hapus banyak tugas sekaligus */
-    public function hapusMassal(Request $request)
-    {
-        $request->validate([
-            'ids'   => 'nullable|array',
-            'ids.*' => 'integer',
-        ]);
-
-        // "Pilih semua hasil filter" mengambil seluruh halaman, bukan hanya yang tampil
-        $ids = $request->boolean('semua_hasil')
-            ? $this->filterQuery($request)->pluck('id')
-            : collect((array) $request->input('ids', []))->filter()->values();
-
-        if ($ids->isEmpty()) {
-            return back()->with('gagal', 'Belum ada tugas yang dipilih.');
-        }
-
-        $dihapus = 0;
-        $dilewati = 0;
-
-        KontrakPekerjaan::with('kontrak')
-            ->whereIn('id', $ids)
-            ->chunkById(200, function ($kelompok) use (&$dihapus, &$dilewati) {
-                foreach ($kelompok as $pekerjaan) {
-                    // Tugas yang sudah dibayar atau kontraknya terverifikasi dikunci
-                    if ($this->alasanTerkunci($pekerjaan, 'dihapus')) {
-                        $dilewati++;
-                        continue;
-                    }
-
-                    $pekerjaan->delete();
-                    $dihapus++;
-                }
-            });
-
-        if ($dihapus === 0) {
-            return back()->with(
-                'gagal',
-                'Tidak ada tugas yang dihapus. Semua tugas yang dipilih sudah dibayar atau kontraknya sudah diverifikasi.'
-            );
-        }
-
-        $pesan = $dihapus . ' tugas berhasil dihapus.';
-        if ($dilewati > 0) {
-            $pesan .= ' ' . $dilewati . ' tugas dilewati karena honornya sudah dibayar atau kontraknya sudah diverifikasi.';
-        }
-
-        return back()->with('sukses', $pesan);
     }
 }

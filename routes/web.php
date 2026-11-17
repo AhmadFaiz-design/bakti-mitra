@@ -61,14 +61,27 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/penugasan', [PenugasanController::class, 'index'])->name('penugasan');
         Route::get('/penugasan/buat', [PenugasanController::class, 'create'])->name('penugasan.buat');
         Route::post('/penugasan', [PenugasanController::class, 'store'])->name('penugasan.simpan');
-        Route::delete('/penugasan/{pekerjaan}', [PenugasanController::class, 'destroy'])
-            ->whereNumber('pekerjaan')->name('penugasan.hapus');
-        Route::patch('/penugasan/{pekerjaan}/bayar', [PenugasanController::class, 'ubahStatusBayar'])
-            ->whereNumber('pekerjaan')->name('penugasan.bayar');
-        Route::get('/penugasan/{pekerjaan}/edit', [PenugasanController::class, 'edit'])
-            ->whereNumber('pekerjaan')->name('penugasan.edit');
-        Route::put('/penugasan/{pekerjaan}', [PenugasanController::class, 'update'])
-            ->whereNumber('pekerjaan')->name('penugasan.update');
+        Route::get('/penugasan/{penugasan}/edit', [PenugasanController::class, 'edit'])
+            ->whereNumber('penugasan')->name('penugasan.edit');
+        Route::put('/penugasan/{penugasan}', [PenugasanController::class, 'update'])
+            ->whereNumber('penugasan')->name('penugasan.update');
+        Route::delete('/penugasan/{penugasan}', [PenugasanController::class, 'destroy'])
+            ->whereNumber('penugasan')->name('penugasan.hapus');
+        Route::patch('/penugasan/{penugasan}/bayar', [PenugasanController::class, 'ubahStatusBayar'])
+            ->whereNumber('penugasan')->name('penugasan.bayar');
+
+        // Assign Petugas (Mitra + Volume)
+        Route::get('/penugasan/{penugasan}/assign', [PenugasanController::class, 'assignForm'])
+            ->whereNumber('penugasan')->name('penugasan.assign');
+        Route::post('/penugasan/{penugasan}/assign', [PenugasanController::class, 'assignStore'])
+            ->whereNumber('penugasan')->name('penugasan.assign.simpan');
+        Route::put('/penugasan/{penugasan}/petugas/{pekerjaan}', [PenugasanController::class, 'updatePetugas'])
+            ->whereNumber(['penugasan', 'pekerjaan'])->name('penugasan.petugas.update');
+        Route::delete('/penugasan/{penugasan}/petugas/{pekerjaan}', [PenugasanController::class, 'hapusPetugas'])
+            ->whereNumber(['penugasan', 'pekerjaan'])->name('penugasan.petugas.hapus');
+        Route::patch('/penugasan/pekerjaan/{pekerjaan}/bayar', [PenugasanController::class, 'ubahStatusBayarPekerjaan'])
+            ->whereNumber('pekerjaan')->name('penugasan.pekerjaan.bayar');
+
         Route::get('/penugasan/export', [PenugasanController::class, 'export'])->name('penugasan.export');
         Route::post('/penugasan/bayar-massal', [PenugasanController::class, 'bayarMassal'])->name('penugasan.bayar-massal');
         Route::delete('/penugasan/hapus-massal', [PenugasanController::class, 'hapusMassal'])->name('penugasan.hapus-massal');
@@ -80,10 +93,10 @@ Route::middleware(['auth', 'role:koordinator'])->group(function () {
     Route::redirect('/koordinator', '/koordinator/dashboard');
 
     Route::prefix('koordinator')->name('koordinator.')->group(function () {
-    Route::get('/dashboard', [KoordinatorDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/mitra', [KoordinatorPenugasanController::class, 'index'])->name('datamitra');
-    Route::get('/mitra/export', [KoordinatorPenugasanController::class, 'export'])->name('penugasan.export');
-});
+        Route::get('/dashboard', [KoordinatorDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/mitra', [KoordinatorPenugasanController::class, 'index'])->name('datamitra');
+        Route::get('/mitra/export', [KoordinatorPenugasanController::class, 'export'])->name('penugasan.export');
+    });
 });
 
 /* ========================= MITRA ========================= */
