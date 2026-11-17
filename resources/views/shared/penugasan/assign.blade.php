@@ -8,301 +8,7 @@
     $totalVolText = rtrim(rtrim(number_format($totalVolume, 2, ',', '.'), '0'), ',') ?: '0';
 @endphp
 
-<x-admin.main class="create-page">
-    <style>
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: 14px 20px;
-        }
-
-        .summary-item span {
-            display: block;
-            font-size: 12px;
-            color: #5f7068;
-            margin-bottom: 4px;
-        }
-
-        .summary-item strong {
-            font-size: 14px;
-            color: #1d2d25;
-        }
-
-        .picker {
-            border: 1px solid #d5e0da;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .picker-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #d5e0da;
-            background: #fbfdfb;
-        }
-
-        .picker-bar input[type="search"] {
-            flex: 1;
-            min-width: 200px;
-            padding: 8px 10px;
-            border: 1px solid #d5e0da;
-            border-radius: 8px;
-            font: inherit;
-        }
-
-        .mass-vol-box {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .mass-vol-box input {
-            width: 105px;
-            padding: 7px 10px;
-            border: 1px solid #d5e0da;
-            border-radius: 8px;
-            font: inherit;
-            font-size: 13px;
-        }
-
-        .mass-vol-btn {
-            padding: 7px 10px;
-            border-radius: 8px;
-            border: 1px solid #d5e0da;
-            background: #fff;
-            font: inherit;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        .mass-vol-btn:hover {
-            background: #eef5f0;
-        }
-
-        .picker-bar label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            margin: 0;
-            cursor: pointer;
-        }
-
-        .picker-list {
-            max-height: 360px;
-            overflow: auto;
-        }
-
-        .assign-row {
-            display: grid;
-            grid-template-columns: 24px 1fr 165px 140px;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #eef3f0;
-            font-size: 14px;
-        }
-
-        .assign-row[hidden] {
-            display: none;
-        }
-
-        .assign-row.selected {
-            background: #f5fbf7;
-        }
-
-        .assign-row.row-invalid {
-            background: #fff4f3;
-        }
-
-        .assign-mitra-label {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .assign-mitra-label small {
-            color: #5f7068;
-            font-size: 12px;
-        }
-
-        .assign-vol-wrap {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .assign-vol-input {
-            width: 95px;
-            padding: 7px 9px;
-            border: 1px solid #d5e0da;
-            border-radius: 8px;
-            font: inherit;
-            font-size: 13px;
-            text-align: right;
-            background: #fff;
-        }
-
-        .assign-row.row-invalid .assign-vol-input {
-            border-color: #b3261e;
-        }
-
-        .assign-satuan {
-            font-size: 12px;
-            color: #5f7068;
-            white-space: nowrap;
-        }
-
-        .assign-honor {
-            text-align: right;
-            font-weight: 600;
-            font-size: 13px;
-            color: #1d2d25;
-            white-space: nowrap;
-        }
-
-        .picker input[type="checkbox"],
-        .inline-bayar input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            min-width: 18px;
-            flex: none;
-            padding: 0;
-            margin: 0;
-            border: 0;
-            box-shadow: none;
-            background: none;
-            accent-color: #0d6efd;
-            cursor: pointer;
-        }
-
-        .terpilih {
-            padding: 10px 12px;
-            border-bottom: 1px solid #d5e0da;
-            background: #f7faf8;
-        }
-
-        .terpilih[hidden] {
-            display: none;
-        }
-
-        .terpilih-head {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: #5f7068;
-        }
-
-        .terpilih-daftar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            max-height: 120px;
-            overflow: auto;
-        }
-
-        .chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 6px 4px 10px;
-            border: 1px solid #d5e0da;
-            border-radius: 999px;
-            background: #fff;
-            font-size: 13px;
-        }
-
-        .chip button {
-            border: 0;
-            background: #eef3f0;
-            color: #5f7068;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            line-height: 1;
-            cursor: pointer;
-            padding: 0;
-        }
-
-        .chip button:hover {
-            background: #fdecea;
-            color: #b3261e;
-        }
-
-        .inline-vol-form {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .inline-vol-form input {
-            width: 82px;
-            padding: 6px 8px;
-            border: 1px solid #d5e0da;
-            border-radius: 7px;
-            font: inherit;
-            font-size: 13px;
-            text-align: right;
-        }
-
-        .mini-btn {
-            padding: 6px 10px;
-            border-radius: 7px;
-            border: 1px solid #d5e0da;
-            background: #fff;
-            font: inherit;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .mini-btn.save {
-            background: #f4faf6;
-            border-color: #b7d7c2;
-            color: #166534;
-        }
-
-        .mini-btn.del {
-            background: #fff5f5;
-            border-color: #f3c4c0;
-            color: #b3261e;
-        }
-
-        .mini-btn:disabled {
-            opacity: .45;
-            cursor: not-allowed;
-        }
-
-        .inline-bayar {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 13px;
-        }
-
-        @media (max-width: 720px) {
-            .assign-row {
-                grid-template-columns: 24px 1fr;
-            }
-            .assign-vol-wrap,
-            .assign-honor {
-                grid-column: 2;
-                justify-self: start;
-            }
-        }
-    </style>
-
+<x-dynamic-component :component="$layout" class="create-page">
     {{-- HEADER HALAMAN --}}
     <header class="page-header">
         <div class="page-title">
@@ -311,10 +17,7 @@
         </div>
 
         <div class="page-actions" style="gap:12px">
-            <a href="{{ route('admin.penugasan') }}" class="btn-secondary"
-                style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-                &larr; Kembali ke Penugasan
-            </a>
+
             <span class="username">{{ auth()->user()->name }}</span>
             <div class="avatar" style="display:flex;align-items:center;justify-content:center">
                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -323,10 +26,9 @@
     </header>
 
     @if ($errors->any())
-        <div role="alert"
-            style="background:#fdecea;border:1px solid #b3261e;color:#b3261e;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px">
+        <div role="alert" class="form-alert-error">
             <b>Penugasan petugas belum bisa disimpan:</b>
-            <ul style="margin:6px 0 0 18px;padding:0">
+            <ul>
                 @foreach ($errors->all() as $pesan)
                     <li>{{ $pesan }}</li>
                 @endforeach
@@ -336,8 +38,8 @@
 
     {{-- RINGKASAN TUGAS --}}
     <section class="form-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
-            <h3 style="margin:0;font-size:16px">Detail Tugas</h3>
+        <div class="form-card-head">
+            <h3 class="form-card-title">Detail Tugas</h3>
             @if ($penugasan->ro)
                 <span class="status-badge active">RO: {{ $penugasan->ro }}</span>
             @endif
@@ -372,26 +74,28 @@
     </section>
 
     {{-- FORM ASSIGN PETUGAS BARU --}}
-    <section class="form-card" style="margin-top:16px">
-        <h3 style="margin:0 0 6px;font-size:16px">Tambah / Assign Petugas Baru</h3>
-        <p style="margin:0 0 14px;font-size:13px;color:#5f7068">
+    <section class="form-card">
+        <h3 class="form-card-title" style="margin-bottom:6px">Tambah / Assign Petugas Baru</h3>
+        <p class="form-card-sub">
             Centang mitra yang ditugaskan lalu masukkan volume pekerjaan masing-masing.
         </p>
 
         @if ($mitraTersedia->isEmpty())
             <div class="picker">
-                <p style="padding:18px;text-align:center;color:#5f7068;margin:0;font-size:14px">
+                <p class="picker-empty" style="margin:0">
                     @if ($totalPetugas > 0)
                         Semua mitra aktif sudah ditugaskan ke tugas ini.
-                    @else
+                    @elseif ($role === 'admin')
                         Belum ada mitra aktif.
                         <a href="{{ route('admin.tambahmitra') }}">Tambah mitra</a> atau
                         <a href="{{ route('admin.mitra.import') }}">import dari Excel</a>.
+                    @else
+                        Belum ada mitra aktif yang tersedia untuk ditugaskan.
                     @endif
                 </p>
             </div>
         @else
-            <form id="assignForm" action="{{ route('admin.penugasan.assign.simpan', $penugasan) }}" method="POST">
+            <form id="assignForm" action="{{ route($routes['assignSimpan'], $penugasan) }}" method="POST">
                 @csrf
 
                 <div class="picker">
@@ -407,13 +111,13 @@
                         <label>
                             <input type="checkbox" id="pilihSemuaMitra"> Pilih semua tampil
                         </label>
-                        <strong id="jumlahDipilih" style="font-size:14px">0 dipilih</strong>
+                        <strong id="jumlahDipilih" class="picker-count">0 dipilih</strong>
                     </div>
 
                     <div class="terpilih" id="boxTerpilih" hidden>
                         <div class="terpilih-head">
                             <span>Mitra terpilih (klik &times; untuk membatalkan)</span>
-                            <strong id="totalHonorBaru" style="color:#166534">Total tambahan honor: Rp 0</strong>
+                            <strong id="totalHonorBaru" class="terpilih-total">Total tambahan honor: Rp 0</strong>
                         </div>
                         <div class="terpilih-daftar" id="daftarTerpilih"></div>
                     </div>
@@ -448,15 +152,10 @@
                     </div>
                 </div>
 
-                <div id="assignErrorClient" role="alert" hidden
-                    style="background:#fdecea;border:1px solid #b3261e;color:#b3261e;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px">
-                </div>
+                <div id="assignErrorClient" role="alert" class="form-alert-error form-alert-inline" hidden></div>
 
-                <div class="form-navigation" style="margin-top:16px">
-                    <a href="{{ route('admin.penugasan') }}" class="btn-secondary"
-                        style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">
-                        Kembali
-                    </a>
+                <div class="form-navigation">
+                    <a href="{{ route($routes['index']) }}" class="btn-secondary btn-link">Kembali</a>
                     <button type="submit" class="btn-primary">Assign Petugas</button>
                 </div>
             </form>
@@ -464,13 +163,13 @@
     </section>
 
     {{-- DAFTAR PETUGAS YANG SUDAH DITUGASKAN --}}
-    <section class="form-card" style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
-            <h3 style="margin:0;font-size:16px">Petugas yang Sudah Ditugaskan ({{ $totalPetugas }})</h3>
+    <section class="form-card">
+        <div class="form-card-head">
+            <h3 class="form-card-title">Petugas yang Sudah Ditugaskan ({{ $totalPetugas }})</h3>
         </div>
 
         <div class="table-scroll">
-            <table class="mitra-table">
+            <table class="mitra-table assign-petugas-table">
                 <thead>
                     <tr>
                         <th>No</th>
@@ -478,7 +177,7 @@
                         <th>Volume ({{ $penugasan->satuan }})</th>
                         <th>Honor</th>
                         <th>Pembayaran</th>
-                        <th style="text-align:right">Aksi</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -500,12 +199,12 @@
                                     {{ $user?->username ?? '-' }}@if ($mitra?->wilayah) &middot; {{ $mitra->wilayah }}@endif
                                 </span>
                                 @if ($diverifikasi)
-                                    <span class="cell-sub" style="color:#b3261e">Kontrak sudah diverifikasi</span>
+                                    <span class="cell-sub lock-note">Kontrak sudah diverifikasi</span>
                                 @endif
                             </td>
                             <td>
                                 <form method="POST"
-                                    action="{{ route('admin.penugasan.petugas.update', [$penugasan, $p]) }}"
+                                    action="{{ route($routes['petugasUpdate'], [$penugasan, $p]) }}"
                                     class="inline-vol-form">
                                     @csrf
                                     @method('PUT')
@@ -523,23 +222,32 @@
                                 Rp {{ number_format($p->jumlah ?? 0, 0, ',', '.') }}
                             </td>
                             <td>
-                                <label class="inline-bayar">
-                                    <input type="checkbox" class="bayar-petugas-check"
-                                        data-url="{{ route('admin.penugasan.pekerjaan.bayar', $p) }}"
-                                        @checked($dibayar)>
+                                @if ($bisaKelolaBayar)
+                                    <label class="inline-bayar">
+                                        <input type="checkbox" class="bayar-petugas-check"
+                                            data-url="{{ route($routes['pekerjaanBayar'], $p) }}"
+                                            @checked($dibayar)>
+                                        @if ($dibayar)
+                                            <span class="status-badge active">Sudah Dibayar</span>
+                                        @else
+                                            <span class="status-badge pending">Belum Dibayar</span>
+                                        @endif
+                                    </label>
+                                @else
                                     @if ($dibayar)
                                         <span class="status-badge active">Sudah Dibayar</span>
                                     @else
                                         <span class="status-badge pending">Belum Dibayar</span>
                                     @endif
-                                </label>
+                                @endif
+
                                 @if ($dibayar && $p->dibayar_pada)
                                     <span class="cell-sub">{{ $p->dibayar_pada->format('d/m/Y H:i') }}</span>
                                 @endif
                             </td>
-                            <td style="text-align:right">
+                            <td>
                                 <form method="POST"
-                                    action="{{ route('admin.penugasan.petugas.hapus', [$penugasan, $p]) }}"
+                                    action="{{ route($routes['petugasHapus'], [$penugasan, $p]) }}"
                                     class="hapus-petugas-form" data-nama="{{ $nama }}" style="display:inline">
                                     @csrf
                                     @method('DELETE')
@@ -552,7 +260,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="text-align:center;padding:20px;color:#5f7068">
+                            <td colspan="6" class="picker-empty">
                                 Belum ada petugas yang ditugaskan. Silakan pilih mitra dan isi volumenya pada form di atas.
                             </td>
                         </tr>
@@ -572,7 +280,7 @@
                 const formatRp = n => 'Rp ' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                 const parseNum = v => parseFloat(String(v || '0').replace(',', '.')) || 0;
 
-                /* ===== Bagian Picker Assign Baru ===== */
+                /* ===== Picker Assign Baru ===== */
                 const assignForm = document.getElementById('assignForm');
                 if (assignForm) {
                     const cari = document.getElementById('cariMitra');
@@ -733,7 +441,6 @@
                             return;
                         }
 
-                        // Nonaktifkan input volume pada baris tidak terpilih agar request tetap ringan
                         rows.forEach(r => {
                             if (!r.querySelector('.assign-check').checked) {
                                 r.querySelector('.assign-vol-input').disabled = true;
@@ -812,4 +519,4 @@
             })();
         </script>
     @endpush
-</x-admin.main>
+</x-dynamic-component>

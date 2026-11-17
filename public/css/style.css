@@ -3482,9 +3482,552 @@ a.notif-item:hover {
 ======================================== */
 
 /* Tabel ini tidak punya kolom checkbox, jadi kolom pertama tidak dipersempit */
-.penugasan-koor th:first-child,
-.penugasan-koor td:first-child {
-    width: auto;
+/* ========================================
+   PENUGASAN BERSAMA & ASSIGN PETUGAS
+======================================== */
+
+/* Kolom Aksi (tombol Assign Petugas + titik tiga) */
+.penugasan-table th.aksi-col,
+.penugasan-table td.action-cell {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.aksi-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.assign-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--tint);
+    background: var(--bg);
+    color: var(--primary-dark);
+    font: 600 12px 'Poppins', sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.assign-btn:hover {
+    background: var(--tint);
+    border-color: var(--primary);
+}
+
+.assign-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.status-badge.empty {
+    background: var(--bg);
+    color: var(--muted);
+}
+
+.status-badge.partial {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.pop-actions-wrap {
+    flex-wrap: wrap;
+}
+
+.pop-btn-full {
+    flex: 1 1 100%;
+}
+
+/* Form Tambah & Edit Tugas */
+.form-card + .form-card {
+    margin-top: 16px;
+}
+
+.form-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.form-card-title {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.form-card-head .form-card-title {
+    margin-bottom: 0;
+}
+
+.form-card-sub {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.form-group[hidden] {
+    display: none;
+}
+
+.form-group label.cek {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.form-group label.cek input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    flex: none;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 4px;
+    box-shadow: none;
+    background: none;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.catatan {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 12px 0 0;
+}
+
+.catatan a {
+    color: var(--primary-dark);
+    font-weight: 500;
+}
+
+.form-alert-error {
+    background: #FDE8E9;
+    border: 1px solid #E5484D;
+    color: #B3261E;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.form-alert-error ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+
+.form-alert-inline {
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.field-error {
+    color: #E5484D;
+    font-size: 12px;
+}
+
+.form-navigation.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.btn-link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-back-compact {
+    height: 40px;
+    padding: 0 16px;
+}
+
+/* Halaman Assign Petugas */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px 20px;
+}
+
+.summary-item span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.summary-item strong {
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.picker {
+    border: 1px solid #D5D0E5;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--white);
+}
+
+.picker-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #D5D0E5;
+    background: var(--bg);
+}
+
+.picker-bar input[type="search"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid #D5D0E5;
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.mass-vol-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mass-vol-box input {
+    width: 110px;
+    padding: 8px 10px;
+    border: 1px solid #D5D0E5;
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.mass-vol-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #D5D0E5;
+    background: var(--white);
+    color: var(--ink);
+    font: 500 12px 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.mass-vol-btn:hover {
+    background: var(--tint);
+    border-color: var(--primary);
+    color: var(--primary-dark);
+}
+
+.picker-bar label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.picker-count {
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.picker-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.picker-empty a {
+    color: var(--primary-dark);
+    font-weight: 500;
+}
+
+.picker-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.assign-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 170px 140px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #F0EDFA;
+    font-size: 13px;
+    transition: background .15s ease;
+}
+
+.assign-row:last-child {
+    border-bottom: 0;
+}
+
+.assign-row[hidden] {
+    display: none;
+}
+
+.assign-row.selected {
+    background: var(--bg);
+}
+
+.assign-row.row-invalid {
+    background: #FFF4F3;
+}
+
+.assign-mitra-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: pointer;
+    margin: 0;
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.assign-mitra-label small {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.assign-vol-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.assign-vol-input {
+    width: 95px;
+    padding: 7px 10px;
+    border: 1px solid #D5D0E5;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13px;
+    text-align: right;
+    background: var(--white);
+    color: var(--ink);
+    outline: none;
+}
+
+.assign-row.row-invalid .assign-vol-input {
+    border-color: #E5484D;
+}
+
+.assign-satuan {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.assign-honor {
+    text-align: right;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+.picker input[type="checkbox"],
+.inline-bayar input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    flex: none;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    background: none;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.picker-bar input[type="search"]:focus,
+.mass-vol-box input:focus,
+.assign-vol-input:focus,
+.inline-vol-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 121, 241, .14);
+}
+
+.terpilih {
+    padding: 10px 14px;
+    border-bottom: 1px solid #D5D0E5;
+    background: var(--bg);
+}
+
+.terpilih[hidden] {
+    display: none;
+}
+
+.terpilih-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.terpilih-total {
+    color: var(--primary-dark);
+}
+
+.terpilih-daftar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 10px;
+    border: 1px solid #D5D0E5;
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.chip button {
+    border: 0;
+    background: var(--tint);
+    color: var(--ink);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.chip button:hover {
+    background: #FDE8E9;
+    color: #E5484D;
+}
+
+.assign-petugas-table th:first-child,
+.assign-petugas-table td:first-child {
+    width: 46px;
     padding-left: 10px;
     padding-right: 10px;
+}
+
+.assign-petugas-table th:last-child,
+.assign-petugas-table td:last-child {
+    text-align: right;
+}
+
+.inline-vol-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inline-vol-form input {
+    width: 84px;
+    padding: 6px 8px;
+    border: 1px solid #D5D0E5;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    text-align: right;
+    color: var(--ink);
+    outline: none;
+}
+
+.mini-btn {
+    padding: 6px 11px;
+    border-radius: 8px;
+    border: 1px solid #D5D0E5;
+    background: var(--white);
+    font: 600 12px 'Poppins', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.mini-btn.save {
+    background: var(--bg);
+    border-color: var(--tint);
+    color: var(--primary-dark);
+}
+
+.mini-btn.save:hover:not(:disabled) {
+    background: var(--tint);
+    border-color: var(--primary);
+}
+
+.mini-btn.del {
+    background: #FDE8E9;
+    border-color: #F6C5C7;
+    color: #E5484D;
+}
+
+.mini-btn.del:hover:not(:disabled) {
+    background: #F8D0D2;
+}
+
+.mini-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.inline-bayar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.lock-note {
+    color: #E5484D;
+}
+
+@media (max-width: 720px) {
+    .assign-row {
+        grid-template-columns: 24px 1fr;
+    }
+
+    .assign-vol-wrap,
+    .assign-honor {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-navigation.cols-3 {
+        grid-template-columns: 1fr;
+    }
 }

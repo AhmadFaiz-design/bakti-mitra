@@ -1,39 +1,4 @@
-<x-admin.main class="create-page">
-    <style>
-        .form-group[hidden] {
-            display: none;
-        }
-
-        .form-group label.cek input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            min-width: 18px;
-            flex: none;
-            padding: 0;
-            margin: 0;
-            border: 0;
-            box-shadow: none;
-            background: none;
-            accent-color: #0d6efd;
-            cursor: pointer;
-        }
-
-        .form-group label.cek {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .catatan {
-            font-size: 13px;
-            color: #5f7068;
-            margin: 12px 0 0;
-        }
-    </style>
-
+<x-dynamic-component :component="$layout" class="create-page">
     <header class="page-header">
         <div class="page-title">
             <h1>Edit Tugas</h1>
@@ -48,15 +13,14 @@
         </div>
     </header>
 
-    <form action="{{ route('admin.penugasan.update', $penugasan) }}" method="POST">
+    <form action="{{ route($routes['update'], $penugasan) }}" method="POST">
         @csrf
         @method('PUT')
 
         @if ($errors->any())
-            <div role="alert"
-                style="background:#fdecea;border:1px solid #b3261e;color:#b3261e;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px">
+            <div role="alert" class="form-alert-error">
                 <b>Perubahan belum bisa disimpan:</b>
-                <ul style="margin:6px 0 0 18px;padding:0">
+                <ul>
                     @foreach ($errors->all() as $pesan)
                         <li>{{ $pesan }}</li>
                     @endforeach
@@ -65,7 +29,7 @@
         @endif
 
         <section class="form-card">
-            <h3 style="margin:0 0 16px;font-size:16px">Detail Pekerjaan</h3>
+            <h3 class="form-card-title">Detail Pekerjaan</h3>
 
             <div class="form-grid">
                 <div class="form-group full-width">
@@ -74,17 +38,19 @@
                         value="{{ old('uraian_pekerjaan', $penugasan->uraian_pekerjaan) }}" required>
                 </div>
 
-                <div class="form-group full-width">
-                    <label for="koordinator_id">Koordinator</label>
-                    <select id="koordinator_id" name="koordinator_id" required>
-                        <option value="" disabled>Pilih Koordinator</option>
-                        @foreach ($koordinator as $k)
-                            <option value="{{ $k->id }}" @selected((string) old('koordinator_id', $penugasan->koordinator_id) === (string) $k->id)>
-                                {{ $k->name }} ({{ $k->username }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                @if ($bisaPilihKoordinator)
+                    <div class="form-group full-width">
+                        <label for="koordinator_id">Koordinator</label>
+                        <select id="koordinator_id" name="koordinator_id" required>
+                            <option value="" disabled>Pilih Koordinator</option>
+                            @foreach ($koordinator as $k)
+                                <option value="{{ $k->id }}" @selected((string) old('koordinator_id', $penugasan->koordinator_id) === (string) $k->id)>
+                                    {{ $k->name }} ({{ $k->username }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
 
                 <div class="form-group">
                     <label for="satuan">Satuan</label>
@@ -116,12 +82,12 @@
 
             <p class="catatan">
                 Untuk menambah mitra atau mengubah volume masing-masing mitra, gunakan menu
-                <a href="{{ route('admin.penugasan.assign', $penugasan) }}">Assign Petugas</a>.
+                <a href="{{ route($routes['assign'], $penugasan) }}">Assign Petugas</a>.
             </p>
         </section>
 
-        <section class="form-card" style="margin-top:16px">
-            <h3 style="margin:0 0 16px;font-size:16px">Informasi Anggaran (opsional)</h3>
+        <section class="form-card">
+            <h3 class="form-card-title">Informasi Anggaran (opsional)</h3>
 
             <div class="form-grid">
                 <div class="form-group">
@@ -169,10 +135,7 @@
             </div>
 
             <div class="form-navigation">
-                <a href="{{ route('admin.penugasan') }}" class="btn-secondary"
-                    style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">
-                    Batal
-                </a>
+                <a href="{{ route($routes['index']) }}" class="btn-secondary btn-link">Batal</a>
                 <button type="submit" class="btn-primary">Simpan Perubahan</button>
             </div>
         </section>
@@ -208,4 +171,4 @@
             })();
         </script>
     @endpush
-</x-admin.main>
+</x-dynamic-component>

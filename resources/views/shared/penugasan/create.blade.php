@@ -1,39 +1,4 @@
-<x-admin.main class="create-page">
-    <style>
-        .form-group[hidden] {
-            display: none;
-        }
-
-        .form-group label.cek input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            min-width: 18px;
-            flex: none;
-            padding: 0;
-            margin: 0;
-            border: 0;
-            box-shadow: none;
-            background: none;
-            accent-color: #0d6efd;
-            cursor: pointer;
-        }
-
-        .form-group label.cek {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .catatan {
-            font-size: 13px;
-            color: #5f7068;
-            margin: 12px 0 0;
-        }
-    </style>
-
+<x-dynamic-component :component="$layout" class="create-page">
     {{-- HEADER HALAMAN --}}
     <header class="page-header">
         <div class="page-title">
@@ -49,14 +14,13 @@
         </div>
     </header>
 
-    <form id="penugasanForm" action="{{ route('admin.penugasan.simpan') }}" method="POST">
+    <form id="penugasanForm" action="{{ route($routes['simpan']) }}" method="POST">
         @csrf
 
         @if ($errors->any())
-            <div role="alert"
-                style="background:#fdecea;border:1px solid #b3261e;color:#b3261e;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px">
+            <div role="alert" class="form-alert-error">
                 <b>Tugas belum bisa disimpan:</b>
-                <ul style="margin:6px 0 0 18px;padding:0">
+                <ul>
                     @foreach ($errors->all() as $pesan)
                         <li>{{ $pesan }}</li>
                     @endforeach
@@ -64,11 +28,9 @@
             </div>
         @endif
 
-        {{-- ======================== --}}
-        {{-- DETAIL PEKERJAAN         --}}
-        {{-- ======================== --}}
+        {{-- DETAIL PEKERJAAN --}}
         <section class="form-card">
-            <h3 style="margin:0 0 16px;font-size:16px">Detail Pekerjaan</h3>
+            <h3 class="form-card-title">Detail Pekerjaan</h3>
 
             <div class="form-grid">
                 <div class="form-group full-width">
@@ -78,20 +40,22 @@
                         placeholder="Contoh: Pengolahan Dokumen Pencacahan Susenas September" required>
                 </div>
 
-                <div class="form-group full-width">
-                    <label for="koordinator_id">Koordinator</label>
-                    <select id="koordinator_id" name="koordinator_id" required>
-                        <option value="" selected disabled>Pilih Koordinator</option>
-                        @foreach ($koordinator as $k)
-                            <option value="{{ $k->id }}" @selected((string) old('koordinator_id') === (string) $k->id)>
-                                {{ $k->name }} ({{ $k->username }})
-                            </option>
-                        @endforeach
-                    </select>
-                    @if ($koordinator->isEmpty())
-                        <small style="color:#b3261e">Belum ada akun koordinator yang aktif.</small>
-                    @endif
-                </div>
+                @if ($bisaPilihKoordinator)
+                    <div class="form-group full-width">
+                        <label for="koordinator_id">Koordinator</label>
+                        <select id="koordinator_id" name="koordinator_id" required>
+                            <option value="" selected disabled>Pilih Koordinator</option>
+                            @foreach ($koordinator as $k)
+                                <option value="{{ $k->id }}" @selected((string) old('koordinator_id') === (string) $k->id)>
+                                    {{ $k->name }} ({{ $k->username }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @if ($koordinator->isEmpty())
+                            <small class="field-error">Belum ada akun koordinator yang aktif.</small>
+                        @endif
+                    </div>
+                @endif
 
                 <div class="form-group">
                     <label for="satuan">Satuan</label>
@@ -128,11 +92,9 @@
             </p>
         </section>
 
-        {{-- ======================== --}}
-        {{-- INFORMASI ANGGARAN       --}}
-        {{-- ======================== --}}
-        <section class="form-card" style="margin-top:16px">
-            <h3 style="margin:0 0 16px;font-size:16px">Informasi Anggaran (opsional)</h3>
+        {{-- INFORMASI ANGGARAN --}}
+        <section class="form-card">
+            <h3 class="form-card-title">Informasi Anggaran (opsional)</h3>
 
             <div class="form-grid">
                 <div class="form-group">
@@ -180,11 +142,8 @@
                 </div>
             </div>
 
-            <div class="form-navigation" style="gap:10px;flex-wrap:wrap">
-                <a href="{{ route('admin.penugasan') }}" class="btn-secondary"
-                    style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">
-                    Batal
-                </a>
+            <div class="form-navigation cols-3">
+                <a href="{{ route($routes['index']) }}" class="btn-secondary btn-link">Batal</a>
                 <button type="submit" class="btn-secondary">Simpan Tugas</button>
                 <button type="submit" name="lanjut_assign" value="1" class="btn-primary">
                     Simpan &amp; Assign Petugas
@@ -196,7 +155,6 @@
     @push('scripts')
         <script>
             (function() {
-                /* Format ribuan harga satuan */
                 const harga = document.getElementById('harga_satuan');
                 const formatRp = v => v.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
@@ -205,7 +163,6 @@
                 });
                 harga.value = formatRp(harga.value);
 
-                /* Kolom RO paket data muncul jika dicentang */
                 const pulsa = document.getElementById('paket_data_pulsa');
                 const grupPulsa = document.getElementById('grupRoPulsa');
                 const aturPulsa = () => {
@@ -214,7 +171,6 @@
                 pulsa.addEventListener('change', aturPulsa);
                 aturPulsa();
 
-                /* RO = KRO + Komponen */
                 const kro = document.getElementById('kro_ro');
                 const komp = document.getElementById('komponen');
                 const previewRo = document.getElementById('previewRo');
@@ -227,4 +183,4 @@
             })();
         </script>
     @endpush
-</x-admin.main>
+</x-dynamic-component>
