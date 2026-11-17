@@ -10,6 +10,7 @@ class KontrakPekerjaan extends Model
 
     protected $fillable = [
         'kontrak_id',
+        'penugasan_id',
         'koordinator_id',
         'urutan',
         'uraian_pekerjaan',
@@ -33,13 +34,18 @@ class KontrakPekerjaan extends Model
         'paket_data_pulsa' => 'boolean',
         'tanggal_mulai'    => 'date',
         'tanggal_selesai'  => 'date',
-        'honor_dibayar' => 'boolean',
-        'dibayar_pada'  => 'datetime',
+        'honor_dibayar'    => 'boolean',
+        'dibayar_pada'     => 'datetime',
     ];
 
     public function kontrak()
     {
         return $this->belongsTo(Kontrak::class);
+    }
+
+    public function penugasan()
+    {
+        return $this->belongsTo(Penugasan::class, 'penugasan_id');
     }
 
     public function koordinator()

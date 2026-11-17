@@ -1,0 +1,522 @@
+@php
+    $hargaSatuan = (int) $penugasan->harga_satuan;
+    $mulai = $penugasan->tanggal_mulai ? \Carbon\Carbon::parse($penugasan->tanggal_mulai)->format('d/m/Y') : '-';
+    $selesai = $penugasan->tanggal_selesai ? \Carbon\Carbon::parse($penugasan->tanggal_selesai)->format('d/m/Y') : '-';
+    $totalPetugas = $penugasan->pekerjaan->count();
+    $totalVolume = (float) $penugasan->pekerjaan->sum('volume');
+    $totalHonor = (int) $penugasan->pekerjaan->sum('jumlah');
+    $totalVolText = rtrim(rtrim(number_format($totalVolume, 2, ',', '.'), '0'), ',') ?: '0';
+@endphp
+
+<x-dynamic-component :component="$layout" class="create-page">
+    {{-- HEADER HALAMAN --}}
+    <header class="page-header">
+        <div class="page-title">
+            <h1>Assign Petugas</h1>
+            <p>{{ $penugasan->uraian_pekerjaan }}</p>
+        </div>
+
+        <div class="page-actions" style="gap:12px">
+
+            <span class="username">{{ auth()->user()->name }}</span>
+            <div class="avatar" style="display:flex;align-items:center;justify-content:center">
+                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            </div>
+        </div>
+    </header>
+
+    @if ($errors->any())
+        <div role="alert" class="form-alert-error">
+            <b>Penugasan petugas belum bisa disimpan:</b>
+            <ul>
+                @foreach ($errors->all() as $pesan)
+                    <li>{{ $pesan }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- RINGKASAN TUGAS --}}
+    <section class="form-card">
+        <div class="form-card-head">
+            <h3 class="form-card-title">Detail Tugas</h3>
+            @if ($penugasan->ro)
+                <span class="status-badge active">RO: {{ $penugasan->ro }}</span>
+            @endif
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-item">
+                <span>Uraian Pekerjaan</span>
+                <strong>{{ $penugasan->uraian_pekerjaan }}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Koordinator</span>
+                <strong>{{ $penugasan->koordinator?->name ?? '-' }}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Periode</span>
+                <strong>{{ $mulai }} s.d. {{ $selesai }}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Tarif / Satuan</span>
+                <strong>Rp {{ number_format($hargaSatuan, 0, ',', '.') }} / {{ $penugasan->satuan }}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Petugas Ditugaskan</span>
+                <strong>{{ $totalPetugas }} Mitra</strong>
+            </div>
+            <div class="summary-item">
+                <span>Total Volume &amp; Honor</span>
+                <strong>{{ $totalVolText }} {{ $penugasan->satuan }} &middot; Rp {{ number_format($totalHonor, 0, ',', '.') }}</strong>
+            </div>
+        </div>
+    </section>
+
+    {{-- FORM ASSIGN PETUGAS BARU --}}
+    <section class="form-card">
+        <h3 class="form-card-title" style="margin-bottom:6px">Tambah / Assign Petugas Baru</h3>
+        <p class="form-card-sub">
+            Centang mitra yang ditugaskan lalu masukkan volume pekerjaan masing-masing.
+        </p>
+
+        @if ($mitraTersedia->isEmpty())
+            <div class="picker">
+                <p class="picker-empty" style="margin:0">
+                    @if ($totalPetugas > 0)
+                        Semua mitra aktif sudah ditugaskan ke tugas ini.
+                    @elseif ($role === 'admin')
+                        Belum ada mitra aktif.
+                        <a href="{{ route('admin.tambahmitra') }}">Tambah mitra</a> atau
+                        <a href="{{ route('admin.mitra.import') }}">import dari Excel</a>.
+                    @else
+                        Belum ada mitra aktif yang tersedia untuk ditugaskan.
+                    @endif
+                </p>
+            </div>
+        @else
+            <form id="assignForm" action="{{ route($routes['assignSimpan'], $penugasan) }}" method="POST">
+                @csrf
+
+                <div class="picker">
+                    <div class="picker-bar">
+                        <input type="search" id="cariMitra" placeholder="Cari nama, Sobat ID, atau wilayah..."
+                            autocomplete="off">
+
+                        <div class="mass-vol-box" title="Opsional: isi volume sama ke semua baris yang dicentang">
+                            <input type="text" id="volumeMassal" inputmode="decimal" placeholder="Vol. default">
+                            <button type="button" class="mass-vol-btn" id="terapkanMassal">Terapkan ke dipilih</button>
+                        </div>
+
+                        <label>
+                            <input type="checkbox" id="pilihSemuaMitra"> Pilih semua tampil
+                        </label>
+                        <strong id="jumlahDipilih" class="picker-count">0 dipilih</strong>
+                    </div>
+
+                    <div class="terpilih" id="boxTerpilih" hidden>
+                        <div class="terpilih-head">
+                            <span>Mitra terpilih (klik &times; untuk membatalkan)</span>
+                            <strong id="totalHonorBaru" class="terpilih-total">Total tambahan honor: Rp 0</strong>
+                        </div>
+                        <div class="terpilih-daftar" id="daftarTerpilih"></div>
+                    </div>
+
+                    <div class="picker-list" id="assignList">
+                        @foreach ($mitraTersedia as $m)
+                            @php
+                                $checkedOld = in_array($m->id, (array) old('mitra_id', []));
+                                $volOld = old('volumes.' . $m->id, '');
+                            @endphp
+                            <div class="assign-row {{ $checkedOld ? 'selected' : '' }}"
+                                data-search="{{ strtolower($m->user->name . ' ' . $m->user->username . ' ' . ($m->wilayah ?? '')) }}"
+                                data-nama="{{ $m->user->name }}">
+                                <input type="checkbox" id="mitra_{{ $m->id }}" class="assign-check"
+                                    name="mitra_id[]" value="{{ $m->id }}" @checked($checkedOld)>
+
+                                <label for="mitra_{{ $m->id }}" class="assign-mitra-label">
+                                    <span>{{ $m->user->name }}</span>
+                                    <small>{{ $m->user->username }}@if ($m->wilayah) &middot; {{ $m->wilayah }}@endif</small>
+                                </label>
+
+                                <div class="assign-vol-wrap">
+                                    <input type="text" name="volumes[{{ $m->id }}]" class="assign-vol-input"
+                                        inputmode="decimal" placeholder="Volume" value="{{ $volOld }}"
+                                        aria-label="Volume untuk {{ $m->user->name }}">
+                                    <span class="assign-satuan">{{ $penugasan->satuan }}</span>
+                                </div>
+
+                                <div class="assign-honor" data-row-honor>Rp 0</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div id="assignErrorClient" role="alert" class="form-alert-error form-alert-inline" hidden></div>
+
+                <div class="form-navigation">
+                    <a href="{{ route($routes['index']) }}" class="btn-secondary btn-link">Kembali</a>
+                    <button type="submit" class="btn-primary">Assign Petugas</button>
+                </div>
+            </form>
+        @endif
+    </section>
+
+    {{-- DAFTAR PETUGAS YANG SUDAH DITUGASKAN --}}
+    <section class="form-card">
+        <div class="form-card-head">
+            <h3 class="form-card-title">Petugas yang Sudah Ditugaskan ({{ $totalPetugas }})</h3>
+        </div>
+
+        <div class="table-scroll">
+            <table class="mitra-table assign-petugas-table">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Mitra</th>
+                        <th>Volume ({{ $penugasan->satuan }})</th>
+                        <th>Honor</th>
+                        <th>Pembayaran</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($penugasan->pekerjaan as $i => $p)
+                        @php
+                            $mitra = $p->kontrak?->mitra;
+                            $user = $mitra?->user;
+                            $nama = $user?->name ?? '-';
+                            $dibayar = (bool) $p->honor_dibayar;
+                            $diverifikasi = (bool) ($p->kontrak?->cek_kontrak || $p->kontrak?->cek_spj);
+                            $terkunci = $dibayar || $diverifikasi;
+                            $volVal = rtrim(rtrim(number_format((float) $p->volume, 2, '.', ''), '0'), '.');
+                        @endphp
+                        <tr>
+                            <td>{{ $i + 1 }}</td>
+                            <td>
+                                <span class="profile-name">{{ $nama }}</span>
+                                <span class="cell-sub">
+                                    {{ $user?->username ?? '-' }}@if ($mitra?->wilayah) &middot; {{ $mitra->wilayah }}@endif
+                                </span>
+                                @if ($diverifikasi)
+                                    <span class="cell-sub lock-note">Kontrak sudah diverifikasi</span>
+                                @endif
+                            </td>
+                            <td>
+                                <form method="POST"
+                                    action="{{ route($routes['petugasUpdate'], [$penugasan, $p]) }}"
+                                    class="inline-vol-form">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="text" name="volume" value="{{ $volVal }}"
+                                        inputmode="decimal" class="existing-vol-input"
+                                        data-target="honor_{{ $p->id }}"
+                                        @disabled($terkunci)
+                                        aria-label="Volume {{ $nama }}">
+                                    <button type="submit" class="mini-btn save" @disabled($terkunci)>
+                                        Simpan
+                                    </button>
+                                </form>
+                            </td>
+                            <td class="honor-cell" id="honor_{{ $p->id }}">
+                                Rp {{ number_format($p->jumlah ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td>
+                                @if ($bisaKelolaBayar)
+                                    <label class="inline-bayar">
+                                        <input type="checkbox" class="bayar-petugas-check"
+                                            data-url="{{ route($routes['pekerjaanBayar'], $p) }}"
+                                            @checked($dibayar)>
+                                        @if ($dibayar)
+                                            <span class="status-badge active">Sudah Dibayar</span>
+                                        @else
+                                            <span class="status-badge pending">Belum Dibayar</span>
+                                        @endif
+                                    </label>
+                                @else
+                                    @if ($dibayar)
+                                        <span class="status-badge active">Sudah Dibayar</span>
+                                    @else
+                                        <span class="status-badge pending">Belum Dibayar</span>
+                                    @endif
+                                @endif
+
+                                @if ($dibayar && $p->dibayar_pada)
+                                    <span class="cell-sub">{{ $p->dibayar_pada->format('d/m/Y H:i') }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                <form method="POST"
+                                    action="{{ route($routes['petugasHapus'], [$penugasan, $p]) }}"
+                                    class="hapus-petugas-form" data-nama="{{ $nama }}" style="display:inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="mini-btn del" @disabled($terkunci)
+                                        title="{{ $terkunci ? 'Tidak bisa dihapus karena honor sudah dibayar atau kontrak sudah diverifikasi' : 'Keluarkan mitra dari tugas ini' }}">
+                                        Keluarkan
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="picker-empty">
+                                Belum ada petugas yang ditugaskan. Silakan pilih mitra dan isi volumenya pada form di atas.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    @push('scripts')
+        <script>
+            (function() {
+                const HARGA_SATUAN = @json($hargaSatuan);
+                const SATUAN = @json($penugasan->satuan);
+                const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
+
+                const formatRp = n => 'Rp ' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                const parseNum = v => parseFloat(String(v || '0').replace(',', '.')) || 0;
+
+                /* ===== Picker Assign Baru ===== */
+                const assignForm = document.getElementById('assignForm');
+                if (assignForm) {
+                    const cari = document.getElementById('cariMitra');
+                    const semua = document.getElementById('pilihSemuaMitra');
+                    const rows = Array.from(document.querySelectorAll('#assignList .assign-row'));
+                    const jumlahDipilih = document.getElementById('jumlahDipilih');
+                    const boxTerpilih = document.getElementById('boxTerpilih');
+                    const daftarTerpilih = document.getElementById('daftarTerpilih');
+                    const totalHonorBaru = document.getElementById('totalHonorBaru');
+                    const volMassal = document.getElementById('volumeMassal');
+                    const btnMassal = document.getElementById('terapkanMassal');
+                    const errClient = document.getElementById('assignErrorClient');
+
+                    function updateRowHonor(row) {
+                        const cb = row.querySelector('.assign-check');
+                        const volInput = row.querySelector('.assign-vol-input');
+                        const honorEl = row.querySelector('[data-row-honor]');
+                        const vol = parseNum(volInput.value);
+                        const honor = vol > 0 ? Math.round(vol * HARGA_SATUAN) : 0;
+
+                        honorEl.textContent = formatRp(honor);
+                        row.classList.toggle('selected', cb.checked);
+                        if (cb.checked && vol > 0) {
+                            row.classList.remove('row-invalid');
+                        }
+                    }
+
+                    function segarkanTerpilih() {
+                        const dipilih = rows.filter(r => r.querySelector('.assign-check').checked);
+                        jumlahDipilih.textContent = dipilih.length + ' dipilih';
+
+                        daftarTerpilih.innerHTML = '';
+                        let totalHonor = 0;
+
+                        dipilih.forEach(row => {
+                            const cb = row.querySelector('.assign-check');
+                            const volInput = row.querySelector('.assign-vol-input');
+                            const nama = row.dataset.nama;
+                            const vol = parseNum(volInput.value);
+                            const honor = vol > 0 ? Math.round(vol * HARGA_SATUAN) : 0;
+                            totalHonor += honor;
+
+                            const chip = document.createElement('span');
+                            chip.className = 'chip';
+
+                            const teks = document.createElement('span');
+                            teks.textContent = nama + (vol > 0 ? ' (' + vol + ' ' + SATUAN + ' · ' + formatRp(honor) + ')' : ' (vol. belum diisi)');
+
+                            const hapus = document.createElement('button');
+                            hapus.type = 'button';
+                            hapus.setAttribute('aria-label', 'Batalkan ' + nama);
+                            hapus.innerHTML = '&times;';
+                            hapus.addEventListener('click', () => {
+                                cb.checked = false;
+                                row.classList.remove('row-invalid');
+                                updateRowHonor(row);
+                                segarkanTerpilih();
+                            });
+
+                            chip.append(teks, hapus);
+                            daftarTerpilih.appendChild(chip);
+                        });
+
+                        totalHonorBaru.textContent = 'Total tambahan honor: ' + formatRp(totalHonor);
+                        boxTerpilih.hidden = dipilih.length === 0;
+                    }
+
+                    rows.forEach(row => {
+                        const cb = row.querySelector('.assign-check');
+                        const volInput = row.querySelector('.assign-vol-input');
+
+                        cb.addEventListener('change', () => {
+                            if (cb.checked && volInput.value.trim() === '') {
+                                volInput.focus();
+                            }
+                            if (!cb.checked) {
+                                row.classList.remove('row-invalid');
+                            }
+                            updateRowHonor(row);
+                            segarkanTerpilih();
+                        });
+
+                        volInput.addEventListener('input', () => {
+                            const vol = parseNum(volInput.value);
+                            if (vol > 0 && !cb.checked) {
+                                cb.checked = true;
+                            }
+                            updateRowHonor(row);
+                            segarkanTerpilih();
+                        });
+
+                        updateRowHonor(row);
+                    });
+
+                    cari.addEventListener('input', () => {
+                        const kata = cari.value.trim().toLowerCase();
+                        rows.forEach(r => {
+                            r.hidden = kata !== '' && !r.dataset.search.includes(kata);
+                        });
+                    });
+
+                    semua.addEventListener('change', () => {
+                        rows.forEach(r => {
+                            if (!r.hidden) {
+                                r.querySelector('.assign-check').checked = semua.checked;
+                                if (!semua.checked) r.classList.remove('row-invalid');
+                                updateRowHonor(r);
+                            }
+                        });
+                        segarkanTerpilih();
+                    });
+
+                    btnMassal.addEventListener('click', () => {
+                        const val = volMassal.value.trim();
+                        if (parseNum(val) <= 0) {
+                            volMassal.focus();
+                            return;
+                        }
+                        rows.forEach(r => {
+                            if (r.querySelector('.assign-check').checked) {
+                                r.querySelector('.assign-vol-input').value = val;
+                                updateRowHonor(r);
+                            }
+                        });
+                        segarkanTerpilih();
+                    });
+
+                    assignForm.addEventListener('submit', e => {
+                        errClient.hidden = true;
+                        const dipilih = rows.filter(r => r.querySelector('.assign-check').checked);
+
+                        if (dipilih.length === 0) {
+                            e.preventDefault();
+                            errClient.textContent = 'Pilih minimal satu mitra terlebih dahulu.';
+                            errClient.hidden = false;
+                            return;
+                        }
+
+                        const kurang = [];
+                        rows.forEach(r => r.classList.remove('row-invalid'));
+
+                        dipilih.forEach(r => {
+                            const vol = parseNum(r.querySelector('.assign-vol-input').value);
+                            if (vol <= 0) {
+                                r.classList.add('row-invalid');
+                                kurang.push(r.dataset.nama);
+                            }
+                        });
+
+                        if (kurang.length > 0) {
+                            e.preventDefault();
+                            errClient.textContent = 'Masukkan volume lebih dari 0 untuk: ' + kurang.join(', ');
+                            errClient.hidden = false;
+                            rows.find(r => r.classList.contains('row-invalid'))?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                            return;
+                        }
+
+                        rows.forEach(r => {
+                            if (!r.querySelector('.assign-check').checked) {
+                                r.querySelector('.assign-vol-input').disabled = true;
+                            }
+                        });
+                    });
+
+                    segarkanTerpilih();
+                }
+
+                /* ===== Preview honor live saat edit volume petugas terdaftar ===== */
+                document.querySelectorAll('.existing-vol-input').forEach(input => {
+                    input.addEventListener('input', () => {
+                        const target = document.getElementById(input.dataset.target);
+                        if (!target) return;
+                        const vol = parseNum(input.value);
+                        target.textContent = formatRp(vol > 0 ? vol * HARGA_SATUAN : 0);
+                    });
+                });
+
+                /* ===== Toggle pembayaran per mitra ===== */
+                document.querySelectorAll('.bayar-petugas-check').forEach(cb => {
+                    cb.addEventListener('change', async () => {
+                        const dibayar = cb.checked;
+                        cb.disabled = true;
+
+                        try {
+                            const res = await fetch(cb.dataset.url, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    dibayar
+                                })
+                            });
+                            if (!res.ok) throw new Error('HTTP ' + res.status);
+                            window.location.reload();
+                        } catch (e) {
+                            cb.checked = !dibayar;
+                            cb.disabled = false;
+                            if (typeof popup === 'function') {
+                                popup({
+                                    jenis: 'gagal',
+                                    judul: 'Tidak berhasil',
+                                    pesan: 'Status pembayaran gagal diperbarui.'
+                                });
+                            } else {
+                                alert('Status pembayaran gagal diperbarui.');
+                            }
+                        }
+                    });
+                });
+
+                /* ===== Konfirmasi keluarkan mitra ===== */
+                document.querySelectorAll('.hapus-petugas-form').forEach(form => {
+                    form.addEventListener('submit', async e => {
+                        e.preventDefault();
+                        const teks = 'Keluarkan ' + form.dataset.nama + ' dari tugas ini?';
+                        const lanjut = typeof popup === 'function' ?
+                            await popup({
+                                jenis: 'hapus',
+                                judul: 'Keluarkan petugas?',
+                                pesan: teks,
+                                tombolOk: 'Ya, keluarkan',
+                                tombolBatal: 'Batal'
+                            }) :
+                            confirm(teks);
+
+                        if (lanjut) form.submit();
+                    });
+                });
+            })();
+        </script>
+    @endpush
+</x-dynamic-component>

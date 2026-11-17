@@ -2,48 +2,65 @@
     $persen = $ringkasan['total'] > 0 ? (int) round(($ringkasan['dibayar'] / $ringkasan['total']) * 100) : 0;
 
     $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
-    $honorMode = request('honor_mode', 'nominal');
-    $adaHonor =
-        $honorMode === 'nominal'
-            ? request()->filled('honor_jumlah')
-            : request()->filled('honor_dari') || request()->filled('honor_sampai');
+
+    $parseRp = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
+    $honorDari = request()->filled('honor_dari') ? $parseRp(request('honor_dari')) : 0;
+    $honorSampaiReq = request()->filled('honor_sampai') ? $parseRp(request('honor_sampai')) : null;
+    $honorBatas = max((int) ($honorMaks ?? 2500000), $honorDari, (int) $honorSampaiReq);
+    $honorSampai = $honorSampaiReq ?? $honorBatas;
+    $adaHonor = $honorDari > 0 || ($honorSampaiReq !== null && $honorSampaiReq < $honorBatas);
+
     $jumlahFilter =
         (int) $adaHonor +
         (int) request()->filled('wilayah') +
-        (int) request()->filled('koordinator') +
+        (int) ($bisaPilihKoordinator && request()->filled('koordinator')) +
         count($tugasDipilih);
 
-    // Input tersembunyi untuk meneruskan filter ke form pencarian, export, dan pembayaran massal
-    $kunciFilter = ['honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah', 'koordinator'];
+    $kunciFilter = ['honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah'];
+    if ($bisaPilihKoordinator) {
+        $kunciFilter[] = 'koordinator';
+    }
+
     $hiddenFilter = collect($kunciFilter)
         ->filter(fn($k) => request()->filled($k))
         ->values()
         ->map(fn($k) => '<input type="hidden" name="' . $k . '" value="' . e(request($k)) . '">')
         ->merge(collect($tugasDipilih)->map(fn($t) => '<input type="hidden" name="tugas[]" value="' . e($t) . '">'))
         ->implode('');
+
+    $colspan = $bisaPilihKoordinator ? 9 : 8;
 @endphp
 
-<x-admin.main>
+<x-dynamic-component :component="$layout">
     <x-slot:titlex>Penugasan Mitra</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
     <header class="page-heading">
         <div>
-            <h1>Penugasan Mitra</h1>
-            <p>Daftar tugas yang sudah diberikan dan status pembayaran honornya</p>
+            <h1>{{ $role === 'koordinator' ? 'Data Penugasan' : 'Penugasan Mitra' }}</h1>
+            <p>
+                {{ $role === 'koordinator'
+                    ? 'Daftar tugas yang Anda kelola, mitra yang ditugaskan, dan status pembayaran honornya'
+                    : 'Daftar tugas, petugas yang ditugaskan, dan status pembayaran honornya' }}
+            </p>
         </div>
 
         <div class="header-actions">
-            <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                <svg>
-                    <use href="#i-cal" />
-                </svg>
-            </button>
-            <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                <svg>
-                    <use href="#i-bell" />
-                </svg>
-            </button>
+            @if ($role === 'koordinator')
+                <x-koordinator.notif />
+            @else
+                <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
+                    <svg>
+                        <use href="#i-cal" />
+                    </svg>
+                </button>
+                <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
+                    <svg>
+                        <use href="#i-bell" />
+                    </svg>
+                </button>
+            @endif
+
             <div class="header-user">
                 <span>{{ auth()->user()->name }}</span>
                 <div class="avatar" style="width:48px;height:48px">
@@ -60,34 +77,45 @@
                     <use href="#i-ring" />
                 </svg> Progres Pembayaran</h2>
             <p class="num hijau">{{ $persen }}%</p>
-            {{-- <div class="progress"><span style="width: {{ $persen }}%"></span></div> --}}
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Total Honor</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                    <path d="M3 10h18M16 14.5h2" />
+                </svg>
+                Total Honor
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['total'], 0, ',', '.') }}</p>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Sudah Dibayar</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                    <path d="M3 10h18M16 14.5h2" />
+                </svg>
+                Sudah Dibayar
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['dibayar'], 0, ',', '.') }}</p>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Belum Dibayar</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                    <path d="M3 10h18M16 14.5h2" />
+                </svg>
+                Belum Dibayar
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['belum'], 0, ',', '.') }}</p>
         </div>
     </section>
 
     {{-- PENCARIAN, EXPORT, STATUS, FILTER --}}
     <section class="mitra-toolbar">
-        <form method="GET" action="{{ route('admin.penugasan') }}" style="display: contents">
+        <form method="GET" action="{{ route($routes['index']) }}" style="display: contents">
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
             <label class="mitra-search">
@@ -95,7 +123,7 @@
                     <use href="#i-search" />
                 </svg>
                 <input id="searchPenugasan" type="search" name="q" value="{{ $q }}"
-                    placeholder="Cari nama mitra, Sobat ID, atau uraian pekerjaan..." autocomplete="off">
+                    placeholder="Cari uraian pekerjaan, RO, atau nama mitra..." autocomplete="off">
             </label>
         </form>
 
@@ -106,9 +134,15 @@
             Export
         </button>
 
-        <x-admin.status-dropdown :options="['semua' => 'Semua', 'belum' => 'Belum Dibayar', 'lunas' => 'Sudah Dibayar']" :current="$status" label="Pembayaran" />
+        <x-admin.status-dropdown :options="[
+            'semua' => 'Semua',
+            'kosong' => 'Belum Ada Petugas',
+            'belum' => 'Belum Dibayar',
+            'lunas' => 'Sudah Dibayar',
+        ]" :current="$status" label="Status" />
 
-        <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
+        <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false"
+            aria-controls="filterPanel">
             <svg>
                 <use href="#i-filter" />
             </svg>
@@ -126,17 +160,15 @@
                     <use href="#i-list" />
                 </svg> List Penugasan</h2>
 
-            @if (Route::has('admin.penugasan.buat'))
-                <a href="{{ route('admin.penugasan.buat') }}" class="primary-btn" style="text-decoration:none">
-                    <svg>
-                        <use href="#i-plus" />
-                    </svg>
-                    Beri Tugas
-                </a>
-            @endif
+            <a href="{{ route($routes['buat']) }}" class="primary-btn btn-link">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Tambah Tugas
+            </a>
         </div>
 
-        {{-- Bar aksi massal: muncul saat ada baris yang dipilih --}}
+        {{-- Bar aksi massal --}}
         <div class="bulk-bar" id="bulkBar" hidden>
             <div class="bulk-info">
                 <strong><span id="bulkCount">0</span> tugas dipilih</strong>
@@ -152,8 +184,10 @@
                 </span>
             </div>
             <div class="bulk-actions">
-                <button type="button" class="primary-btn" data-aksi="bayar">Tandai Dibayar</button>
-                <button type="button" class="outline-btn" data-aksi="batal">Tandai Belum Dibayar</button>
+                @if ($bisaKelolaBayar)
+                    <button type="button" class="primary-btn" data-aksi="bayar">Tandai Dibayar</button>
+                    <button type="button" class="outline-btn" data-aksi="batal">Tandai Belum Dibayar</button>
+                @endif
                 <button type="button" class="outline-btn" id="bulkReset">Batal pilih</button>
                 <button type="button" class="danger-btn" id="bulkHapus">
                     <svg viewBox="0 0 24 24">
@@ -172,115 +206,160 @@
                             <input type="checkbox" class="check-mitra" id="selectAll"
                                 aria-label="Pilih semua tugas di halaman ini">
                         </th>
-                        <th>Profile</th>
-                        <th>Nama</th>
                         <th>Uraian Pekerjaan</th>
-                        <th>Koordinator</th>
+                        @if ($bisaPilihKoordinator)
+                            <th>Koordinator</th>
+                        @endif
                         <th>Periode</th>
-                        <th>Volume</th>
-                        <th>Honor</th>
+                        <th>Petugas (Mitra)</th>
+                        <th>Tarif / Total Vol</th>
+                        <th>Total Honor</th>
                         <th>Status</th>
-                        <th>Aksi</th>
+                        <th class="aksi-col">Aksi</th>
                     </tr>
                 </thead>
 
                 <tbody id="penugasanBody">
-                    @forelse ($daftar as $p)
+                    @forelse ($daftar as $t)
                         @php
-                            $user = $p->kontrak?->mitra?->user;
-                            $nama = $user?->name ?? '-';
-                            $dibayar = (bool) $p->honor_dibayar;
-                            $mulai = $p->tanggal_mulai
-                                ? \Carbon\Carbon::parse($p->tanggal_mulai)->format('d/m/Y')
+                            $jumlahPetugas = (int) $t->pekerjaan_count;
+                            $jumlahDibayar = (int) $t->pekerjaan_dibayar_count;
+                            $totalVolume = (float) ($t->total_volume ?? 0);
+                            $totalHonor = (int) ($t->total_honor ?? 0);
+
+                            $mulai = $t->tanggal_mulai
+                                ? \Carbon\Carbon::parse($t->tanggal_mulai)->format('d/m/Y')
                                 : '-';
-                            $selesai = $p->tanggal_selesai
-                                ? \Carbon\Carbon::parse($p->tanggal_selesai)->format('d/m/Y')
+                            $selesai = $t->tanggal_selesai
+                                ? \Carbon\Carbon::parse($t->tanggal_selesai)->format('d/m/Y')
                                 : '-';
-                            $volume = rtrim(rtrim(number_format((float) $p->volume, 2, ',', '.'), '0'), ',');
-                            $diverifikasi = (bool) ($p->kontrak?->cek_kontrak || $p->kontrak?->cek_spj);
+                            $volText = rtrim(rtrim(number_format($totalVolume, 2, ',', '.'), '0'), ',');
+
+                            $namaMitra = $t->pekerjaan
+                                ->map(fn($p) => $p->kontrak?->mitra?->user?->name)
+                                ->filter()
+                                ->values();
+
+                            $adaDibayar = $jumlahDibayar > 0;
+                            $semuaDibayar = $jumlahPetugas > 0 && $jumlahDibayar === $jumlahPetugas;
+                            $adaDiverifikasi = $t->pekerjaan->contains(
+                                fn($p) => (bool) ($p->kontrak?->cek_kontrak || $p->kontrak?->cek_spj),
+                            );
+                            $terkunci = $adaDibayar || $adaDiverifikasi;
+
+                            $alasan = $adaDibayar
+                                ? 'Tugas tidak bisa diubah atau dihapus karena sudah ada petugas yang honornya dibayar.'
+                                : ($adaDiverifikasi
+                                    ? 'Tugas tidak bisa diubah atau dihapus karena kontrak salah satu petugas sudah diverifikasi.'
+                                    : '');
+
+                            $statusTeks = $jumlahPetugas === 0
+                                ? 'Belum ada petugas'
+                                : ($semuaDibayar
+                                    ? 'Sudah dibayar semua'
+                                    : ($adaDibayar
+                                        ? "Sebagian dibayar ($jumlahDibayar/$jumlahPetugas)"
+                                        : 'Belum dibayar'));
 
                             $info = [
-                                'nama' => $nama,
-                                'sobat' => $user?->username ?? '-',
-                                'uraian' => $p->uraian_pekerjaan ?? '-',
-                                'koordinator' => $p->koordinator?->name ?? '-',
+                                'uraian' => $t->uraian_pekerjaan ?? '-',
+                                'ro' => $t->ro ?: '-',
+                                'koordinator' => $t->koordinator?->name ?? '-',
                                 'periode' => $mulai . ' s.d. ' . $selesai,
-                                'honor' => 'Rp ' . number_format($p->jumlah ?? 0, 0, ',', '.'),
-                                'dibayar' => $dibayar,
-                                'waktu' => $dibayar ? $p->dibayar_pada?->format('d/m/Y H:i') ?? '' : '',
-                                'bayarUrl' => route('admin.penugasan.bayar', $p),
-                                'editUrl' => Route::has('admin.penugasan.edit')
-                                    ? route('admin.penugasan.edit', $p)
-                                    : '',
-                                'hapusUrl' => Route::has('admin.penugasan.hapus')
-                                    ? route('admin.penugasan.hapus', $p)
-                                    : '',
-                                'terkunci' => $dibayar || $diverifikasi,
-                                'alasan' => $dibayar
-                                    ? 'Tidak bisa diubah atau dihapus karena honor sudah dibayar. Batalkan pembayaran dulu.'
-                                    : ($diverifikasi
-                                        ? 'Tidak bisa diubah atau dihapus karena kontrak sudah diverifikasi.'
-                                        : ''),
+                                'jumlahPetugas' => $jumlahPetugas,
+                                'petugasTeks' => $jumlahPetugas > 0
+                                    ? $jumlahPetugas . ' Mitra (Total Vol: ' . ($volText ?: '0') . ' ' . $t->satuan . ')'
+                                    : 'Belum ada petugas',
+                                'honor' => 'Rp ' . number_format($totalHonor, 0, ',', '.'),
+                                'dibayar' => $semuaDibayar,
+                                'statusTeks' => $statusTeks,
+                                'bayarUrl' => $bisaKelolaBayar ? route($routes['bayar'], $t) : '',
+                                'assignUrl' => route($routes['assign'], $t),
+                                'editUrl' => route($routes['edit'], $t),
+                                'hapusUrl' => route($routes['hapus'], $t),
+                                'terkunci' => $terkunci,
+                                'alasan' => $alasan,
                             ];
                         @endphp
 
                         <tr>
                             <td>
-                                <input type="checkbox" class="check-mitra row-check" value="{{ $p->id }}"
-                                    aria-label="Pilih tugas {{ $nama }}">
-                            </td>
-
-                            <td>
-                                <div class="profile-avatar">{{ strtoupper(mb_substr($nama, 0, 1)) }}</div>
-                            </td>
-
-                            <td>
-                                <span class="profile-name">{{ $nama }}</span>
-                                @if ($user)
-                                    <span class="cell-sub">{{ $user->username }}</span>
-                                @endif
+                                <input type="checkbox" class="check-mitra row-check" value="{{ $t->id }}"
+                                    aria-label="Pilih tugas {{ $t->uraian_pekerjaan }}">
                             </td>
 
                             <td class="cell-wrap">
-                                {{ $p->uraian_pekerjaan }}
-                                @if ($p->ro)
-                                    <span class="cell-sub">RO: {{ $p->ro }}</span>
+                                <span class="profile-name">{{ $t->uraian_pekerjaan }}</span>
+                                @if ($t->ro)
+                                    <span class="cell-sub">RO: {{ $t->ro }}</span>
                                 @endif
                             </td>
 
-                            <td>{{ $p->koordinator?->name ?? '-' }}</td>
+                            @if ($bisaPilihKoordinator)
+                                <td>
+                                    {{ $t->koordinator?->name ?? '-' }}
+                                    @if ($t->koordinator?->username)
+                                        <span class="cell-sub">{{ $t->koordinator->username }}</span>
+                                    @endif
+                                </td>
+                            @endif
 
                             <td class="id-cell">
                                 {{ $mulai }}
                                 <span class="cell-sub">s.d. {{ $selesai }}</span>
                             </td>
 
-                            <td class="id-cell">{{ $volume }} {{ $p->satuan }}</td>
+                            <td>
+                                @if ($jumlahPetugas === 0)
+                                    <span class="status-badge empty">Belum ada petugas</span>
+                                @else
+                                    <span class="profile-name">{{ $jumlahPetugas }} Mitra</span>
+                                    <span class="cell-sub">
+                                        {{ $namaMitra->take(2)->implode(', ') }}@if ($jumlahPetugas > 2)
+                                            +{{ $jumlahPetugas - 2 }} lainnya
+                                        @endif
+                                    </span>
+                                @endif
+                            </td>
 
-                            <td class="honor-cell">Rp {{ number_format($p->jumlah ?? 0, 0, ',', '.') }}</td>
+                            <td class="id-cell">
+                                Rp {{ number_format($t->harga_satuan ?? 0, 0, ',', '.') }} / {{ $t->satuan }}
+                                <span class="cell-sub">
+                                    Total Vol: {{ $jumlahPetugas > 0 ? ($volText ?: '0') . ' ' . $t->satuan : '-' }}
+                                </span>
+                            </td>
+
+                            <td class="honor-cell">Rp {{ number_format($totalHonor, 0, ',', '.') }}</td>
 
                             <td>
-                                @if ($dibayar)
+                                @if ($jumlahPetugas === 0)
+                                    <span class="status-badge empty">Belum Diassign</span>
+                                @elseif ($semuaDibayar)
                                     <span class="status-badge active">Sudah Dibayar</span>
+                                @elseif ($adaDibayar)
+                                    <span class="status-badge partial">Sebagian ({{ $jumlahDibayar }}/{{ $jumlahPetugas }})</span>
                                 @else
                                     <span class="status-badge pending">Belum Dibayar</span>
                                 @endif
                             </td>
 
                             <td class="action-cell">
-                                <button type="button" class="action-btn" aria-label="Aksi {{ $nama }}"
-                                    aria-haspopup="true" aria-expanded="false" data-info="{{ json_encode($info) }}">
-                                    &#8942;
-                                </button>
+                                <div class="aksi-wrap">
+                                    <button type="button" class="action-btn"
+                                        aria-label="Aksi {{ $t->uraian_pekerjaan }}" aria-haspopup="true"
+                                        aria-expanded="false" data-info="{{ json_encode($info) }}">
+                                        &#8942;
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" style="text-align:center;padding:24px">
+                            <td colspan="{{ $colspan }}" style="text-align:center;padding:24px">
                                 @if ($q !== '' || $status !== 'semua' || $jumlahFilter > 0)
                                     Tidak ada tugas yang cocok dengan pencarian atau filter.
                                 @else
-                                    Belum ada tugas yang diberikan.
+                                    Belum ada tugas yang dibuat.
                                 @endif
                             </td>
                         </tr>
@@ -302,52 +381,53 @@
             @if ($daftar->hasPages())
                 <span style="display:flex;gap:8px;align-items:center">
                     @unless ($daftar->onFirstPage())
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->url(1) }}"
+                        <a class="outline-btn btn-link" href="{{ $daftar->url(1) }}"
                             aria-label="Halaman pertama" title="Halaman pertama">&lt;&lt;</a>
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->previousPageUrl() }}"
+                        <a class="outline-btn btn-link" href="{{ $daftar->previousPageUrl() }}"
                             aria-label="Halaman sebelumnya" title="Halaman sebelumnya">&lt;</a>
                     @endunless
 
                     <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
 
                     @if ($daftar->hasMorePages())
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->nextPageUrl() }}"
+                        <a class="outline-btn btn-link" href="{{ $daftar->nextPageUrl() }}"
                             aria-label="Halaman berikutnya" title="Halaman berikutnya">&gt;</a>
-                        <a class="outline-btn" style="text-decoration:none"
-                            href="{{ $daftar->url($daftar->lastPage()) }}" aria-label="Halaman terakhir"
-                            title="Halaman terakhir">&gt;&gt;</a>
+                        <a class="outline-btn btn-link" href="{{ $daftar->url($daftar->lastPage()) }}"
+                            aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
                     @endif
                 </span>
             @endif
         </div>
     </section>
 
-    {{-- POPOVER AKSI (satu untuk semua baris) --}}
+    {{-- POPOVER AKSI --}}
     <div class="mitra-popover" id="penPopover" role="dialog" aria-label="Detail penugasan">
         <div class="pop-field">
-            <span class="pop-label">Mitra</span>
-            <strong class="pop-name" id="popNama"></strong>
+            <span class="pop-label">Uraian Pekerjaan</span>
+            <strong class="pop-name" id="popUraian"></strong>
         </div>
 
         <div class="pop-row">
             <div class="pop-field">
-                <span class="pop-label">Sobat ID</span>
-                <strong class="pop-value" id="popSobat"></strong>
+                <span class="pop-label">RO</span>
+                <strong class="pop-value" id="popRo"></strong>
             </div>
             <div class="pop-field">
-                <span class="pop-label">Honor</span>
+                <span class="pop-label">Total Honor</span>
                 <strong class="pop-value" id="popHonor"></strong>
             </div>
         </div>
 
-        <div class="pop-field">
-            <span class="pop-label">Uraian Pekerjaan</span>
-            <div class="pop-text" id="popUraian"></div>
-        </div>
+        @if ($bisaPilihKoordinator)
+            <div class="pop-field">
+                <span class="pop-label">Koordinator</span>
+                <div class="pop-text" id="popKoordinator"></div>
+            </div>
+        @endif
 
         <div class="pop-field">
-            <span class="pop-label">Koordinator</span>
-            <div class="pop-text" id="popKoordinator"></div>
+            <span class="pop-label">Petugas</span>
+            <div class="pop-text" id="popPetugas"></div>
         </div>
 
         <div class="pop-field">
@@ -357,16 +437,23 @@
 
         <div class="pop-field">
             <span class="pop-label">Pembayaran</span>
-            <label class="pop-check">
-                <input type="checkbox" id="popBayar">
-                <span id="popBayarTeks">Tandai honor sudah dibayar</span>
-            </label>
-            <small class="pop-sub" id="popBayarWaktu"></small>
+            @if ($bisaKelolaBayar)
+                <label class="pop-check">
+                    <input type="checkbox" id="popBayar">
+                    <span id="popBayarTeks">Tandai semua honor sudah dibayar</span>
+                </label>
+                <small class="pop-sub">Untuk bayar per mitra, buka halaman Assign Petugas.</small>
+            @else
+                <div class="pop-text" id="popBayarReadonly"></div>
+            @endif
         </div>
 
         <div class="pop-field">
             <span class="pop-label">Aksi</span>
-            <div class="pop-actions">
+            <div class="pop-actions pop-actions-wrap">
+                <button type="button" class="pop-btn pop-btn-edit pop-btn-full" id="popAssign">
+                    Assign / Kelola Petugas
+                </button>
                 <button type="button" class="pop-btn pop-btn-del" id="popHapus">
                     Hapus Tugas
                     <svg viewBox="0 0 24 24">
@@ -394,16 +481,7 @@
     <div class="filter-overlay" id="filterOverlay"></div>
 
     <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Penugasan" aria-hidden="true">
-        @php
-            $parseRp = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
-            $modeRentang = request('honor_mode') === 'rentang';
-            $honorDari = $modeRentang && request()->filled('honor_dari') ? $parseRp(request('honor_dari')) : 0;
-            $honorSampai = $modeRentang && request()->filled('honor_sampai') ? $parseRp(request('honor_sampai')) : null;
-            $honorBatas = max((int) ($honorMaks ?? 2500000), $honorDari, (int) $honorSampai);
-            $honorSampai ??= $honorBatas;
-        @endphp
-
-        <form method="GET" action="{{ route('admin.penugasan') }}" id="filterForm" class="filter-form">
+        <form method="GET" action="{{ route($routes['index']) }}" id="filterForm" class="filter-form">
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
@@ -413,14 +491,19 @@
 
                 <x-admin.filter-wilayah :opsi="$daftarWilayah" :dipilih="request('wilayah')" />
 
-                <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
-                    :banyak="false" :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])" :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
+                @if ($bisaPilihKoordinator)
+                    <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
+                        :banyak="false"
+                        :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])"
+                        :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
+                @endif
 
-                <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas" :dipilih="$tugasDipilih" />
+                <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas"
+                    :dipilih="$tugasDipilih" />
 
-                <x-admin.filter-range judul="Rentang Honor" :max="$honorBatas" :dari="$honorDari" :sampai="$honorSampai"
-                    nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000" :rupiah="true"
-                    mode-id="honorMode" />
+                <x-admin.filter-range judul="Rentang Total Honor" :max="$honorBatas" :dari="$honorDari"
+                    :sampai="$honorSampai" nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000"
+                    :rupiah="true" mode-id="honorMode" />
             </div>
 
             <div class="filter-footer">
@@ -443,13 +526,13 @@
 
     <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
         aria-hidden="true">
-        <form method="GET" action="{{ route('admin.penugasan.export') }}" id="exportForm">
+        <form method="GET" action="{{ route($routes['export']) }}" id="exportForm">
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
 
             <h2 id="exportTitle" class="export-title">Export Data Penugasan</h2>
-            <p class="export-sub">Data yang diexport berdasarkan hasil filter</p>
+            <p class="export-sub">Data rincian honor mitra berdasarkan tugas hasil filter</p>
 
             <div class="export-options">
                 <label class="export-option">
@@ -488,23 +571,25 @@
         </form>
     </div>
 
-    {{-- FORM TERSEMBUNYI: hapus satu tugas & pembayaran massal --}}
+    {{-- FORM TERSEMBUNYI --}}
     <form id="hapusForm" method="POST" style="display:none">
         @csrf
         @method('DELETE')
     </form>
 
-    <form id="bulkForm" method="POST" action="{{ route('admin.penugasan.bayar-massal') }}" style="display:none">
-        @csrf
-        <input type="hidden" name="aksi" id="bulkAksi">
-        <input type="hidden" name="semua_hasil" id="bulkSemuaHasil" value="0">
-        <input type="hidden" name="q" value="{{ $q }}">
-        <input type="hidden" name="status" value="{{ $status }}">
-        {!! $hiddenFilter !!}
-        <div id="bulkIds"></div>
-    </form>
-    <form id="bulkHapusForm" method="POST" action="{{ route('admin.penugasan.hapus-massal') }}"
-        style="display:none">
+    @if ($bisaKelolaBayar)
+        <form id="bulkForm" method="POST" action="{{ route($routes['bayarMassal']) }}" style="display:none">
+            @csrf
+            <input type="hidden" name="aksi" id="bulkAksi">
+            <input type="hidden" name="semua_hasil" id="bulkSemuaHasil" value="0">
+            <input type="hidden" name="q" value="{{ $q }}">
+            <input type="hidden" name="status" value="{{ $status }}">
+            {!! $hiddenFilter !!}
+            <div id="bulkIds"></div>
+        </form>
+    @endif
+
+    <form id="bulkHapusForm" method="POST" action="{{ route($routes['hapusMassal']) }}" style="display:none">
         @csrf
         @method('DELETE')
         <input type="hidden" name="semua_hasil" id="bulkHapusSemuaHasil" value="0">
@@ -516,14 +601,14 @@
 
     @push('scripts')
         <script>
-            /* ===== Pilih baris + pembayaran massal ===== */
+            /* ===== Pilih baris + aksi massal ===== */
             (function() {
                 const semua = document.getElementById('selectAll');
                 const bar = document.getElementById('bulkBar');
                 const hitung = document.getElementById('bulkCount');
                 const hint = document.getElementById('bulkHint');
                 const hasilOn = document.getElementById('bulkHasilOn');
-                const form = document.getElementById('bulkForm');
+                const bulkForm = document.getElementById('bulkForm');
                 const TOTAL = @json($daftar->total());
                 const ADA_HALAMAN_LAIN = @json($daftar->hasPages());
                 let semuaHasil = false;
@@ -535,8 +620,8 @@
                     const jumlah = semuaHasil ? TOTAL : dipilih.length;
                     if (jumlah === 0) return;
 
-                    const teks = jumlah + ' tugas akan dihapus permanen dan tidak bisa dikembalikan. ' +
-                        'Tugas yang honornya sudah dibayar atau kontraknya sudah diverifikasi tidak akan dihapus.';
+                    const teks = jumlah + ' tugas akan dihapus permanen beserta daftar petugasnya. ' +
+                        'Tugas yang memiliki honor sudah dibayar atau kontrak terverifikasi tidak akan dihapus.';
 
                     const lanjut = typeof popup === 'function' ?
                         await popup({
@@ -577,7 +662,9 @@
                     hitung.textContent = semuaHasil ? TOTAL : n;
                     hint.hidden = !(ADA_HALAMAN_LAIN && n > 0 && n === cek.length && !semuaHasil);
                     hasilOn.hidden = !semuaHasil;
-                    document.getElementById('bulkSemuaHasil').value = semuaHasil ? '1' : '0';
+
+                    const bulkSemuaEl = document.getElementById('bulkSemuaHasil');
+                    if (bulkSemuaEl) bulkSemuaEl.value = semuaHasil ? '1' : '0';
                 }
 
                 semua.addEventListener('change', () => {
@@ -606,33 +693,35 @@
                     segarkan();
                 });
 
-                bar.querySelectorAll('[data-aksi]').forEach(tombol => {
-                    tombol.addEventListener('click', () => {
-                        const aksi = tombol.dataset.aksi;
-                        const dipilih = baris().filter(c => c.checked);
-                        const jumlah = semuaHasil ? TOTAL : dipilih.length;
-                        if (jumlah === 0) return;
+                if (bulkForm) {
+                    bar.querySelectorAll('[data-aksi]').forEach(tombol => {
+                        tombol.addEventListener('click', () => {
+                            const aksi = tombol.dataset.aksi;
+                            const dipilih = baris().filter(c => c.checked);
+                            const jumlah = semuaHasil ? TOTAL : dipilih.length;
+                            if (jumlah === 0) return;
 
-                        const teks = aksi === 'bayar' ?
-                            'Tandai ' + jumlah + ' tugas sebagai SUDAH dibayar?' :
-                            'Tandai ' + jumlah + ' tugas sebagai BELUM dibayar?';
-                        if (!confirm(teks)) return;
+                            const teks = aksi === 'bayar' ?
+                                'Tandai semua petugas pada ' + jumlah + ' tugas sebagai SUDAH dibayar?' :
+                                'Tandai semua petugas pada ' + jumlah + ' tugas sebagai BELUM dibayar?';
+                            if (!confirm(teks)) return;
 
-                        document.getElementById('bulkAksi').value = aksi;
-                        const wadah = document.getElementById('bulkIds');
-                        wadah.innerHTML = '';
-                        if (!semuaHasil) {
-                            dipilih.forEach(c => {
-                                const i = document.createElement('input');
-                                i.type = 'hidden';
-                                i.name = 'ids[]';
-                                i.value = c.value;
-                                wadah.appendChild(i);
-                            });
-                        }
-                        form.submit();
+                            document.getElementById('bulkAksi').value = aksi;
+                            const wadah = document.getElementById('bulkIds');
+                            wadah.innerHTML = '';
+                            if (!semuaHasil) {
+                                dipilih.forEach(c => {
+                                    const i = document.createElement('input');
+                                    i.type = 'hidden';
+                                    i.name = 'ids[]';
+                                    i.value = c.value;
+                                    wadah.appendChild(i);
+                                });
+                            }
+                            bulkForm.submit();
+                        });
                     });
-                });
+                }
 
                 segarkan();
             })();
@@ -643,6 +732,9 @@
                 const tbody = document.getElementById('penugasanBody');
                 const hapusForm = document.getElementById('hapusForm');
                 const popBayar = document.getElementById('popBayar');
+                const popBayarReadonly = document.getElementById('popBayarReadonly');
+                const popKoordinator = document.getElementById('popKoordinator');
+                const popAssign = document.getElementById('popAssign');
                 const popEdit = document.getElementById('popEdit');
                 const popHapus = document.getElementById('popHapus');
                 const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
@@ -673,7 +765,7 @@
                     if (left < margin) left = r.right + gap;
                     left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
 
-                    let top = Math.max(margin, Math.min(r.top, window.innerHeight - h - margin));
+                    const top = Math.max(margin, Math.min(r.top, window.innerHeight - h - margin));
 
                     pop.style.left = left + 'px';
                     pop.style.top = top + 'px';
@@ -688,22 +780,24 @@
                         return;
                     }
 
-                    document.getElementById('popNama').textContent = info.nama;
-                    document.getElementById('popSobat').textContent = info.sobat;
-                    document.getElementById('popHonor').textContent = info.honor;
                     document.getElementById('popUraian').textContent = info.uraian;
-                    document.getElementById('popKoordinator').textContent = info.koordinator;
+                    document.getElementById('popRo').textContent = info.ro;
+                    document.getElementById('popHonor').textContent = info.honor;
+                    if (popKoordinator) popKoordinator.textContent = info.koordinator;
+                    document.getElementById('popPetugas').textContent = info.petugasTeks;
                     document.getElementById('popPeriode').textContent = info.periode;
 
-                    popBayar.checked = !!info.dibayar;
-                    popBayar.disabled = false;
-                    document.getElementById('popBayarTeks').textContent =
-                        info.dibayar ? 'Honor sudah dibayar' : 'Tandai honor sudah dibayar';
-                    document.getElementById('popBayarWaktu').textContent =
-                        info.waktu ? 'Dibayar pada ' + info.waktu : '';
-
-                    popEdit.style.display = info.editUrl ? '' : 'none';
-                    popHapus.style.display = info.hapusUrl ? '' : 'none';
+                    if (popBayar) {
+                        const adaPetugas = Number(info.jumlahPetugas) > 0;
+                        popBayar.checked = !!info.dibayar;
+                        popBayar.disabled = !adaPetugas;
+                        document.getElementById('popBayarTeks').textContent = !adaPetugas ?
+                            'Belum ada petugas untuk dibayar' :
+                            (info.dibayar ? 'Semua honor sudah dibayar' : 'Tandai semua honor sudah dibayar');
+                    }
+                    if (popBayarReadonly) {
+                        popBayarReadonly.textContent = info.statusTeks;
+                    }
 
                     const terkunci = !!info.terkunci;
                     popEdit.disabled = terkunci;
@@ -735,32 +829,37 @@
                     if (aktif && !pop.contains(e.target)) tutup();
                 }, true);
 
-                /* Ceklist pembayaran satu tugas */
-                popBayar.addEventListener('change', async () => {
-                    if (!info) return;
-                    const dibayar = popBayar.checked;
-                    popBayar.disabled = true;
+                if (popBayar) {
+                    popBayar.addEventListener('change', async () => {
+                        if (!info || !info.bayarUrl) return;
+                        const dibayar = popBayar.checked;
+                        popBayar.disabled = true;
 
-                    try {
-                        const res = await fetch(info.bayarUrl, {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': token,
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                dibayar
-                            })
-                        });
-                        if (!res.ok) throw new Error('HTTP ' + res.status);
-                        window.location.reload(); // kartu ringkasan & daftar ikut diperbarui
-                    } catch (e) {
-                        popBayar.checked = !dibayar;
-                        popBayar.disabled = false;
-                        pesan('gagal', 'Tidak berhasil', 'Status pembayaran gagal disimpan. Coba lagi.');
-                    }
+                        try {
+                            const res = await fetch(info.bayarUrl, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    dibayar
+                                })
+                            });
+                            if (!res.ok) throw new Error('HTTP ' + res.status);
+                            window.location.reload();
+                        } catch (e) {
+                            popBayar.checked = !dibayar;
+                            popBayar.disabled = false;
+                            pesan('gagal', 'Tidak berhasil', 'Status pembayaran gagal disimpan. Coba lagi.');
+                        }
+                    });
+                }
+
+                popAssign.addEventListener('click', () => {
+                    if (info?.assignUrl) window.location = info.assignUrl;
                 });
 
                 popEdit.addEventListener('click', () => {
@@ -769,13 +868,12 @@
 
                 popHapus.addEventListener('click', async () => {
                     const url = info?.hapusUrl;
-                    const nama = info?.nama;
                     const uraian = info?.uraian;
                     tutup();
                     if (!url) return;
 
-                    const teks = 'Tugas "' + uraian + '" untuk ' + nama +
-                        ' akan dihapus permanen dan tidak bisa dikembalikan.';
+                    const teks = 'Tugas "' + uraian +
+                        '" beserta daftar petugasnya akan dihapus permanen dan tidak bisa dikembalikan.';
                     const lanjut = typeof popup === 'function' ?
                         await popup({
                             jenis: 'hapus',
@@ -821,4 +919,4 @@
             })();
         </script>
     @endpush
-</x-admin.main>
+</x-dynamic-component>

@@ -73,3 +73,34 @@
 .dash .perhatian.ungu {
     background: var(--tint);
 }
+
+/* Penugasan Bersama & Assign Petugas (Tema Koordinator: Teal + Amber) */
+.picker,
+.picker-bar,
+.terpilih,
+.picker-bar input[type="search"],
+.mass-vol-box input,
+.mass-vol-btn,
+.assign-vol-input,
+.inline-vol-form input,
+.mini-btn,
+.chip {
+    border-color: #C9E3DF;
+}
+
+.assign-row {
+    border-bottom-color: #E4F3F0;
+}
+
+.picker-bar input[type="search"]:focus,
+.mass-vol-box input:focus,
+.assign-vol-input:focus,
+.inline-vol-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(20, 168, 154, .14);
+}
+
+.status-badge.partial {
+    background: #FFF4E0;
+    color: #9A5B00;
+}
