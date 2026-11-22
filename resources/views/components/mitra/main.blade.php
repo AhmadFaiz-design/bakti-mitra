@@ -94,6 +94,12 @@
                         <use href="#i-list" />
                     </svg><span class="label">Daftar Tugas</span>
                 </x-admin.list-sidebar>
+
+                <x-admin.list-sidebar :href="route('mitra.kontrak')" title="Kontrak Saya" :active="request()->routeIs('mitra.kontrak*')">
+                    <svg>
+                        <use href="#i-cash" />
+                    </svg><span class="label">Kontrak Saya</span>
+                </x-admin.list-sidebar>
             </nav>
 
             <div class="sidebar-bottom">

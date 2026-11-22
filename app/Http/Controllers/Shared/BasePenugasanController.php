@@ -163,7 +163,7 @@ abstract class BasePenugasanController extends Controller
             ->with('sukses', 'Tugas "' . $penugasan->uraian_pekerjaan . '" berhasil dibuat. Klik "Assign Petugas" untuk menambahkan mitra.');
     }
 
-    /** Halaman Assign Petugas (pilih mitra + isi volume masing-masing) */
+    /** Halaman Assign Petugas (pilih mitra + isi volume + cek sisa kuota honor bulanan) */
     public function assignForm(Penugasan $penugasan)
     {
         $this->otorisasiTugas($penugasan);
@@ -190,7 +190,26 @@ abstract class BasePenugasanController extends Controller
             ->sortBy(fn($m) => strtolower($m->user->name))
             ->values();
 
-        return view('shared.penugasan.assign', $this->sharedData() + compact('penugasan', 'mitraTersedia'));
+        $tanggal    = Carbon::parse($penugasan->tanggal_mulai);
+        $batasHonor = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
+
+        // Total honor setiap mitra pada bulan & tahun tugas ini (dari seluruh koordinator)
+        $honorBulanMitra = DB::table('kontrak as k')
+            ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+            ->where('k.periode_tahun', $tanggal->year)
+            ->where('k.periode_bulan', $tanggal->month)
+            ->groupBy('k.mitra_id')
+            ->selectRaw('k.mitra_id, COALESCE(SUM(kp.jumlah), 0) as total')
+            ->pluck('total', 'mitra_id')
+            ->map(fn($v) => (int) $v)
+            ->all();
+
+        return view('shared.penugasan.assign', $this->sharedData() + compact(
+            'penugasan',
+            'mitraTersedia',
+            'honorBulanMitra',
+            'batasHonor'
+        ));
     }
 
     /** Simpan assign beberapa mitra beserta volume masing-masing */
@@ -228,13 +247,26 @@ abstract class BasePenugasanController extends Controller
 
         $tanggal     = Carbon::parse($penugasan->tanggal_mulai);
         $hargaSatuan = (int) $penugasan->harga_satuan;
+        $batasHonor  = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
 
-        $dibuat   = 0;
-        $dilewati = [];
-        $terkunci = [];
+        $dibuat       = 0;
+        $dilewati     = [];
+        $terkunci     = [];
+        $lewatBatas   = [];
 
         try {
-            DB::transaction(function () use ($penugasan, $data, $volumes, $tanggal, $hargaSatuan, &$dibuat, &$dilewati, &$terkunci) {
+            DB::transaction(function () use (
+                $penugasan,
+                $data,
+                $volumes,
+                $tanggal,
+                $hargaSatuan,
+                $batasHonor,
+                &$dibuat,
+                &$dilewati,
+                &$terkunci,
+                &$lewatBatas
+            ) {
                 $daftar = Mitra::with('user')
                     ->whereIn('id', $data['mitra_id'])
                     ->whereHas('user', fn($u) => $u->where('is_active', true))
@@ -273,8 +305,13 @@ abstract class BasePenugasanController extends Controller
                         continue;
                     }
 
-                    $vol    = (float) $volumes[$mitra->id];
-                    $jumlah = (int) round($vol * $hargaSatuan);
+                    $honorSaatIni = (int) $kontrak->pekerjaan()->sum('jumlah');
+                    $vol          = (float) $volumes[$mitra->id];
+                    $jumlah       = (int) round($vol * $hargaSatuan);
+
+                    if ($batasHonor > 0 && ($honorSaatIni + $jumlah) > $batasHonor) {
+                        $lewatBatas[] = $mitra->user->name;
+                    }
 
                     $kontrak->pekerjaan()->create([
                         'penugasan_id'        => $penugasan->id,
@@ -327,6 +364,9 @@ abstract class BasePenugasanController extends Controller
         if ($terkunci) {
             $pesan .= ' ' . count($terkunci) . ' mitra dilewati karena kontrak bulan tersebut sudah diverifikasi.';
         }
+        if ($lewatBatas) {
+            $pesan .= ' Perhatian: total honor bulan ini melebihi batas untuk ' . implode(', ', $lewatBatas) . '.';
+        }
 
         return redirect()
             ->route($this->routeMap()['assign'], $penugasan)
@@ -365,12 +405,20 @@ abstract class BasePenugasanController extends Controller
             'jumlah' => $jumlah,
         ]);
 
+        $batasHonor = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
+        $totalBulan = (int) ($pekerjaan->kontrak?->pekerjaan()->sum('jumlah') ?? 0);
+        $pesan      = 'Volume untuk ' . $nama . ' berhasil diperbarui.';
+
+        if ($batasHonor > 0 && $totalBulan > $batasHonor) {
+            $pesan .= ' Perhatian: total honor bulan ini untuk ' . $nama . ' melebihi batas maksimal.';
+        }
+
         return redirect()
             ->route($this->routeMap()['assign'], $penugasan)
-            ->with('sukses', 'Volume untuk ' . $nama . ' berhasil diperbarui.');
+            ->with('sukses', $pesan);
     }
 
-    /** Hapus / keluarkan 1 mitra dari tugas */
+    /** Hapus / keluarkan 1 mitra dari tugas & bersihkan kontrak jika kosong */
     public function hapusPetugas(Penugasan $penugasan, KontrakPekerjaan $pekerjaan)
     {
         $this->otorisasiTugas($penugasan);
@@ -381,8 +429,13 @@ abstract class BasePenugasanController extends Controller
             return back()->with('gagal', $alasan);
         }
 
-        $nama = $pekerjaan->kontrak?->mitra?->user?->name ?? 'mitra';
-        $pekerjaan->delete();
+        $nama    = $pekerjaan->kontrak?->mitra?->user?->name ?? 'mitra';
+        $kontrak = $pekerjaan->kontrak;
+
+        DB::transaction(function () use ($pekerjaan, $kontrak) {
+            $pekerjaan->delete();
+            $this->bersihkanKontrakKosong($kontrak);
+        });
 
         return redirect()
             ->route($this->routeMap()['assign'], $penugasan)
@@ -581,8 +634,13 @@ abstract class BasePenugasanController extends Controller
         $nama = $penugasan->uraian_pekerjaan;
 
         DB::transaction(function () use ($penugasan) {
+            $kontraks = $penugasan->pekerjaan->pluck('kontrak')->filter()->unique('id');
             $penugasan->pekerjaan()->delete();
             $penugasan->delete();
+
+            foreach ($kontraks as $kontrak) {
+                $this->bersihkanKontrakKosong($kontrak);
+            }
         });
 
         return redirect()
@@ -670,9 +728,9 @@ abstract class BasePenugasanController extends Controller
         $penugasanIds = $request->boolean('semua_hasil')
             ? $this->filterQuery($request)->pluck('penugasan.id')
             : Penugasan::query()
-                ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
-                ->whereIn('id', collect((array) $request->input('ids', []))->filter()->values())
-                ->pluck('id');
+            ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
+            ->whereIn('id', collect((array) $request->input('ids', []))->filter()->values())
+            ->pluck('id');
 
         if ($penugasanIds->isEmpty()) {
             return back()->with('gagal', 'Belum ada tugas yang dipilih.');
@@ -727,8 +785,13 @@ abstract class BasePenugasanController extends Controller
                     }
 
                     DB::transaction(function () use ($penugasan) {
+                        $kontraks = $penugasan->pekerjaan->pluck('kontrak')->filter()->unique('id');
                         $penugasan->pekerjaan()->delete();
                         $penugasan->delete();
+
+                        foreach ($kontraks as $kontrak) {
+                            $this->bersihkanKontrakKosong($kontrak);
+                        }
                     });
                     $dihapus++;
                 }
@@ -851,6 +914,20 @@ abstract class BasePenugasanController extends Controller
     }
 
     /* ===================== Shared Context & Helper ===================== */
+
+    protected function bersihkanKontrakKosong(?Kontrak $kontrak): void
+    {
+        if (!$kontrak) {
+            return;
+        }
+
+        $kosong        = $kontrak->pekerjaan()->doesntExist();
+        $belumBernomor = empty($kontrak->nomor_kontrak) && empty($kontrak->nomor_urut_kontrak);
+
+        if ($kosong && $belumBernomor && !$kontrak->cek_kontrak && !$kontrak->cek_spj) {
+            $kontrak->delete();
+        }
+    }
 
     protected function routeMap(): array
     {
