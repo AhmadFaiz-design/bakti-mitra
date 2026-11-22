@@ -4031,3 +4031,54 @@ a.notif-item:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Expand daftar nama mitra di kolom Petugas (Mitra) */
+.penugasan-table td.petugas-cell {
+    vertical-align: top;
+}
+
+.mitra-cell-toggle {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: 8px;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    display: block;
+    transition: background .15s ease;
+}
+
+.mitra-cell-toggle:hover {
+    background: var(--bg);
+}
+
+.mitra-head-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mitra-arrow {
+    font-size: 11px;
+    color: var(--primary-dark);
+    line-height: 1;
+}
+
+.mitra-nama-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.mitra-nama-item {
+    display: block;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+    white-space: normal;
+}

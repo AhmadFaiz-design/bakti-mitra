@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\PenugasanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Koordinator\DashboardController as KoordinatorDashboardController;
 use App\Http\Controllers\Koordinator\PenugasanController as KoordinatorPenugasanController;
+use App\Http\Controllers\Mitra\DashboardController as MitraDashboardController;
+use App\Http\Controllers\Mitra\TugasController as MitraTugasController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -129,6 +131,7 @@ Route::middleware(['auth', 'role:mitra'])->group(function () {
     Route::redirect('/mitra', '/mitra/dashboard');
 
     Route::prefix('mitra')->name('mitra.')->group(function () {
-        Route::view('/dashboard', 'mitra.dashboard')->name('dashboard');
+        Route::get('/dashboard', [MitraDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/tugas', [MitraTugasController::class, 'index'])->name('tugas');
     });
 });
