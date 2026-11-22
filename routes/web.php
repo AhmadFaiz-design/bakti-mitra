@@ -8,6 +8,10 @@ use App\Http\Controllers\Admin\PenugasanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Koordinator\DashboardController as KoordinatorDashboardController;
 use App\Http\Controllers\Koordinator\PenugasanController as KoordinatorPenugasanController;
+use App\Http\Controllers\Mitra\DashboardController as MitraDashboardController;
+use App\Http\Controllers\Mitra\TugasController as MitraTugasController;
+use App\Http\Controllers\Admin\KontrakController;
+use App\Http\Controllers\Mitra\KontrakController as MitraKontrakController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -84,6 +88,18 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/penugasan/export', [PenugasanController::class, 'export'])->name('penugasan.export');
         Route::post('/penugasan/bayar-massal', [PenugasanController::class, 'bayarMassal'])->name('penugasan.bayar-massal');
         Route::delete('/penugasan/hapus-massal', [PenugasanController::class, 'hapusMassal'])->name('penugasan.hapus-massal');
+
+        // Kontrak Bulanan Mitra
+        Route::get('/kontrak', [KontrakController::class, 'index'])->name('kontrak');
+        Route::post('/kontrak/generate-nomor', [KontrakController::class, 'generateNomor'])->name('kontrak.generate');
+        Route::put('/kontrak/{kontrak}', [KontrakController::class, 'update'])
+            ->whereNumber('kontrak')->name('kontrak.update');
+        Route::patch('/kontrak/{kontrak}/verifikasi', [KontrakController::class, 'verifikasi'])
+            ->whereNumber('kontrak')->name('kontrak.verifikasi');
+        Route::post('/kontrak/verifikasi-massal', [KontrakController::class, 'verifikasiMassal'])
+            ->name('kontrak.verifikasi-massal');
+        Route::get('/kontrak/{kontrak}/spk', [KontrakController::class, 'cetakSpk'])
+            ->whereNumber('kontrak')->name('kontrak.spk');
     });
 });
 
@@ -129,6 +145,10 @@ Route::middleware(['auth', 'role:mitra'])->group(function () {
     Route::redirect('/mitra', '/mitra/dashboard');
 
     Route::prefix('mitra')->name('mitra.')->group(function () {
-        Route::view('/dashboard', 'mitra.dashboard')->name('dashboard');
+        Route::get('/dashboard', [MitraDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/tugas', [MitraTugasController::class, 'index'])->name('tugas');
+        Route::get('/kontrak', [MitraKontrakController::class, 'index'])->name('kontrak');
+        Route::get('/kontrak/{kontrak}/spk', [MitraKontrakController::class, 'cetakSpk'])
+            ->whereNumber('kontrak')->name('kontrak.spk');
     });
 });

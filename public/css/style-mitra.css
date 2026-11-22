@@ -1,0 +1,339 @@
+/* Tema Mitra: Biru Royal + Mint */
+:root {
+    --primary: #2563EB;
+    --primary-dark: #1E40AF;
+    --ink: #0F172A;
+    --bg: #EFF6FF;
+    --tint: #DBEAFE;
+    --white: #fff;
+    --lime: #34D399;
+    --muted: #64748B;
+    --radius: 24px;
+}
+
+.sidebar,
+.menu a,
+.menu button,
+.toggle,
+.sidebar-collapse {
+    color: #BFDBFE;
+}
+
+.menu .active,
+.menu a:hover,
+.toggle:hover {
+    color: var(--white);
+}
+
+.has-sub.open > .sub-toggle {
+    color: var(--ink);
+}
+
+.mitra-search:focus-within,
+.rupiah-input:focus-within,
+.form-group input:focus,
+.form-group select:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
+}
+
+.mitra-search,
+.outline-btn,
+.status-switch,
+.dd-btn {
+    border-color: #CBD5E1;
+}
+
+.mitra-table tbody tr:hover,
+.dash a.notif-item:hover {
+    background: #F1F5FD;
+}
+
+.mitra-table td {
+    border-bottom-color: #E2E8F0;
+}
+
+.dash .scroll,
+.dash .notif-list,
+.dash .cal-notes {
+    scrollbar-color: #93C5FD transparent;
+}
+
+.dash .scroll::-webkit-scrollbar-thumb {
+    background: #93C5FD;
+}
+
+.dash .scroll:hover::-webkit-scrollbar-thumb,
+.dash .cal-notes::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
+.dash .perhatian.ungu {
+    background: var(--tint);
+}
+
+/* Layout khusus Dashboard Mitra (tanpa grafik, anti tumpang tindih & sejajar) */
+.mitra-dash .dash-top {
+    height: auto !important;
+    min-height: 0 !important;
+    grid-template-rows: auto !important;
+    align-items: stretch;
+}
+
+.mitra-dash .dash-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: auto !important;
+    min-height: 0 !important;
+    min-width: 0;
+}
+
+.mitra-dash .calendar-card {
+    height: auto !important;
+    margin: 0 !important;
+}
+
+.mitra-dash .dash-left > .pair {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    height: auto !important;
+    min-height: 0;
+    align-items: stretch;
+}
+
+.mitra-dash .dash-left > .pair > .card {
+    display: flex;
+    flex-direction: column;
+    margin: 0 !important;
+    height: auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.mitra-dash .dash-left > .pair > .card > .list {
+    flex: 1;
+    max-height: 290px;
+}
+
+.mitra-dash .mitra-bottom {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    height: auto !important;
+    min-height: 0;
+    align-items: stretch;
+}
+
+.mitra-dash .mitra-bottom > .card {
+    display: flex;
+    flex-direction: column;
+    margin: 0 !important;
+    height: auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.mitra-dash .mitra-bottom .perlu-wrap,
+.mitra-dash .mitra-bottom .perhatian-list {
+    flex: 1;
+    max-height: 240px;
+}
+
+@media (max-width: 900px) {
+    .mitra-dash .dash-left > .pair,
+    .mitra-dash .mitra-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+/* Halaman Daftar Tugas Mitra & Modal Detail Jobdesk */
+.mitra-tugas-table th:first-child,
+.mitra-tugas-table td:first-child {
+    width: 46px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.mitra-tugas-table th.aksi-col,
+.mitra-tugas-table td.action-cell {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.detail-tugas-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--tint);
+    background: var(--bg);
+    color: var(--primary-dark);
+    font: 600 12px 'Poppins', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.detail-tugas-btn:hover {
+    background: var(--tint);
+    border-color: var(--primary);
+}
+
+.detail-tugas-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.waktu-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.waktu-badge.berlangsung {
+    background: var(--tint);
+    color: var(--primary-dark);
+}
+
+.waktu-badge.akan {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.waktu-badge.selesai {
+    background: #E2E8F0;
+    color: #475569;
+}
+
+.pulsa-chip {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #DCFCE7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Modal Detail Jobdesk */
+.jobdesk-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -48%) scale(.96);
+    width: calc(100vw - 32px);
+    max-width: 620px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+    z-index: 1200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.jobdesk-modal.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.jobdesk-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.jobdesk-head h2 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--ink);
+}
+
+.jobdesk-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #CBD5E1;
+    background: var(--white);
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    flex: none;
+}
+
+.jobdesk-close:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.jobdesk-box {
+    background: var(--bg);
+    border: 1px solid var(--tint);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.jobdesk-box span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.jobdesk-box strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+}
+
+.jobdesk-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+    margin-bottom: 20px;
+}
+
+.jobdesk-item span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 3px;
+}
+
+.jobdesk-item strong {
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.jobdesk-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
+    border-top: 1px solid #E2E8F0;
+}
+
+@media (max-width: 600px) {
+    .jobdesk-grid {
+        grid-template-columns: 1fr;
+    }
+}

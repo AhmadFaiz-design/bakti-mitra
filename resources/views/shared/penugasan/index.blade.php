@@ -141,8 +141,7 @@
             'lunas' => 'Sudah Dibayar',
         ]" :current="$status" label="Status" />
 
-        <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false"
-            aria-controls="filterPanel">
+        <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
             <svg>
                 <use href="#i-filter" />
             </svg>
@@ -161,7 +160,8 @@
                 </svg> List Penugasan</h2>
 
             <a href="{{ route($routes['buat']) }}" class="primary-btn btn-link">
-                <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round">
+                <svg viewBox="0 0 24 24"
+                    style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round">
                     <path d="M12 5v14M5 12h14" />
                 </svg>
                 Tambah Tugas
@@ -253,13 +253,14 @@
                                     ? 'Tugas tidak bisa diubah atau dihapus karena kontrak salah satu petugas sudah diverifikasi.'
                                     : '');
 
-                            $statusTeks = $jumlahPetugas === 0
-                                ? 'Belum ada petugas'
-                                : ($semuaDibayar
-                                    ? 'Sudah dibayar semua'
-                                    : ($adaDibayar
-                                        ? "Sebagian dibayar ($jumlahDibayar/$jumlahPetugas)"
-                                        : 'Belum dibayar'));
+                            $statusTeks =
+                                $jumlahPetugas === 0
+                                    ? 'Belum ada petugas'
+                                    : ($semuaDibayar
+                                        ? 'Sudah dibayar semua'
+                                        : ($adaDibayar
+                                            ? "Sebagian dibayar ($jumlahDibayar/$jumlahPetugas)"
+                                            : 'Belum dibayar'));
 
                             $info = [
                                 'uraian' => $t->uraian_pekerjaan ?? '-',
@@ -267,9 +268,15 @@
                                 'koordinator' => $t->koordinator?->name ?? '-',
                                 'periode' => $mulai . ' s.d. ' . $selesai,
                                 'jumlahPetugas' => $jumlahPetugas,
-                                'petugasTeks' => $jumlahPetugas > 0
-                                    ? $jumlahPetugas . ' Mitra (Total Vol: ' . ($volText ?: '0') . ' ' . $t->satuan . ')'
-                                    : 'Belum ada petugas',
+                                'petugasTeks' =>
+                                    $jumlahPetugas > 0
+                                        ? $jumlahPetugas .
+                                            ' Mitra (Total Vol: ' .
+                                            ($volText ?: '0') .
+                                            ' ' .
+                                            $t->satuan .
+                                            ')'
+                                        : 'Belum ada petugas',
                                 'honor' => 'Rp ' . number_format($totalHonor, 0, ',', '.'),
                                 'dibayar' => $semuaDibayar,
                                 'statusTeks' => $statusTeks,
@@ -309,16 +316,36 @@
                                 <span class="cell-sub">s.d. {{ $selesai }}</span>
                             </td>
 
-                            <td>
+                            <td class="petugas-cell">
                                 @if ($jumlahPetugas === 0)
                                     <span class="status-badge empty">Belum ada petugas</span>
                                 @else
-                                    <span class="profile-name">{{ $jumlahPetugas }} Mitra</span>
-                                    <span class="cell-sub">
-                                        {{ $namaMitra->take(2)->implode(', ') }}@if ($jumlahPetugas > 2)
-                                            +{{ $jumlahPetugas - 2 }} lainnya
-                                        @endif
-                                    </span>
+                                    <button type="button" class="mitra-cell-toggle" aria-expanded="false"
+                                        title="Klik untuk melihat seluruh nama mitra">
+                                        <span class="mitra-ringkas">
+                                            <span class="mitra-head-row">
+                                                <span class="profile-name">{{ $jumlahPetugas }} Mitra</span>
+                                                <span class="mitra-arrow" aria-hidden="true">&#9662;</span>
+                                            </span>
+                                            <span class="cell-sub">
+                                                {{ $namaMitra->take(2)->implode(', ') }}@if ($jumlahPetugas > 2)
+                                                    +{{ $jumlahPetugas - 2 }} lainnya
+                                                @endif
+                                            </span>
+                                        </span>
+
+                                        <span class="mitra-lengkap" hidden>
+                                            <span class="mitra-head-row">
+                                                <span class="profile-name">{{ $jumlahPetugas }} Mitra</span>
+                                                <span class="mitra-arrow" aria-hidden="true">&#9652;</span>
+                                            </span>
+                                            <span class="mitra-nama-list">
+                                                @foreach ($namaMitra as $nm)
+                                                    <span class="mitra-nama-item">{{ $nm }}</span>
+                                                @endforeach
+                                            </span>
+                                        </span>
+                                    </button>
                                 @endif
                             </td>
 
@@ -337,7 +364,8 @@
                                 @elseif ($semuaDibayar)
                                     <span class="status-badge active">Sudah Dibayar</span>
                                 @elseif ($adaDibayar)
-                                    <span class="status-badge partial">Sebagian ({{ $jumlahDibayar }}/{{ $jumlahPetugas }})</span>
+                                    <span class="status-badge partial">Sebagian
+                                        ({{ $jumlahDibayar }}/{{ $jumlahPetugas }})</span>
                                 @else
                                     <span class="status-badge pending">Belum Dibayar</span>
                                 @endif
@@ -353,61 +381,60 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ $colspan }}" style="text-align:center;padding:24px">
-                                @if ($q !== '' || $status !== 'semua' || $jumlahFilter > 0)
-                                    Tidak ada tugas yang cocok dengan pencarian atau filter.
-                                @else
-                                    Belum ada tugas yang dibuat.
-                                @endif
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        @empty
+                            <tr>
+                                <td colspan="{{ $colspan }}" style="text-align:center;padding:24px">
+                                    @if ($q !== '' || $status !== 'semua' || $jumlahFilter > 0)
+                                        Tidak ada tugas yang cocok dengan pencarian atau filter.
+                                    @else
+                                        Belum ada tugas yang dibuat.
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-        <div class="table-footer">
-            <span>
-                @if ($daftar->total() > 0)
-                    Menampilkan {{ $daftar->firstItem() }}–{{ $daftar->lastItem() }}
-                    dari {{ $daftar->total() }} tugas
-                @else
-                    Tidak ada data
-                @endif
-            </span>
-
-            @if ($daftar->hasPages())
-                <span style="display:flex;gap:8px;align-items:center">
-                    @unless ($daftar->onFirstPage())
-                        <a class="outline-btn btn-link" href="{{ $daftar->url(1) }}"
-                            aria-label="Halaman pertama" title="Halaman pertama">&lt;&lt;</a>
-                        <a class="outline-btn btn-link" href="{{ $daftar->previousPageUrl() }}"
-                            aria-label="Halaman sebelumnya" title="Halaman sebelumnya">&lt;</a>
-                    @endunless
-
-                    <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
-
-                    @if ($daftar->hasMorePages())
-                        <a class="outline-btn btn-link" href="{{ $daftar->nextPageUrl() }}"
-                            aria-label="Halaman berikutnya" title="Halaman berikutnya">&gt;</a>
-                        <a class="outline-btn btn-link" href="{{ $daftar->url($daftar->lastPage()) }}"
-                            aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
+            <div class="table-footer">
+                <span>
+                    @if ($daftar->total() > 0)
+                        Menampilkan {{ $daftar->firstItem() }}–{{ $daftar->lastItem() }}
+                        dari {{ $daftar->total() }} tugas
+                    @else
+                        Tidak ada data
                     @endif
                 </span>
-            @endif
-        </div>
-    </section>
 
-    {{-- POPOVER AKSI --}}
-    <div class="mitra-popover" id="penPopover" role="dialog" aria-label="Detail penugasan">
-        <div class="pop-field">
-            <span class="pop-label">Uraian Pekerjaan</span>
-            <strong class="pop-name" id="popUraian"></strong>
-        </div>
+                @if ($daftar->hasPages())
+                    <span style="display:flex;gap:8px;align-items:center">
+                        @unless ($daftar->onFirstPage())
+                            <a class="outline-btn btn-link" href="{{ $daftar->url(1) }}" aria-label="Halaman pertama"
+                                title="Halaman pertama">&lt;&lt;</a>
+                            <a class="outline-btn btn-link" href="{{ $daftar->previousPageUrl() }}"
+                                aria-label="Halaman sebelumnya" title="Halaman sebelumnya">&lt;</a>
+                        @endunless
 
-        <div class="pop-row">
+                        <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
+
+                        @if ($daftar->hasMorePages())
+                            <a class="outline-btn btn-link" href="{{ $daftar->nextPageUrl() }}"
+                                aria-label="Halaman berikutnya" title="Halaman berikutnya">&gt;</a>
+                            <a class="outline-btn btn-link" href="{{ $daftar->url($daftar->lastPage()) }}"
+                                aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
+                        @endif
+                    </span>
+                @endif
+            </div>
+        </section>
+
+        {{-- POPOVER AKSI --}}
+        <div class="mitra-popover" id="penPopover" role="dialog" aria-label="Detail penugasan">
+            <div class="pop-field">
+                <span class="pop-label">Uraian Pekerjaan</span>
+                <strong class="pop-name" id="popUraian"></strong>
+            </div>
+
             <div class="pop-field">
                 <span class="pop-label">RO</span>
                 <strong class="pop-value" id="popRo"></strong>
@@ -416,507 +443,511 @@
                 <span class="pop-label">Total Honor</span>
                 <strong class="pop-value" id="popHonor"></strong>
             </div>
+
+            @if ($bisaPilihKoordinator)
+                <div class="pop-field">
+                    <span class="pop-label">Koordinator</span>
+                    <div class="pop-text" id="popKoordinator"></div>
+                </div>
+            @endif
+
+            <div class="pop-field">
+                <span class="pop-label">Petugas</span>
+                <div class="pop-text" id="popPetugas"></div>
+            </div>
+
+            <div class="pop-field">
+                <span class="pop-label">Periode</span>
+                <div class="pop-text" id="popPeriode"></div>
+            </div>
+
+            <div class="pop-field">
+                <span class="pop-label">Pembayaran</span>
+                @if ($bisaKelolaBayar)
+                    <label class="pop-check">
+                        <input type="checkbox" id="popBayar">
+                        <span id="popBayarTeks">Tandai semua honor sudah dibayar</span>
+                    </label>
+                    <small class="pop-sub">Untuk bayar per mitra, buka halaman Assign Petugas.</small>
+                @else
+                    <div class="pop-text" id="popBayarReadonly"></div>
+                @endif
+            </div>
+
+            <div class="pop-field">
+                <span class="pop-label">Aksi</span>
+                <div class="pop-actions pop-actions-wrap">
+                    <button type="button" class="pop-btn pop-btn-edit pop-btn-full" id="popAssign">
+                        Assign / Kelola Petugas
+                    </button>
+                    <button type="button" class="pop-btn pop-btn-del" id="popHapus">
+                        Hapus Tugas
+                        <svg viewBox="0 0 24 24">
+                            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                        </svg>
+                    </button>
+                    <button type="button" class="pop-btn pop-btn-edit" id="popEdit">
+                        Edit Tugas
+                        <svg viewBox="0 0 24 24">
+                            <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="pop-warning" id="popKunci" role="alert" hidden>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 3l10 18H2L12 3zM12 10v4M12 17.5v.01" />
+                    </svg>
+                    <span id="popKunciTeks"></span>
+                </div>
+            </div>
         </div>
 
-        @if ($bisaPilihKoordinator)
-            <div class="pop-field">
-                <span class="pop-label">Koordinator</span>
-                <div class="pop-text" id="popKoordinator"></div>
-            </div>
+        {{-- PANEL FILTER --}}
+        <div class="filter-overlay" id="filterOverlay"></div>
+
+        <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Penugasan" aria-hidden="true">
+            <form method="GET" action="{{ route($routes['index']) }}" id="filterForm" class="filter-form">
+                <input type="hidden" name="q" value="{{ $q }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
+
+                <div class="filter-body">
+                    <h2 class="filter-title">Filter Penugasan</h2>
+
+                    <x-admin.filter-wilayah :opsi="$daftarWilayah" :dipilih="request('wilayah')" />
+
+                    @if ($bisaPilihKoordinator)
+                        <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
+                            :banyak="false" :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])" :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
+                    @endif
+
+                    <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas" :dipilih="$tugasDipilih" />
+
+                    <x-admin.filter-range judul="Rentang Total Honor" :max="$honorBatas" :dari="$honorDari"
+                        :sampai="$honorSampai" nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000"
+                        :rupiah="true" mode-id="honorMode" />
+                </div>
+
+                <div class="filter-footer">
+                    <button type="button" class="filter-reset" id="filterReset">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                        </svg>
+                        Reset
+                    </button>
+                    <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
+                    <button type="submit" class="btn-apply">Terapkan</button>
+                </div>
+            </form>
+        </aside>
+
+        <x-admin.filter-js />
+
+        {{-- MODAL EXPORT --}}
+        <div class="modal-overlay" id="exportOverlay"></div>
+
+        <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
+            aria-hidden="true">
+            <form method="GET" action="{{ route($routes['export']) }}" id="exportForm">
+                <input type="hidden" name="q" value="{{ $q }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                {!! $hiddenFilter !!}
+
+                <h2 id="exportTitle" class="export-title">Export Data Penugasan</h2>
+                <p class="export-sub">Data rincian honor mitra berdasarkan tugas hasil filter</p>
+
+                <div class="export-options">
+                    <label class="export-option">
+                        <input type="radio" name="format" value="csv" checked>
+                        <svg class="export-icon" viewBox="0 0 32 32">
+                            <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                            <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                fill="currentColor" stroke="none">CSV</text>
+                        </svg>
+                        <span class="export-text">
+                            <strong>CSV</strong>
+                            <small>Dokumen diekspor dengan format CSV</small>
+                        </span>
+                        <span class="export-radio"></span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="radio" name="format" value="pdf">
+                        <svg class="export-icon" viewBox="0 0 32 32">
+                            <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                            <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                fill="currentColor" stroke="none">PDF</text>
+                        </svg>
+                        <span class="export-text">
+                            <strong>PDF</strong>
+                            <small>Dokumen diekspor dengan format PDF</small>
+                        </span>
+                        <span class="export-radio"></span>
+                    </label>
+                </div>
+
+                <div class="export-footer">
+                    <button type="button" class="btn-cancel" id="exportCancel">Cancel</button>
+                    <button type="submit" class="btn-apply">Download</button>
+                </div>
+            </form>
+        </div>
+
+        {{-- FORM TERSEMBUNYI --}}
+        <form id="hapusForm" method="POST" style="display:none">
+            @csrf
+            @method('DELETE')
+        </form>
+
+        @if ($bisaKelolaBayar)
+            <form id="bulkForm" method="POST" action="{{ route($routes['bayarMassal']) }}" style="display:none">
+                @csrf
+                <input type="hidden" name="aksi" id="bulkAksi">
+                <input type="hidden" name="semua_hasil" id="bulkSemuaHasil" value="0">
+                <input type="hidden" name="q" value="{{ $q }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                {!! $hiddenFilter !!}
+                <div id="bulkIds"></div>
+            </form>
         @endif
 
-        <div class="pop-field">
-            <span class="pop-label">Petugas</span>
-            <div class="pop-text" id="popPetugas"></div>
-        </div>
-
-        <div class="pop-field">
-            <span class="pop-label">Periode</span>
-            <div class="pop-text" id="popPeriode"></div>
-        </div>
-
-        <div class="pop-field">
-            <span class="pop-label">Pembayaran</span>
-            @if ($bisaKelolaBayar)
-                <label class="pop-check">
-                    <input type="checkbox" id="popBayar">
-                    <span id="popBayarTeks">Tandai semua honor sudah dibayar</span>
-                </label>
-                <small class="pop-sub">Untuk bayar per mitra, buka halaman Assign Petugas.</small>
-            @else
-                <div class="pop-text" id="popBayarReadonly"></div>
-            @endif
-        </div>
-
-        <div class="pop-field">
-            <span class="pop-label">Aksi</span>
-            <div class="pop-actions pop-actions-wrap">
-                <button type="button" class="pop-btn pop-btn-edit pop-btn-full" id="popAssign">
-                    Assign / Kelola Petugas
-                </button>
-                <button type="button" class="pop-btn pop-btn-del" id="popHapus">
-                    Hapus Tugas
-                    <svg viewBox="0 0 24 24">
-                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-                    </svg>
-                </button>
-                <button type="button" class="pop-btn pop-btn-edit" id="popEdit">
-                    Edit Tugas
-                    <svg viewBox="0 0 24 24">
-                        <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
-                    </svg>
-                </button>
-            </div>
-
-            <div class="pop-warning" id="popKunci" role="alert" hidden>
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 3l10 18H2L12 3zM12 10v4M12 17.5v.01" />
-                </svg>
-                <span id="popKunciTeks"></span>
-            </div>
-        </div>
-    </div>
-
-    {{-- PANEL FILTER --}}
-    <div class="filter-overlay" id="filterOverlay"></div>
-
-    <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Penugasan" aria-hidden="true">
-        <form method="GET" action="{{ route($routes['index']) }}" id="filterForm" class="filter-form">
-            <input type="hidden" name="q" value="{{ $q }}">
-            <input type="hidden" name="status" value="{{ $status }}">
-            <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
-
-            <div class="filter-body">
-                <h2 class="filter-title">Filter Penugasan</h2>
-
-                <x-admin.filter-wilayah :opsi="$daftarWilayah" :dipilih="request('wilayah')" />
-
-                @if ($bisaPilihKoordinator)
-                    <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
-                        :banyak="false"
-                        :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])"
-                        :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
-                @endif
-
-                <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas"
-                    :dipilih="$tugasDipilih" />
-
-                <x-admin.filter-range judul="Rentang Total Honor" :max="$honorBatas" :dari="$honorDari"
-                    :sampai="$honorSampai" nama-dari="honor_dari" nama-sampai="honor_sampai" :step="10000"
-                    :rupiah="true" mode-id="honorMode" />
-            </div>
-
-            <div class="filter-footer">
-                <button type="button" class="filter-reset" id="filterReset">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
-                    </svg>
-                    Reset
-                </button>
-                <button type="button" class="btn-cancel" id="filterCancel">Cancel</button>
-                <button type="submit" class="btn-apply">Terapkan</button>
-            </div>
-        </form>
-    </aside>
-
-    <x-admin.filter-js />
-
-    {{-- MODAL EXPORT --}}
-    <div class="modal-overlay" id="exportOverlay"></div>
-
-    <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
-        aria-hidden="true">
-        <form method="GET" action="{{ route($routes['export']) }}" id="exportForm">
-            <input type="hidden" name="q" value="{{ $q }}">
-            <input type="hidden" name="status" value="{{ $status }}">
-            {!! $hiddenFilter !!}
-
-            <h2 id="exportTitle" class="export-title">Export Data Penugasan</h2>
-            <p class="export-sub">Data rincian honor mitra berdasarkan tugas hasil filter</p>
-
-            <div class="export-options">
-                <label class="export-option">
-                    <input type="radio" name="format" value="csv" checked>
-                    <svg class="export-icon" viewBox="0 0 32 32">
-                        <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
-                        <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
-                            fill="currentColor" stroke="none">CSV</text>
-                    </svg>
-                    <span class="export-text">
-                        <strong>CSV</strong>
-                        <small>Dokumen diekspor dengan format CSV</small>
-                    </span>
-                    <span class="export-radio"></span>
-                </label>
-
-                <label class="export-option">
-                    <input type="radio" name="format" value="pdf">
-                    <svg class="export-icon" viewBox="0 0 32 32">
-                        <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
-                        <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
-                            fill="currentColor" stroke="none">PDF</text>
-                    </svg>
-                    <span class="export-text">
-                        <strong>PDF</strong>
-                        <small>Dokumen diekspor dengan format PDF</small>
-                    </span>
-                    <span class="export-radio"></span>
-                </label>
-            </div>
-
-            <div class="export-footer">
-                <button type="button" class="btn-cancel" id="exportCancel">Cancel</button>
-                <button type="submit" class="btn-apply">Download</button>
-            </div>
-        </form>
-    </div>
-
-    {{-- FORM TERSEMBUNYI --}}
-    <form id="hapusForm" method="POST" style="display:none">
-        @csrf
-        @method('DELETE')
-    </form>
-
-    @if ($bisaKelolaBayar)
-        <form id="bulkForm" method="POST" action="{{ route($routes['bayarMassal']) }}" style="display:none">
+        <form id="bulkHapusForm" method="POST" action="{{ route($routes['hapusMassal']) }}" style="display:none">
             @csrf
-            <input type="hidden" name="aksi" id="bulkAksi">
-            <input type="hidden" name="semua_hasil" id="bulkSemuaHasil" value="0">
+            @method('DELETE')
+            <input type="hidden" name="semua_hasil" id="bulkHapusSemuaHasil" value="0">
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
-            <div id="bulkIds"></div>
+            <div id="bulkHapusIds"></div>
         </form>
-    @endif
 
-    <form id="bulkHapusForm" method="POST" action="{{ route($routes['hapusMassal']) }}" style="display:none">
-        @csrf
-        @method('DELETE')
-        <input type="hidden" name="semua_hasil" id="bulkHapusSemuaHasil" value="0">
-        <input type="hidden" name="q" value="{{ $q }}">
-        <input type="hidden" name="status" value="{{ $status }}">
-        {!! $hiddenFilter !!}
-        <div id="bulkHapusIds"></div>
-    </form>
+        @push('scripts')
+            <script>
+                /* ===== Pilih baris + aksi massal ===== */
+                (function() {
+                    const semua = document.getElementById('selectAll');
+                    const bar = document.getElementById('bulkBar');
+                    const hitung = document.getElementById('bulkCount');
+                    const hint = document.getElementById('bulkHint');
+                    const hasilOn = document.getElementById('bulkHasilOn');
+                    const bulkForm = document.getElementById('bulkForm');
+                    const TOTAL = @json($daftar->total());
+                    const ADA_HALAMAN_LAIN = @json($daftar->hasPages());
+                    let semuaHasil = false;
 
-    @push('scripts')
-        <script>
-            /* ===== Pilih baris + aksi massal ===== */
-            (function() {
-                const semua = document.getElementById('selectAll');
-                const bar = document.getElementById('bulkBar');
-                const hitung = document.getElementById('bulkCount');
-                const hint = document.getElementById('bulkHint');
-                const hasilOn = document.getElementById('bulkHasilOn');
-                const bulkForm = document.getElementById('bulkForm');
-                const TOTAL = @json($daftar->total());
-                const ADA_HALAMAN_LAIN = @json($daftar->hasPages());
-                let semuaHasil = false;
+                    const baris = () => [...document.querySelectorAll('#penugasanBody .row-check')];
 
-                const baris = () => [...document.querySelectorAll('#penugasanBody .row-check')];
+                    document.getElementById('bulkHapus').addEventListener('click', async () => {
+                        const dipilih = baris().filter(c => c.checked);
+                        const jumlah = semuaHasil ? TOTAL : dipilih.length;
+                        if (jumlah === 0) return;
 
-                document.getElementById('bulkHapus').addEventListener('click', async () => {
-                    const dipilih = baris().filter(c => c.checked);
-                    const jumlah = semuaHasil ? TOTAL : dipilih.length;
-                    if (jumlah === 0) return;
+                        const teks = jumlah + ' tugas akan dihapus permanen beserta daftar petugasnya. ' +
+                            'Tugas yang memiliki honor sudah dibayar atau kontrak terverifikasi tidak akan dihapus.';
 
-                    const teks = jumlah + ' tugas akan dihapus permanen beserta daftar petugasnya. ' +
-                        'Tugas yang memiliki honor sudah dibayar atau kontrak terverifikasi tidak akan dihapus.';
+                        const lanjut = typeof popup === 'function' ?
+                            await popup({
+                                jenis: 'hapus',
+                                judul: 'Hapus ' + jumlah + ' tugas?',
+                                pesan: teks,
+                                tombolOk: 'Ya, hapus',
+                                tombolBatal: 'Batal'
+                            }) :
+                            confirm(teks);
 
-                    const lanjut = typeof popup === 'function' ?
-                        await popup({
-                            jenis: 'hapus',
-                            judul: 'Hapus ' + jumlah + ' tugas?',
-                            pesan: teks,
-                            tombolOk: 'Ya, hapus',
-                            tombolBatal: 'Batal'
-                        }) :
-                        confirm(teks);
+                        if (!lanjut) return;
 
-                    if (!lanjut) return;
-
-                    document.getElementById('bulkHapusSemuaHasil').value = semuaHasil ? '1' : '0';
-                    const wadah = document.getElementById('bulkHapusIds');
-                    wadah.innerHTML = '';
-                    if (!semuaHasil) {
-                        dipilih.forEach(c => {
-                            const i = document.createElement('input');
-                            i.type = 'hidden';
-                            i.name = 'ids[]';
-                            i.value = c.value;
-                            wadah.appendChild(i);
-                        });
-                    }
-                    document.getElementById('bulkHapusForm').submit();
-                });
-
-                function segarkan() {
-                    const cek = baris();
-                    const n = cek.filter(c => c.checked).length;
-                    if (n === 0) semuaHasil = false;
-
-                    semua.checked = cek.length > 0 && n === cek.length;
-                    semua.indeterminate = n > 0 && n < cek.length;
-
-                    bar.hidden = n === 0;
-                    hitung.textContent = semuaHasil ? TOTAL : n;
-                    hint.hidden = !(ADA_HALAMAN_LAIN && n > 0 && n === cek.length && !semuaHasil);
-                    hasilOn.hidden = !semuaHasil;
-
-                    const bulkSemuaEl = document.getElementById('bulkSemuaHasil');
-                    if (bulkSemuaEl) bulkSemuaEl.value = semuaHasil ? '1' : '0';
-                }
-
-                semua.addEventListener('change', () => {
-                    semuaHasil = false;
-                    baris().forEach(c => c.checked = semua.checked);
-                    segarkan();
-                });
-
-                document.getElementById('penugasanBody').addEventListener('change', e => {
-                    if (!e.target.classList.contains('row-check')) return;
-                    semuaHasil = false;
-                    segarkan();
-                });
-
-                document.getElementById('bulkPilihHasil')?.addEventListener('click', () => {
-                    semuaHasil = true;
-                    segarkan();
-                });
-                document.getElementById('bulkBatalHasil')?.addEventListener('click', () => {
-                    semuaHasil = false;
-                    segarkan();
-                });
-                document.getElementById('bulkReset').addEventListener('click', () => {
-                    semuaHasil = false;
-                    baris().forEach(c => c.checked = false);
-                    segarkan();
-                });
-
-                if (bulkForm) {
-                    bar.querySelectorAll('[data-aksi]').forEach(tombol => {
-                        tombol.addEventListener('click', () => {
-                            const aksi = tombol.dataset.aksi;
-                            const dipilih = baris().filter(c => c.checked);
-                            const jumlah = semuaHasil ? TOTAL : dipilih.length;
-                            if (jumlah === 0) return;
-
-                            const teks = aksi === 'bayar' ?
-                                'Tandai semua petugas pada ' + jumlah + ' tugas sebagai SUDAH dibayar?' :
-                                'Tandai semua petugas pada ' + jumlah + ' tugas sebagai BELUM dibayar?';
-                            if (!confirm(teks)) return;
-
-                            document.getElementById('bulkAksi').value = aksi;
-                            const wadah = document.getElementById('bulkIds');
-                            wadah.innerHTML = '';
-                            if (!semuaHasil) {
-                                dipilih.forEach(c => {
-                                    const i = document.createElement('input');
-                                    i.type = 'hidden';
-                                    i.name = 'ids[]';
-                                    i.value = c.value;
-                                    wadah.appendChild(i);
-                                });
-                            }
-                            bulkForm.submit();
-                        });
+                        document.getElementById('bulkHapusSemuaHasil').value = semuaHasil ? '1' : '0';
+                        const wadah = document.getElementById('bulkHapusIds');
+                        wadah.innerHTML = '';
+                        if (!semuaHasil) {
+                            dipilih.forEach(c => {
+                                const i = document.createElement('input');
+                                i.type = 'hidden';
+                                i.name = 'ids[]';
+                                i.value = c.value;
+                                wadah.appendChild(i);
+                            });
+                        }
+                        document.getElementById('bulkHapusForm').submit();
                     });
-                }
 
-                segarkan();
-            })();
+                    function segarkan() {
+                        const cek = baris();
+                        const n = cek.filter(c => c.checked).length;
+                        if (n === 0) semuaHasil = false;
 
-            /* ===== Popover aksi penugasan ===== */
-            (function() {
-                const pop = document.getElementById('penPopover');
-                const tbody = document.getElementById('penugasanBody');
-                const hapusForm = document.getElementById('hapusForm');
-                const popBayar = document.getElementById('popBayar');
-                const popBayarReadonly = document.getElementById('popBayarReadonly');
-                const popKoordinator = document.getElementById('popKoordinator');
-                const popAssign = document.getElementById('popAssign');
-                const popEdit = document.getElementById('popEdit');
-                const popHapus = document.getElementById('popHapus');
-                const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
-                let aktif = null;
-                let info = null;
+                        semua.checked = cek.length > 0 && n === cek.length;
+                        semua.indeterminate = n > 0 && n < cek.length;
 
-                const pesan = (jenis, judul, teks) =>
-                    typeof popup === 'function' ? popup({
-                        jenis,
-                        judul,
-                        pesan: teks
-                    }) : alert(teks);
+                        bar.hidden = n === 0;
+                        hitung.textContent = semuaHasil ? TOTAL : n;
+                        hint.hidden = !(ADA_HALAMAN_LAIN && n > 0 && n === cek.length && !semuaHasil);
+                        hasilOn.hidden = !semuaHasil;
 
-                function tutup() {
-                    pop.classList.remove('open');
-                    if (aktif) aktif.setAttribute('aria-expanded', 'false');
-                    aktif = null;
-                }
-
-                function posisi(btn) {
-                    const r = btn.getBoundingClientRect();
-                    const gap = 8,
-                        margin = 8;
-                    const w = pop.offsetWidth,
-                        h = pop.offsetHeight;
-
-                    let left = r.left - w - gap;
-                    if (left < margin) left = r.right + gap;
-                    left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
-
-                    const top = Math.max(margin, Math.min(r.top, window.innerHeight - h - margin));
-
-                    pop.style.left = left + 'px';
-                    pop.style.top = top + 'px';
-                }
-
-                function buka(btn) {
-                    if (aktif && aktif !== btn) aktif.setAttribute('aria-expanded', 'false');
-
-                    try {
-                        info = JSON.parse(btn.dataset.info);
-                    } catch (e) {
-                        return;
+                        const bulkSemuaEl = document.getElementById('bulkSemuaHasil');
+                        if (bulkSemuaEl) bulkSemuaEl.value = semuaHasil ? '1' : '0';
                     }
 
-                    document.getElementById('popUraian').textContent = info.uraian;
-                    document.getElementById('popRo').textContent = info.ro;
-                    document.getElementById('popHonor').textContent = info.honor;
-                    if (popKoordinator) popKoordinator.textContent = info.koordinator;
-                    document.getElementById('popPetugas').textContent = info.petugasTeks;
-                    document.getElementById('popPeriode').textContent = info.periode;
+                    semua.addEventListener('change', () => {
+                        semuaHasil = false;
+                        baris().forEach(c => c.checked = semua.checked);
+                        segarkan();
+                    });
 
-                    if (popBayar) {
-                        const adaPetugas = Number(info.jumlahPetugas) > 0;
-                        popBayar.checked = !!info.dibayar;
-                        popBayar.disabled = !adaPetugas;
-                        document.getElementById('popBayarTeks').textContent = !adaPetugas ?
-                            'Belum ada petugas untuk dibayar' :
-                            (info.dibayar ? 'Semua honor sudah dibayar' : 'Tandai semua honor sudah dibayar');
+                    /* ===== Expand/collapse daftar nama mitra di sel Petugas ===== */
+                    document.getElementById('penugasanBody').addEventListener('click', e => {
+                        const toggle = e.target.closest('.mitra-cell-toggle');
+                        if (!toggle) return;
+
+                        const ringkas = toggle.querySelector('.mitra-ringkas');
+                        const lengkap = toggle.querySelector('.mitra-lengkap');
+                        const dibuka = toggle.getAttribute('aria-expanded') === 'true';
+
+                        toggle.setAttribute('aria-expanded', String(!dibuka));
+                        ringkas.hidden = !dibuka;
+                        lengkap.hidden = dibuka;
+                    });
+
+                    document.getElementById('bulkPilihHasil')?.addEventListener('click', () => {
+                        semuaHasil = true;
+                        segarkan();
+                    });
+                    document.getElementById('bulkBatalHasil')?.addEventListener('click', () => {
+                        semuaHasil = false;
+                        segarkan();
+                    });
+                    document.getElementById('bulkReset').addEventListener('click', () => {
+                        semuaHasil = false;
+                        baris().forEach(c => c.checked = false);
+                        segarkan();
+                    });
+
+                    if (bulkForm) {
+                        bar.querySelectorAll('[data-aksi]').forEach(tombol => {
+                            tombol.addEventListener('click', () => {
+                                const aksi = tombol.dataset.aksi;
+                                const dipilih = baris().filter(c => c.checked);
+                                const jumlah = semuaHasil ? TOTAL : dipilih.length;
+                                if (jumlah === 0) return;
+
+                                const teks = aksi === 'bayar' ?
+                                    'Tandai semua petugas pada ' + jumlah + ' tugas sebagai SUDAH dibayar?' :
+                                    'Tandai semua petugas pada ' + jumlah + ' tugas sebagai BELUM dibayar?';
+                                if (!confirm(teks)) return;
+
+                                document.getElementById('bulkAksi').value = aksi;
+                                const wadah = document.getElementById('bulkIds');
+                                wadah.innerHTML = '';
+                                if (!semuaHasil) {
+                                    dipilih.forEach(c => {
+                                        const i = document.createElement('input');
+                                        i.type = 'hidden';
+                                        i.name = 'ids[]';
+                                        i.value = c.value;
+                                        wadah.appendChild(i);
+                                    });
+                                }
+                                bulkForm.submit();
+                            });
+                        });
                     }
-                    if (popBayarReadonly) {
-                        popBayarReadonly.textContent = info.statusTeks;
+
+                    segarkan();
+                })();
+
+                /* ===== Popover aksi penugasan ===== */
+                (function() {
+                    const pop = document.getElementById('penPopover');
+                    const tbody = document.getElementById('penugasanBody');
+                    const hapusForm = document.getElementById('hapusForm');
+                    const popBayar = document.getElementById('popBayar');
+                    const popBayarReadonly = document.getElementById('popBayarReadonly');
+                    const popKoordinator = document.getElementById('popKoordinator');
+                    const popAssign = document.getElementById('popAssign');
+                    const popEdit = document.getElementById('popEdit');
+                    const popHapus = document.getElementById('popHapus');
+                    const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
+                    let aktif = null;
+                    let info = null;
+
+                    const pesan = (jenis, judul, teks) =>
+                        typeof popup === 'function' ? popup({
+                            jenis,
+                            judul,
+                            pesan: teks
+                        }) : alert(teks);
+
+                    function tutup() {
+                        pop.classList.remove('open');
+                        if (aktif) aktif.setAttribute('aria-expanded', 'false');
+                        aktif = null;
                     }
 
-                    const terkunci = !!info.terkunci;
-                    popEdit.disabled = terkunci;
-                    popHapus.disabled = terkunci;
-                    document.getElementById('popKunciTeks').textContent = info.alasan || '';
-                    document.getElementById('popKunci').hidden = !terkunci;
+                    function posisi(btn) {
+                        const r = btn.getBoundingClientRect();
+                        const gap = 8,
+                            margin = 8;
+                        const w = pop.offsetWidth,
+                            h = pop.offsetHeight;
 
-                    aktif = btn;
-                    btn.setAttribute('aria-expanded', 'true');
-                    pop.classList.add('open');
-                    posisi(btn);
-                }
+                        let left = r.left - w - gap;
+                        if (left < margin) left = r.right + gap;
+                        left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
 
-                tbody.addEventListener('click', e => {
-                    const btn = e.target.closest('.action-btn');
-                    if (!btn) return;
-                    e.stopPropagation();
-                    (aktif === btn) ? tutup(): buka(btn);
-                });
+                        const top = Math.max(margin, Math.min(r.top, window.innerHeight - h - margin));
 
-                document.addEventListener('click', e => {
-                    if (aktif && !pop.contains(e.target)) tutup();
-                });
-                document.addEventListener('keydown', e => {
-                    if (e.key === 'Escape') tutup();
-                });
-                window.addEventListener('resize', tutup);
-                window.addEventListener('scroll', e => {
-                    if (aktif && !pop.contains(e.target)) tutup();
-                }, true);
+                        pop.style.left = left + 'px';
+                        pop.style.top = top + 'px';
+                    }
 
-                if (popBayar) {
-                    popBayar.addEventListener('change', async () => {
-                        if (!info || !info.bayarUrl) return;
-                        const dibayar = popBayar.checked;
-                        popBayar.disabled = true;
+                    function buka(btn) {
+                        if (aktif && aktif !== btn) aktif.setAttribute('aria-expanded', 'false');
 
                         try {
-                            const res = await fetch(info.bayarUrl, {
-                                method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    'X-CSRF-TOKEN': token,
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                },
-                                body: JSON.stringify({
-                                    dibayar
-                                })
-                            });
-                            if (!res.ok) throw new Error('HTTP ' + res.status);
-                            window.location.reload();
+                            info = JSON.parse(btn.dataset.info);
                         } catch (e) {
-                            popBayar.checked = !dibayar;
-                            popBayar.disabled = false;
-                            pesan('gagal', 'Tidak berhasil', 'Status pembayaran gagal disimpan. Coba lagi.');
+                            return;
+                        }
+
+                        document.getElementById('popUraian').textContent = info.uraian;
+                        document.getElementById('popRo').textContent = info.ro;
+                        document.getElementById('popHonor').textContent = info.honor;
+                        if (popKoordinator) popKoordinator.textContent = info.koordinator;
+                        document.getElementById('popPetugas').textContent = info.petugasTeks;
+                        document.getElementById('popPeriode').textContent = info.periode;
+
+                        if (popBayar) {
+                            const adaPetugas = Number(info.jumlahPetugas) > 0;
+                            popBayar.checked = !!info.dibayar;
+                            popBayar.disabled = !adaPetugas;
+                            document.getElementById('popBayarTeks').textContent = !adaPetugas ?
+                                'Belum ada petugas untuk dibayar' :
+                                (info.dibayar ? 'Semua honor sudah dibayar' : 'Tandai semua honor sudah dibayar');
+                        }
+                        if (popBayarReadonly) {
+                            popBayarReadonly.textContent = info.statusTeks;
+                        }
+
+                        const terkunci = !!info.terkunci;
+                        popEdit.disabled = terkunci;
+                        popHapus.disabled = terkunci;
+                        document.getElementById('popKunciTeks').textContent = info.alasan || '';
+                        document.getElementById('popKunci').hidden = !terkunci;
+
+                        aktif = btn;
+                        btn.setAttribute('aria-expanded', 'true');
+                        pop.classList.add('open');
+                        posisi(btn);
+                    }
+
+                    tbody.addEventListener('click', e => {
+                        const btn = e.target.closest('.action-btn');
+                        if (!btn) return;
+                        e.stopPropagation();
+                        (aktif === btn) ? tutup(): buka(btn);
+                    });
+
+                    document.addEventListener('click', e => {
+                        if (aktif && !pop.contains(e.target)) tutup();
+                    });
+                    document.addEventListener('keydown', e => {
+                        if (e.key === 'Escape') tutup();
+                    });
+                    window.addEventListener('resize', tutup);
+                    window.addEventListener('scroll', e => {
+                        if (aktif && !pop.contains(e.target)) tutup();
+                    }, true);
+
+                    if (popBayar) {
+                        popBayar.addEventListener('change', async () => {
+                            if (!info || !info.bayarUrl) return;
+                            const dibayar = popBayar.checked;
+                            popBayar.disabled = true;
+
+                            try {
+                                const res = await fetch(info.bayarUrl, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': token,
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: JSON.stringify({
+                                        dibayar
+                                    })
+                                });
+                                if (!res.ok) throw new Error('HTTP ' + res.status);
+                                window.location.reload();
+                            } catch (e) {
+                                popBayar.checked = !dibayar;
+                                popBayar.disabled = false;
+                                pesan('gagal', 'Tidak berhasil', 'Status pembayaran gagal disimpan. Coba lagi.');
+                            }
+                        });
+                    }
+
+                    popAssign.addEventListener('click', () => {
+                        if (info?.assignUrl) window.location = info.assignUrl;
+                    });
+
+                    popEdit.addEventListener('click', () => {
+                        if (info?.editUrl) window.location = info.editUrl;
+                    });
+
+                    popHapus.addEventListener('click', async () => {
+                        const url = info?.hapusUrl;
+                        const uraian = info?.uraian;
+                        tutup();
+                        if (!url) return;
+
+                        const teks = 'Tugas "' + uraian +
+                            '" beserta daftar petugasnya akan dihapus permanen dan tidak bisa dikembalikan.';
+                        const lanjut = typeof popup === 'function' ?
+                            await popup({
+                                jenis: 'hapus',
+                                judul: 'Hapus tugas?',
+                                pesan: teks,
+                                tombolOk: 'Ya, hapus',
+                                tombolBatal: 'Batal'
+                            }) :
+                            confirm(teks);
+
+                        if (lanjut) {
+                            hapusForm.action = url;
+                            hapusForm.submit();
                         }
                     });
-                }
+                })();
 
-                popAssign.addEventListener('click', () => {
-                    if (info?.assignUrl) window.location = info.assignUrl;
-                });
+                /* ===== Export ===== */
+                (function() {
+                    const modal = document.getElementById('exportModal');
+                    const overlay = document.getElementById('exportOverlay');
+                    const form = document.getElementById('exportForm');
 
-                popEdit.addEventListener('click', () => {
-                    if (info?.editUrl) window.location = info.editUrl;
-                });
-
-                popHapus.addEventListener('click', async () => {
-                    const url = info?.hapusUrl;
-                    const uraian = info?.uraian;
-                    tutup();
-                    if (!url) return;
-
-                    const teks = 'Tugas "' + uraian +
-                        '" beserta daftar petugasnya akan dihapus permanen dan tidak bisa dikembalikan.';
-                    const lanjut = typeof popup === 'function' ?
-                        await popup({
-                            jenis: 'hapus',
-                            judul: 'Hapus tugas?',
-                            pesan: teks,
-                            tombolOk: 'Ya, hapus',
-                            tombolBatal: 'Batal'
-                        }) :
-                        confirm(teks);
-
-                    if (lanjut) {
-                        hapusForm.action = url;
-                        hapusForm.submit();
+                    function buka() {
+                        modal.classList.add('open');
+                        overlay.classList.add('open');
+                        modal.setAttribute('aria-hidden', 'false');
                     }
-                });
-            })();
 
-            /* ===== Export ===== */
-            (function() {
-                const modal = document.getElementById('exportModal');
-                const overlay = document.getElementById('exportOverlay');
-                const form = document.getElementById('exportForm');
+                    function tutup() {
+                        modal.classList.remove('open');
+                        overlay.classList.remove('open');
+                        modal.setAttribute('aria-hidden', 'true');
+                    }
 
-                function buka() {
-                    modal.classList.add('open');
-                    overlay.classList.add('open');
-                    modal.setAttribute('aria-hidden', 'false');
-                }
-
-                function tutup() {
-                    modal.classList.remove('open');
-                    overlay.classList.remove('open');
-                    modal.setAttribute('aria-hidden', 'true');
-                }
-
-                document.getElementById('exportPenugasan').addEventListener('click', buka);
-                overlay.addEventListener('click', tutup);
-                document.getElementById('exportCancel').addEventListener('click', tutup);
-                document.addEventListener('keydown', e => {
-                    if (e.key === 'Escape') tutup();
-                });
-                form.addEventListener('submit', () => setTimeout(tutup, 400));
-            })();
-        </script>
-    @endpush
-</x-dynamic-component>
+                    document.getElementById('exportPenugasan').addEventListener('click', buka);
+                    overlay.addEventListener('click', tutup);
+                    document.getElementById('exportCancel').addEventListener('click', tutup);
+                    document.addEventListener('keydown', e => {
+                        if (e.key === 'Escape') tutup();
+                    });
+                    form.addEventListener('submit', () => setTimeout(tutup, 400));
+                })();
+            </script>
+        @endpush
+    </x-dynamic-component>

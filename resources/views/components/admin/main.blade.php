@@ -109,6 +109,12 @@
                     </svg><span class="label">Penugasan</span>
                 </x-admin.list-sidebar>
 
+                <x-admin.list-sidebar :href="route('admin.kontrak')" title="Kontrak Mitra" :active="request()->routeIs('admin.kontrak*')">
+                    <svg>
+                        <use href="#i-list" />
+                    </svg><span class="label">Kontrak Mitra</span>
+                </x-admin.list-sidebar>
+
                 @php
                     $urlTambahKoor = Route::has('admin.tambahkoor') ? route('admin.tambahkoor') : '#';
                     $grupAkunAktif = request()->routeIs('admin.tambahmitra', 'admin.tambahkoor');

@@ -24,22 +24,22 @@ class UserSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        User::updateOrCreate(['username' => '199002022016022002'], [
+        User::updateOrCreate(['username' => 'koor'], [
             'name'      => 'Koordinator Contoh',
             'role'      => 'koordinator',
             'password'  => Hash::make('password'),
             'is_active' => true,
         ]);
 
-        $akunMitra = User::updateOrCreate(['username' => '3201000001'], [
-            'name'      => 'Mitra Contoh',
+        $akunMitra = User::updateOrCreate(['username' => 'mitra'], [
+            'name'      => 'Mitra 1',
             'role'      => 'mitra',
             'password'  => Hash::make('password'),
             'is_active' => true,
         ]);
 
         Mitra::updateOrCreate(['user_id' => $akunMitra->id], [
-            'nik'     => '7471000000000001',
+            'nik'     => '7471000000000011',
             'wilayah' => 'Kendari',
         ]);
     }
