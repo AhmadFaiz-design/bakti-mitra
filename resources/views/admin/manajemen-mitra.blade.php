@@ -576,28 +576,37 @@
                                 });
                             });
 
-                            document.getElementById('popHapus').addEventListener('click', async () => {
+                            document.getElementById('popHapus').addEventListener('click', async e => {
+                                e.stopPropagation();
+
                                 const url = aktif?.dataset.deleteUrl;
-                                const nama = aktif?.dataset.nama;
+                                const nama = aktif?.dataset.nama ?? 'mitra ini';
 
                                 tutup(); // tutup popover aksi lebih dulu
 
                                 if (!url) {
-                                    popup({
-                                        jenis: 'info',
-                                        judul: 'Belum tersedia',
-                                        pesan: 'Fitur hapus mitra belum dibuat.'
-                                    });
+                                    if (typeof popup === 'function') {
+                                        popup({
+                                            jenis: 'info',
+                                            judul: 'Belum tersedia',
+                                            pesan: 'Fitur hapus mitra belum dibuat.'
+                                        });
+                                    } else {
+                                        alert('Fitur hapus mitra belum dibuat.');
+                                    }
                                     return;
                                 }
 
-                                const lanjut = await popup({
-                                    jenis: 'hapus',
-                                    judul: 'Hapus akun mitra?',
-                                    pesan: 'Akun "' + nama + '" akan dihapus permanen dan tidak bisa dikembalikan.',
-                                    tombolOk: 'Ya, hapus',
-                                    tombolBatal: 'Batal'
-                                });
+                                const teks = 'Akun "' + nama + '" akan dihapus permanen dan tidak bisa dikembalikan.';
+                                const lanjut = typeof popup === 'function' ?
+                                    await popup({
+                                        jenis: 'hapus',
+                                        judul: 'Hapus akun mitra?',
+                                        pesan: teks,
+                                        tombolOk: 'Ya, hapus',
+                                        tombolBatal: 'Batal'
+                                    }) :
+                                    confirm(teks);
 
                                 if (lanjut) {
                                     hapusForm.action = url;
