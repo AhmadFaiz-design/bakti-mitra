@@ -1,13 +1,13 @@
 /* Tema Koordinator: teal + amber */
 :root {
-    --primary: #14A89A;
-    --primary-dark: #0B6B62;
-    --ink: #0E2F2C;
-    --bg: #EEF8F6;
-    --tint: #D3EEE9;
+    --primary: #3FC1B0;
+    --primary-dark: #1B8074;
+    --ink: #123532;
+    --bg: #EFFAF8;
+    --tint: #D5F1EC;
     --white: #fff;
-    --lime: #FFB547;
-    --muted: #5E7D79;
+    --lime: #C9A7FF;
+    --muted: #628581;
     --radius: 24px;
 }
 
@@ -26,7 +26,7 @@
     color: var(--white);
 }
 
-.has-sub.open > .sub-toggle {
+.has-sub.open>.sub-toggle {
     color: var(--ink);
 }
 

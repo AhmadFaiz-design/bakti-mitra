@@ -1,13 +1,13 @@
 /* Tema Mitra: Biru Royal + Mint */
 :root {
-    --primary: #2563EB;
-    --primary-dark: #1E40AF;
-    --ink: #0F172A;
-    --bg: #EFF6FF;
-    --tint: #DBEAFE;
+    --primary: #4BA3F2;
+    --primary-dark: #1F6FBF;
+    --ink: #112A44;
+    --bg: #EFF7FE;
+    --tint: #D6EAFB;
     --white: #fff;
-    --lime: #34D399;
-    --muted: #64748B;
+    --lime: #FFD84D;
+    --muted: #5F7A94;
     --radius: 24px;
 }
 
