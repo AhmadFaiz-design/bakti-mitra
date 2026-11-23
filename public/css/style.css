@@ -4304,3 +4304,119 @@ a.notif-item:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========================================
+   HEADER GLOBAL (.topbar) UNTUK SEMUA HALAMAN
+======================================== */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 20px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+}
+
+.topbar-title {
+    min-width: 0;
+}
+
+.topbar-title h1 {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+}
+
+.topbar-title p {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-left: auto;
+}
+
+.topbar .user {
+    white-space: nowrap;
+}
+
+.dropdown .pill svg.rotate {
+    transform: rotate(180deg);
+}
+
+.bulan-menu {
+    min-width: 170px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.bulan-menu a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.bulan-menu a:hover {
+    background: #f3f4f6;
+}
+
+.bulan-menu a.active {
+    font-weight: 600;
+    background: var(--tint);
+}
+
+/* Penyesuaian khusus saat di dalam .dash */
+.dash .topbar {
+    margin-bottom: 0;
+    flex-wrap: nowrap;
+}
+
+.dash .topbar-title h1 {
+    font-size: 32px;
+    line-height: 1.2;
+}
+
+.topbar-right .bulan-dd {
+    margin-left: 0;
+}
+
+@media (max-width: 1000px) {
+    .dash .topbar {
+        flex-wrap: wrap;
+    }
+
+    .topbar-title h1,
+    .dash .topbar-title h1 {
+        font-size: 25px;
+    }
+}
+
+@media (max-width: 600px) {
+    .topbar-title h1,
+    .dash .topbar-title h1 {
+        font-size: 21px;
+    }
+
+    .topbar-right {
+        gap: 10px;
+    }
+
+    .topbar .user {
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    .topbar .avatar {
+        width: 36px;
+        height: 36px;
+    }
+}

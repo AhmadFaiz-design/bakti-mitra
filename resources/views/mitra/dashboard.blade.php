@@ -1,94 +1,7 @@
 <x-mitra.main>
     <div class="dash mitra-dash">
-        <header class="topbar">
-            <h1>Dashboard</h1>
-
-            {{-- PILIH BULAN --}}
-            <div class="dropdown bulan-dd" x-data="{ open: false }" @click.outside="open = false" x-init="$watch('open', v => v && $nextTick(() => {
-                const m = $refs.menu,
-                    a = m.querySelector('a.active');
-                if (a) m.scrollTop = a.offsetTop - m.clientHeight / 2;
-            }))">
-                <button type="button" class="pill" @click="open = !open" :aria-expanded="open" aria-haspopup="listbox">
-                    <span>{{ $labelBulan }}</span>
-                    <svg :class="{ 'rotate': open }">
-                        <use href="#i-down" />
-                    </svg>
-                </button>
-
-                <ul class="dropdown-menu bulan-menu" x-ref="menu" x-show="open" x-transition.opacity.duration.150ms
-                    x-cloak>
-                    @foreach ($opsiBulan as $o)
-                        <li>
-                            <a href="{{ route('mitra.dashboard', ['bulan' => $o['k']]) }}"
-                                class="{{ $o['k'] === $bulanKey ? 'active' : '' }}">{{ $o['t'] }}</a>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-
-            <div class="user">
-                <div class="notif" x-data="{ open: false }" @click.outside="open = false"
-                    @keydown.escape.window="open = false">
-                    <button type="button" class="bell" @click="open = !open" :aria-expanded="open"
-                        aria-haspopup="dialog" aria-label="Notifikasi">
-                        <svg>
-                            <use href="#i-bell" />
-                        </svg>
-                        @if ($notifPenting > 0)
-                            <span class="bell-dot"></span>
-                        @endif
-                    </button>
-
-                    <div class="notif-pop" x-show="open" x-transition.opacity.duration.150ms x-cloak role="dialog"
-                        aria-label="Notifikasi">
-                        <div class="notif-head">
-                            <strong>Notifikasi</strong>
-                            @if ($notifPenting > 0)
-                                <span>{{ $notifPenting }} perlu perhatian</span>
-                            @endif
-                        </div>
-
-                        <ul class="notif-list">
-                            @forelse ($notifikasi as $n)
-                                @php $tag = $n['url'] ? 'a' : 'div'; @endphp
-                                <li>
-                                    <{{ $tag }}
-                                        @if ($n['url']) href="{{ $n['url'] }}" @endif
-                                        class="notif-item {{ $n['level'] }}">
-                                        <span class="n-ic">
-                                            @if ($n['ikon'] === 'tugas')
-                                                <svg>
-                                                    <use href="#i-list" />
-                                                </svg>
-                                            @else
-                                                <svg viewBox="0 0 24 24">
-                                                    <path d="M12 3l10 18H2L12 3zM12 10v4M12 17.5v.01" />
-                                                </svg>
-                                            @endif
-                                        </span>
-                                        <span class="n-teks">
-                                            <strong>{{ $n['judul'] }}</strong>
-                                            <small>{{ $n['ket'] }}</small>
-                                            @if (!empty($n['waktu']))
-                                                <em>{{ $n['waktu'] }}</em>
-                                            @endif
-                                        </span>
-                                    </{{ $tag }}>
-                                </li>
-                            @empty
-                                <li class="notif-kosong">Belum ada notifikasi.</li>
-                            @endforelse
-                        </ul>
-                    </div>
-                </div>
-
-                {{ auth()->user()->name }}
-                <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </header>
+        <x-header judul="Dashboard" :opsi-bulan="$opsiBulan" :bulan-key="$bulanKey" :label-bulan="$labelBulan" :notifikasi="$notifikasi"
+            :notif-penting="$notifPenting" />
 
         {{-- BARIS ATAS: KIRI (STATS + RINCIAN TUGAS & JADWAL PENUGASAN) | KANAN (KALENDER) --}}
         <div class="dash-top">
@@ -234,7 +147,7 @@
                                         <small>{{ $p['ket'] }}</small>
                                     </span>
                                     <span class="p-tag">{{ $p['tag'] }}</span>
-                                </{{ $tag }}>
+                                    </{{ $tag }}>
                             </li>
                         @empty
                             <li class="kosong">Semua aman. Tidak ada yang perlu ditindaklanjuti.</li>
@@ -267,7 +180,8 @@
                         @foreach ($komposisiHonor as $i => $item)
                             <li style="--c: {{ $warnaKomp[$i % 3] }}">
                                 <span class="nm"><i></i><span class="nm-t">{{ $item->label }}</span></span>
-                                <span class="vl">Rp {{ number_format($item->jumlah, 0, ',', '.') }}<em>{{ round(($item->jumlah / max(1, $totalKomposisi)) * 100) }}%</em></span>
+                                <span class="vl">Rp
+                                    {{ number_format($item->jumlah, 0, ',', '.') }}<em>{{ round(($item->jumlah / max(1, $totalKomposisi)) * 100) }}%</em></span>
                             </li>
                         @endforeach
                     </ul>

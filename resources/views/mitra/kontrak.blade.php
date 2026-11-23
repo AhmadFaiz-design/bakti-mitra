@@ -10,26 +10,7 @@
     <x-slot:titlex>Kontrak Saya</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>Kontrak Bulanan Saya</h1>
-            <p>Rekap nomor kontrak (SPK), rincian pekerjaan per bulan, status verifikasi, dan unduh PDF SPK</p>
-        </div>
-
-        <div class="header-actions">
-            <a href="{{ route('mitra.dashboard') }}" class="header-icon" aria-label="Dashboard" title="Kembali ke Dashboard">
-                <svg>
-                    <use href="#i-home" />
-                </svg>
-            </a>
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header judul="Kontrak Bulanan Saya" subjudul="Rekap Nomor Kontrak (SPK), Rincian Pekerjaan per Bulan, Status Verifikasi, dan Unduh PDF SPK" />
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-mitra">

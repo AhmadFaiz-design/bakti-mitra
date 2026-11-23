@@ -208,6 +208,8 @@
         });
     </script>
     <x-admin.notifikasi />
+    {{-- Komponen popup global --}}
+    <x-popup />
     @stack('scripts')
 </body>
 

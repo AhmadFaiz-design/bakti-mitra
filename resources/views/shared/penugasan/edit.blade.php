@@ -1,17 +1,5 @@
 <x-dynamic-component :component="$layout" class="create-page">
-    <header class="page-header">
-        <div class="page-title">
-            <h1>Edit Tugas</h1>
-            <p>Perubahan detail tugas akan disinkronkan ke semua mitra yang sudah ditugaskan</p>
-        </div>
-
-        <div class="page-actions">
-            <span class="username">{{ auth()->user()->name }}</span>
-            <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-            </div>
-        </div>
-    </header>
+    <x-header judul="Edit Tugas" subjudul="Perubahan Detail Tugas Akan Disinkronkan ke Semua Mitra yang Sudah Ditugaskan" />
 
     <form action="{{ route($routes['update'], $penugasan) }}" method="POST">
         @csrf

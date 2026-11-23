@@ -15,33 +15,7 @@
 @endphp
 <x-admin.main>
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>Koordinator BPS Kota Kendari</h1>
-            <p>Manajemen Data Koordinator BPS Kota Kendari</p>
-        </div>
-
-        <div class="header-actions">
-            <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                <svg>
-                    <use href="#i-cal" />
-                </svg>
-            </button>
-
-            <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                <svg>
-                    <use href="#i-bell" />
-                </svg>
-            </button>
-
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header judul="Koordinator BPS Kota Kendari" subjudul="Manajemen Data Koordinator BPS Kota Kendari" />
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-koor">

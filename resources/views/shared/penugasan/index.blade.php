@@ -35,40 +35,12 @@
     <x-slot:titlex>Penugasan Mitra</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>{{ $role === 'koordinator' ? 'Data Penugasan' : 'Penugasan Mitra' }}</h1>
-            <p>
-                {{ $role === 'koordinator'
-                    ? 'Daftar tugas yang Anda kelola, mitra yang ditugaskan, dan status pembayaran honornya'
-                    : 'Daftar tugas, petugas yang ditugaskan, dan status pembayaran honornya' }}
-            </p>
-        </div>
-
-        <div class="header-actions">
-            @if ($role === 'koordinator')
-                <x-koordinator.notif />
-            @else
-                <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                    <svg>
-                        <use href="#i-cal" />
-                    </svg>
-                </button>
-                <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                    <svg>
-                        <use href="#i-bell" />
-                    </svg>
-                </button>
-            @endif
-
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header
+    :judul="$role === 'koordinator' ? 'Data Penugasan' : 'Penugasan Mitra'"
+    :subjudul="$role === 'koordinator'
+        ? 'Daftar tugas yang Anda kelola, mitra yang ditugaskan, dan status pembayaran honornya'
+        : 'Daftar tugas, petugas yang ditugaskan, dan status pembayaran honornya'"
+/>
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-mitra">
@@ -709,6 +681,9 @@
                         ringkas.hidden = !dibuka;
                         lengkap.hidden = dibuka;
                     });
+                    document.getElementById('penugasanBody').addEventListener('change', e => {
+                        if (e.target.matches('.row-check')) segarkan();
+                    });
 
                     document.getElementById('bulkPilihHasil')?.addEventListener('click', () => {
                         semuaHasil = true;
@@ -726,16 +701,26 @@
 
                     if (bulkForm) {
                         bar.querySelectorAll('[data-aksi]').forEach(tombol => {
-                            tombol.addEventListener('click', () => {
+                            tombol.addEventListener('click', async () => {
                                 const aksi = tombol.dataset.aksi;
                                 const dipilih = baris().filter(c => c.checked);
                                 const jumlah = semuaHasil ? TOTAL : dipilih.length;
                                 if (jumlah === 0) return;
 
                                 const teks = aksi === 'bayar' ?
-                                    'Tandai semua petugas pada ' + jumlah + ' tugas sebagai SUDAH dibayar?' :
+                                    'Tandai semua petugas pada ' + jumlah +
+                                    ' tugas sebagai SUDAH dibayar?' :
                                     'Tandai semua petugas pada ' + jumlah + ' tugas sebagai BELUM dibayar?';
-                                if (!confirm(teks)) return;
+
+                                const lanjut = await popup({
+                                    jenis: 'konfirmasi',
+                                    judul: aksi === 'bayar' ? 'Tandai sudah dibayar?' :
+                                        'Tandai belum dibayar?',
+                                    pesan: teks,
+                                    tombolOk: 'Ya, simpan',
+                                    tombolBatal: 'Batal'
+                                });
+                                if (!lanjut) return;
 
                                 document.getElementById('bulkAksi').value = aksi;
                                 const wadah = document.getElementById('bulkIds');

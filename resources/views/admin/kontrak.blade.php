@@ -18,21 +18,7 @@
     <x-slot:titlex>Kontrak Bulanan Mitra</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>Kontrak Bulanan Mitra</h1>
-            <p>Penomoran kontrak (B-x.y/74710/PL-300/Tahun), verifikasi kontrak &amp; SPJ, serta cetak SPK</p>
-        </div>
-
-        <div class="header-actions">
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header judul="Kontrak Bulanan Mitra" subjudul="Manajemen Kontrak Mitra BPS Kota Kendari" />
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-mitra">

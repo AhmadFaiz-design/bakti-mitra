@@ -36,26 +36,7 @@
     <x-slot:titlex>Daftar Tugas</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>Daftar Tugas Saya</h1>
-            <p>Lihat detail jobdesk, periode pelaksanaan, target volume, dan status pembayaran honor Anda</p>
-        </div>
-
-        <div class="header-actions">
-            <a href="{{ route('mitra.dashboard') }}" class="header-icon" aria-label="Dashboard" title="Kembali ke Dashboard">
-                <svg>
-                    <use href="#i-home" />
-                </svg>
-            </a>
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header judul="Daftar Tugas Saya" subjudul="Lihaat Detail Jobdesk, Periode Pelaksanaan, Target Volume, dan Status Pembayaran Honor Anda" />
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-mitra">

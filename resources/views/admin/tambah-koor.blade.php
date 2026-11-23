@@ -2,25 +2,7 @@
     <x-slot:titlex>Buat Akun Koordinator</x-slot:titlex>
 
     <!-- HEADER HALAMAN -->
-    <header class="page-header">
-        <div class="page-title">
-            <h1>Pembuatan Akun Koordinator</h1>
-            <p>Manajemen Data Koordinator BPS Kota Kendari</p>
-        </div>
-
-        <div class="page-actions">
-            <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                <svg><use href="#i-cal" /></svg>
-            </button>
-            <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                <svg><use href="#i-bell" /></svg>
-            </button>
-            <span class="username">{{ auth()->user()->name }}</span>
-            <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-            </div>
-        </div>
-    </header>
+    <x-header judul="Pembuatan Akun Koordinator" subjudul="Manajemen Data Koordinator BPS Kota Kendari" />
 
     <!-- FORM SATU TAHAP -->
     <form id="koorForm" action="{{ route('admin.tambahkoor.simpan') }}" method="POST">

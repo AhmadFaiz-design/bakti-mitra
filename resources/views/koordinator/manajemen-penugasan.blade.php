@@ -27,23 +27,7 @@
     <x-slot:titlex>Data Penugasan</x-slot:titlex>
 
     {{-- HEADER HALAMAN --}}
-    <header class="page-heading">
-        <div>
-            <h1>Data Penugasan</h1>
-            <p>Daftar tugas yang Anda berikan kepada mitra dan status pembayaran honornya</p>
-        </div>
-
-        <div class="header-actions">
-            <x-koordinator.notif />
-
-            <div class="header-user">
-                <span>{{ auth()->user()->name }}</span>
-                <div class="avatar" style="width:48px;height:48px">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                </div>
-            </div>
-        </div>
-    </header>
+    <x-header judul="Data Penugasan" subjudul="Daftar Tugas yang Anda Berikan Kepada Mitra dan Status Pembayaran Honornya" />
 
     {{-- KARTU STATISTIK --}}
     <section class="stats-mitra">

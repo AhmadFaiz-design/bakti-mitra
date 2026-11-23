@@ -17,22 +17,7 @@
 
 <x-dynamic-component :component="$layout" class="create-page">
     {{-- HEADER HALAMAN --}}
-    <header class="page-header">
-        <div class="page-title">
-            <h1>Assign Petugas</h1>
-            <p>{{ $penugasan->uraian_pekerjaan }}</p>
-        </div>
-
-        <div class="page-actions" style="gap:12px">
-            <a href="{{ route($routes['index']) }}" class="btn-secondary btn-link btn-back-compact">
-                &larr; Kembali ke Penugasan
-            </a>
-            <span class="username">{{ auth()->user()->name }}</span>
-            <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-            </div>
-        </div>
-    </header>
+    <x-header judul="Assign Petugas" subjudul="{{ $penugasan->uraian_pekerjaan }}" />
 
     @if ($errors->any())
         <div role="alert" class="form-alert-error">

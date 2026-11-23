@@ -1,29 +1,7 @@
         <x-admin.main class="create-page">
 
             <!-- HEADER HALAMAN -->
-            <header class="page-header">
-                <div class="page-title">
-                    <h1>Pembuatan Akun Mitra</h1>
-                    <p>Manajemen Data Mitra BPS Kota Kendari</p>
-                </div>
-
-                <div class="page-actions">
-                    <button type="button" class="header-icon" aria-label="Kalender" title="Kalender">
-                        <svg>
-                            <use href="#i-cal" />
-                        </svg>
-                    </button>
-                    <button type="button" class="header-icon" aria-label="Notifikasi" title="Notifikasi">
-                        <svg>
-                            <use href="#i-bell" />
-                        </svg>
-                    </button>
-                    <span class="username">{{ auth()->user()->name }}</span>
-                    <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                    </div>
-                </div>
-            </header>
+            <x-header judul="Pembuatan Akun Mitra" subjudul="Manajemen Data Mitra BPS Kota Kendari" />
 
             <!-- FORM MULTI STEP -->
             <form id="mitraForm" action="{{ route('admin.tambahmitra.simpan') }}" method="POST">

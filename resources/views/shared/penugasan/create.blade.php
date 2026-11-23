@@ -1,18 +1,6 @@
 <x-dynamic-component :component="$layout" class="create-page">
     {{-- HEADER HALAMAN --}}
-    <header class="page-header">
-        <div class="page-title">
-            <h1>Tambah Tugas</h1>
-            <p>Buat detail tugas terlebih dahulu, lalu assign mitra beserta volumenya di halaman Assign Petugas</p>
-        </div>
-
-        <div class="page-actions">
-            <span class="username">{{ auth()->user()->name }}</span>
-            <div class="avatar" style="display:flex;align-items:center;justify-content:center">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-            </div>
-        </div>
-    </header>
+    <x-header judul="Tambah Tugas" subjudul="Buat Detail Tugas Terlebih Dahulu, lalu Assign Mitra Beserta Volumenya di Halaman Assign Petugas" />
 
     <form id="penugasanForm" action="{{ route($routes['simpan']) }}" method="POST">
         @csrf
