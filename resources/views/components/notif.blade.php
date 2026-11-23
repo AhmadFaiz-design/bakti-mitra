@@ -6,6 +6,7 @@
 @php
     $daftarNotif = collect($notifikasi ?? []);
     $jumlahPenting = (int) ($notifPenting ?? 0);
+
 @endphp
 
 <div class="notif" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
