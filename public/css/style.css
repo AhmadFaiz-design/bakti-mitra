@@ -124,71 +124,139 @@ svg {
     opacity: 0;
 }
 
-/* TOMBOL TOGGLE: di dalam sidebar, didorong ke paling bawah */
-.toggle {
+/* ========================================
+   BAGIAN BAWAH SIDEBAR: PROFIL + LOGOUT + PERKECIL
+======================================== */
+
+.sidebar-bottom {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Kotak Profil & Logout: padding kiri-kanan tetap 8px agar avatar tidak bergeser */
+.sidebar-user {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px 8px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, .28);
+    border: 1px solid rgba(255, 255, 255, .1);
+    overflow: hidden;
+    transition: gap .25s ease, border-radius .25s ease;
+}
+
+.sidebar-user-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 11px;
+    min-width: 0;
+    transition: gap .2s ease;
+}
+
+.sidebar-avatar {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--tint);
+    color: var(--primary-dark);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sidebar-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    opacity: 1;
+    transition: opacity .15s ease .1s;
+}
+
+.sidebar-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-user-id {
+    font-size: 11px;
+    color: rgba(255, 255, 255, .62);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tombol Logout di dalam kotak user */
+.logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
-    padding: 11px 18px;
-    border: 0;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, .08);
-    color: #CFCAF0;
-    font: 500 14px 'Poppins';
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid rgba(229, 72, 77, .35);
+    border-radius: 12px;
+    background: var(--danger, #E5484D);
+    color: var(--white);
+    font: 500 13px 'Poppins', sans-serif;
+    overflow: hidden;
     cursor: pointer;
-    text-align: left
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 
-.toggle:hover {
-    background: var(--primary);
-    color: var(--white)
+.logout-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
-.toggle:focus-visible {
+.logout-btn:hover {
+    background: var(--danger-hover, #C93A3F);
+    border-color: var(--danger-hover, #C93A3F);
+    color: var(--white);
+}
+
+.logout-btn:focus-visible {
     outline: 2px solid var(--lime);
-    outline-offset: 2px
+    outline-offset: 2px;
 }
 
-.toggle svg {
-    transition: transform .3s
-}
-
-.collapsed .toggle svg {
-    transform: rotate(180deg)
-}
-
-.menu {
-    margin-bottom: 24px
-}
-
-/* TOMBOL PERKECIL: tanpa kotak, dengan garis di atasnya */
+/* Tombol Perkecil (kotak bergaris di paling bawah) */
 .sidebar-collapse {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     width: 100%;
-    margin-top: 6px;
-    padding: 16px 20px 4px;
-    border: 0;
-    border-top: 1px solid rgba(255, 255, 255, .15);
-    border-radius: 0;
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 14px;
     background: transparent;
-    color: #CFCAF0;
+    color: var(--white);
     font: 500 13px 'Poppins', sans-serif;
-    text-align: left;
+    overflow: hidden;
     cursor: pointer;
-    transition: color .15s ease;
+    transition: background .15s ease, border-color .15s ease;
 }
 
 .sidebar-collapse svg {
-    width: 16px;
-    height: 16px;
-    transition: transform .3s;
+    width: 18px;
+    height: 18px;
 }
 
 .sidebar-collapse:hover {
-    color: var(--white);
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(255, 255, 255, .5);
 }
 
 .sidebar-collapse:focus-visible {
@@ -196,31 +264,49 @@ svg {
     outline-offset: 2px;
 }
 
-/* Teks memudar mengikuti bar yang mengecil */
+/* Teks menu memudar saat sidebar mengecil */
 .sidebar .label {
     white-space: nowrap;
     overflow: hidden;
     transition: opacity .15s ease .1s;
-    /* saat membesar: muncul sedikit terlambat */
 }
 
 .collapsed .sidebar .label {
     opacity: 0;
     transition-delay: 0s;
-    /* saat mengecil: langsung memudar */
 }
 
-/* Mode sidebar kecil: hanya ikon, di tengah, panah berbalik */
-
-.collapsed .sidebar-collapse svg {
-    transform: rotate(180deg);
+/* Mode sidebar kecil: semua ikon sejajar di kiri tepat di tengah bar 84px (42px) */
+.collapsed .sidebar-user {
+    gap: 8px;
+    border-radius: 16px;
 }
 
-/* Ikon Keluar tidak ikut berputar saat sidebar kecil */
-.collapsed .logout-btn svg {
-    transform: none;
+.collapsed .sidebar-user-info {
+    gap: 0;
 }
 
+.collapsed .sidebar-user-meta {
+    opacity: 0;
+    transition-delay: 0s;
+}
+
+.collapsed .logout-btn {
+    justify-content: flex-start;
+    padding: 0 10px;
+    gap: 0;
+}
+
+.collapsed .logout-btn .label,
+.collapsed .sidebar-collapse .label {
+    display: none;
+}
+
+.collapsed .sidebar-collapse {
+    justify-content: flex-start;
+    padding: 0 18px;
+    gap: 0;
+}
 
 /* MODE PENDEK: sembunyikan teks, ikon di tengah */
 .menu .label {
@@ -481,6 +567,27 @@ svg {
 
 /* 7. RESPONSIF */
 @media(max-width:1000px) {
+    .collapsed .sidebar-user {
+        gap: 12px;
+    }
+
+    .collapsed .sidebar-user-info {
+        gap: 11px;
+    }
+
+    .collapsed .sidebar-user-meta {
+        opacity: 1;
+    }
+
+    .collapsed .logout-btn {
+        justify-content: center;
+        padding: 0 12px;
+        gap: 8px;
+    }
+
+    .collapsed .logout-btn .label {
+        display: inline;
+    }
 
     .app,
     .app.collapsed {
@@ -3544,7 +3651,7 @@ a.notif-item:hover {
 }
 
 /* Form Tambah & Edit Tugas */
-.form-card + .form-card {
+.form-card+.form-card {
     margin-top: 16px;
 }
 
@@ -4401,6 +4508,7 @@ a.notif-item:hover {
 }
 
 @media (max-width: 600px) {
+
     .topbar-title h1,
     .dash .topbar-title h1 {
         font-size: 21px;

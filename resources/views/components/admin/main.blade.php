@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Bakti Mitra - {{ $titlex ?? 'Dashboard' }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
@@ -74,7 +75,6 @@
             <line x1="19" y1="12" x2="22" y2="12" />
             <circle cx="12" cy="12" r="2.5" />
         </symbol>
-
     </svg>
 
     <div class="app" id="app">
@@ -150,21 +150,37 @@
                 </div>
             </nav>
 
+            @php $user = auth()->user(); @endphp
+
             <div class="sidebar-bottom">
-                <button type="button" class="toggle logout-btn" title="Keluar"
-                    onclick="document.getElementById('logout-form').submit();">
-                    <svg>
-                        <use href="#i-logout" />
-                    </svg>
-                    <span class="label">Keluar</span>
-                </button>
+                <div class="sidebar-user">
+                    <div class="sidebar-user-info" title="{{ $user?->name }}">
+                        <div class="sidebar-avatar">
+                            {{ strtoupper(substr($user?->name ?? 'U', 0, 1)) }}
+                        </div>
+                        <div class="sidebar-user-meta">
+                            <strong class="sidebar-user-name">{{ $user?->name ?? 'Admin' }}</strong>
+                            @if ($user?->username)
+                                <span class="sidebar-user-id">{{ $user->username }}</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <button type="button" class="logout-btn" id="logoutBtn" title="Logout">
+                        <span class="label">Logout</span>
+                        <svg>
+                            <use href="#i-logout" />
+                        </svg>
+                    </button>
+                </div>
 
                 <button type="button" class="sidebar-collapse" id="toggle" aria-label="Perkecil sidebar"
                     aria-expanded="true">
-                    <svg>
-                        <use href="#i-left" />
-                    </svg>
                     <span class="label" id="toggleLabel">Perkecil</span>
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="16" rx="3" />
+                        <path d="M9 4v16" />
+                    </svg>
                 </button>
             </div>
         </aside>
@@ -179,36 +195,57 @@
     </form>
 
     <script>
+        /* Konfirmasi popup sebelum logout */
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+            const teks = 'Anda akan keluar dari akun ini dan perlu login kembali untuk mengakses sistem.';
+            const lanjut = typeof popup === 'function' ?
+                await popup({
+                    jenis: 'logout',
+                    judul: 'Yakin ingin logout?',
+                    pesan: teks,
+                    tombolOk: 'Ya, logout',
+                    tombolBatal: 'Batal'
+                }) :
+                confirm('Yakin ingin logout?');
+
+            if (lanjut) {
+                document.getElementById('logout-form')?.submit();
+            }
+        });
         /* Toggle sidebar panjang <-> pendek */
         const app = document.getElementById('app');
         const btn = document.getElementById('toggle');
 
         function setCollapsed(state) {
             app.classList.toggle('collapsed', state);
-            btn.setAttribute('aria-expanded', String(!state));
-            btn.setAttribute('aria-label', state ? 'Perbesar sidebar' : 'Perkecil sidebar');
-            document.getElementById('toggleLabel').textContent = state ? 'Perbesar' : 'Perkecil';
+            btn?.setAttribute('aria-expanded', String(!state));
+            btn?.setAttribute('aria-label', state ? 'Perbesar sidebar' : 'Perkecil sidebar');
+            const lbl = document.getElementById('toggleLabel');
+            if (lbl) lbl.textContent = state ? 'Perbesar' : 'Perkecil';
             try {
                 localStorage.setItem('sidebarCollapsed', state ? '1' : '0');
             } catch (e) {}
         }
 
-        btn.addEventListener('click', () => setCollapsed(!app.classList.contains('collapsed')));
+        btn?.addEventListener('click', () => setCollapsed(!app.classList.contains('collapsed')));
 
         /* Ingat pilihan terakhir pengguna */
         try {
             if (localStorage.getItem('sidebarCollapsed') === '1') setCollapsed(true);
         } catch (e) {}
+
         /* Dropdown Buat Akun */
         const sub = document.getElementById('sub');
-        const subBtn = sub.querySelector('.sub-toggle');
-        subBtn.addEventListener('click', () => {
-            const terbuka = sub.classList.toggle('open');
-            subBtn.setAttribute('aria-expanded', String(terbuka));
-        });
+        if (sub) {
+            const subBtn = sub.querySelector('.sub-toggle');
+            subBtn?.addEventListener('click', () => {
+                const terbuka = sub.classList.toggle('open');
+                subBtn.setAttribute('aria-expanded', String(terbuka));
+            });
+        }
     </script>
+
     <x-admin.notifikasi />
-    {{-- Komponen popup global --}}
     <x-popup />
     @stack('scripts')
 </body>

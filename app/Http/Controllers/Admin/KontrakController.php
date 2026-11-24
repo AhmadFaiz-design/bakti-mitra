@@ -180,8 +180,16 @@ class KontrakController extends Controller
         $terakhirNomor = null;
 
         DB::transaction(function () use (
-            $kontraks, $kodeX, $kodeUnit, $tahun, $data, $timpa,
-            &$y, &$jumlah, &$pertamaNomor, &$terakhirNomor
+            $kontraks,
+            $kodeX,
+            $kodeUnit,
+            $tahun,
+            $data,
+            $timpa,
+            &$y,
+            &$jumlah,
+            &$pertamaNomor,
+            &$terakhirNomor
         ) {
             // Jika timpa ulang, kosongkan dulu nomor pada kontrak target agar tidak bentrok saat tukar urutan
             if ($timpa) {
@@ -284,17 +292,21 @@ class KontrakController extends Controller
         ]);
     }
 
-    /** Verifikasi massal kontrak atau SPJ */
+    /** Verifikasi atau batalkan verifikasi massal kontrak dan/atau SPJ */
     public function verifikasiMassal(Request $request)
     {
         $request->validate([
-            'aksi'  => 'required|in:kontrak_ok,kontrak_batal,spj_ok,spj_batal',
-            'ids'   => 'nullable|array',
-            'ids.*' => 'integer',
+            'mode'      => 'required|in:verifikasi,batal',
+            'targets'   => 'required|array|min:1',
+            'targets.*' => 'in:kontrak,spj',
+            'ids'       => 'nullable|array',
+            'ids.*'     => 'integer',
+        ], [
+            'targets.required' => 'Pilih minimal satu jenis verifikasi (Kontrak atau SPJ).',
+            'targets.min'      => 'Pilih minimal satu jenis verifikasi (Kontrak atau SPJ).',
         ]);
 
-        $aksi = $request->input('aksi');
-        $ids  = $request->boolean('semua_hasil')
+        $ids = $request->boolean('semua_hasil')
             ? $this->filterQuery($request, (string) $request->input('periode', ''))->pluck('kontrak.id')
             : collect((array) $request->input('ids', []))->filter()->values();
 
@@ -302,36 +314,67 @@ class KontrakController extends Controller
             return back()->with('gagal', 'Belum ada kontrak yang dipilih.');
         }
 
-        $kolom = str_starts_with($aksi, 'kontrak_') ? 'cek_kontrak' : 'cek_spj';
-        $nilai = str_ends_with($aksi, '_ok');
+        $nilai   = $request->input('mode') === 'verifikasi';
+        $targets = collect($request->input('targets', []))->unique()->values();
 
-        $query = Kontrak::whereIn('id', $ids)->where($kolom, !$nilai);
+        $jumlahKontrak      = 0;
+        $jumlahSpj          = 0;
+        $dilewatiTanpaNomor = 0;
 
-        if ($kolom === 'cek_kontrak' && $nilai) {
-            $query->whereNotNull('nomor_kontrak')
-                ->where('nomor_kontrak', '!=', '')
-                ->whereNotNull('tanggal_spk');
-        }
+        DB::transaction(function () use ($ids, $targets, $nilai, &$jumlahKontrak, &$jumlahSpj, &$dilewatiTanpaNomor) {
+            if ($targets->contains('kontrak')) {
+                if ($nilai) {
+                    $dilewatiTanpaNomor = Kontrak::whereIn('id', $ids)
+                        ->where('cek_kontrak', false)
+                        ->where(fn($w) => $w
+                            ->whereNull('nomor_kontrak')
+                            ->orWhere('nomor_kontrak', '')
+                            ->orWhereNull('tanggal_spk'))
+                        ->count();
+                }
 
-        $jumlah = $query->update([$kolom => $nilai]);
+                $qKontrak = Kontrak::whereIn('id', $ids)->where('cek_kontrak', !$nilai);
 
-        if ($jumlah === 0) {
+                if ($nilai) {
+                    $qKontrak->whereNotNull('nomor_kontrak')
+                        ->where('nomor_kontrak', '!=', '')
+                        ->whereNotNull('tanggal_spk');
+                }
+
+                $jumlahKontrak = $qKontrak->update(['cek_kontrak' => $nilai]);
+            }
+
+            if ($targets->contains('spj')) {
+                $jumlahSpj = Kontrak::whereIn('id', $ids)
+                    ->where('cek_spj', !$nilai)
+                    ->update(['cek_spj' => $nilai]);
+            }
+        });
+
+        if ($jumlahKontrak === 0 && $jumlahSpj === 0) {
             return back()->with(
                 'gagal',
-                $kolom === 'cek_kontrak' && $nilai
+                $dilewatiTanpaNomor > 0
                     ? 'Tidak ada kontrak yang diverifikasi. Pastikan nomor kontrak dan tanggal SPK sudah terisi.'
                     : 'Tidak ada status yang berubah.'
             );
         }
 
-        $label = match ($aksi) {
-            'kontrak_ok'    => 'kontrak sudah diverifikasi.',
-            'kontrak_batal' => 'verifikasi kontrak dibatalkan.',
-            'spj_ok'        => 'SPJ sudah diverifikasi.',
-            'spj_batal'     => 'verifikasi SPJ dibatalkan.',
-        };
+        $bagian = [];
+        if ($jumlahKontrak > 0) {
+            $bagian[] = $jumlahKontrak . ' kontrak';
+        }
+        if ($jumlahSpj > 0) {
+            $bagian[] = $jumlahSpj . ' SPJ';
+        }
 
-        return back()->with('sukses', $jumlah . ' data berhasil ditandai ' . $label);
+        $pesan = implode(' dan ', $bagian) . ' ' . ($nilai ? 'berhasil diverifikasi.' : 'berhasil dibatalkan verifikasinya.');
+
+        if ($dilewatiTanpaNomor > 0) {
+            $pesan .= ' (' . $dilewatiTanpaNomor . ' kontrak dilewati karena belum bernomor/bertanggal SPK).';
+        }
+
+        return back()->with('sukses', $pesan);
     }
 
     /** Download / Cetak PDF SPK resmi untuk 1 kontrak mitra */

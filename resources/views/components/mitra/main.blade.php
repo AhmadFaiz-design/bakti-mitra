@@ -102,21 +102,37 @@
                 </x-admin.list-sidebar>
             </nav>
 
+            @php $user = auth()->user(); @endphp
+
             <div class="sidebar-bottom">
-                <button type="button" class="toggle logout-btn" title="Keluar"
-                    onclick="document.getElementById('logout-form').submit();">
-                    <svg>
-                        <use href="#i-logout" />
-                    </svg>
-                    <span class="label">Keluar</span>
-                </button>
+                <div class="sidebar-user">
+                    <div class="sidebar-user-info" title="{{ $user?->name }}">
+                        <div class="sidebar-avatar">
+                            {{ strtoupper(substr($user?->name ?? 'U', 0, 1)) }}
+                        </div>
+                        <div class="sidebar-user-meta">
+                            <strong class="sidebar-user-name">{{ $user?->name ?? 'User' }}</strong>
+                            @if ($user?->username)
+                                <span class="sidebar-user-id">{{ $user->username }}</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <button type="button" class="logout-btn" id="logoutBtn" title="Logout">
+                        <span class="label">Logout</span>
+                        <svg>
+                            <use href="#i-logout" />
+                        </svg>
+                    </button>
+                </div>
 
                 <button type="button" class="sidebar-collapse" id="toggle" aria-label="Perkecil sidebar"
                     aria-expanded="true">
-                    <svg>
-                        <use href="#i-left" />
-                    </svg>
                     <span class="label" id="toggleLabel">Perkecil</span>
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="16" rx="3" />
+                        <path d="M9 4v16" />
+                    </svg>
                 </button>
             </div>
         </aside>
@@ -131,6 +147,23 @@
     </form>
 
     <script>
+        /* Konfirmasi popup sebelum logout */
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+            const teks = 'Anda akan keluar dari akun ini dan perlu login kembali untuk mengakses sistem.';
+            const lanjut = typeof popup === 'function' ?
+                await popup({
+                    jenis: 'logout',
+                    judul: 'Yakin ingin logout?',
+                    pesan: teks,
+                    tombolOk: 'Ya, logout',
+                    tombolBatal: 'Batal'
+                }) :
+                confirm('Yakin ingin logout?');
+
+            if (lanjut) {
+                document.getElementById('logout-form')?.submit();
+            }
+        });
         /* Toggle sidebar panjang <-> pendek */
         const app = document.getElementById('app');
         const btn = document.getElementById('toggle');

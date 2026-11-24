@@ -2,8 +2,8 @@
 
     <style>
         /* ========================================
-       GLOBAL POPUP (ADMIN, KOORDINATOR, MITRA)
-    ======================================== */
+                   GLOBAL POPUP (ADMIN, KOORDINATOR, MITRA)
+                ======================================== */
 
         .app-popup-overlay {
             position: fixed;
@@ -179,6 +179,9 @@
                 <circle cx="12" cy="12" r="9" />
                 <path d="M12 11v5M12 8h.01" />
             </svg>
+            <svg data-icon="logout" viewBox="0 0 24 24" hidden>
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
         </div>
 
         <h3 class="app-popup-title" id="appPopupTitle"></h3>
@@ -204,6 +207,14 @@
             const btnOk = document.getElementById('appPopupOk');
 
             const KONFIG = {
+                logout: {
+                    ikon: 'logout',
+                    warnaIcon: 'merah',
+                    warnaOk: 'merah',
+                    judul: 'Yakin ingin logout?',
+                    ok: 'Ya, logout',
+                    batal: 'Batal'
+                },
                 hapus: {
                     ikon: 'hapus',
                     warnaIcon: 'merah',
@@ -317,7 +328,7 @@
                 modal.setAttribute('aria-hidden', 'false');
 
                 requestAnimationFrame(() => {
-                    (jenis === 'hapus' && adaBatal ? btnBatal : btnOk).focus();
+                    ((jenis === 'hapus' || jenis === 'logout') && adaBatal ? btnBatal : btnOk).focus();
                 });
             }
 
