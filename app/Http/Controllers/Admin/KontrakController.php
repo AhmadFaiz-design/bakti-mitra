@@ -17,6 +17,11 @@ class KontrakController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
         $q      = trim((string) $request->query('q', ''));
         $status = in_array($request->query('status'), ['belum_nomor', 'belum_kontrak', 'menunggu_spj', 'lengkap'], true)
             ? $request->query('status')
@@ -72,7 +77,7 @@ class KontrakController extends Controller
             ->orderByDesc('periode_tahun')
             ->orderByDesc('periode_bulan')
             ->orderBy('id')
-            ->paginate(10)
+            ->paginate($perPage)
             ->withQueryString();
 
         if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
@@ -118,16 +123,46 @@ class KontrakController extends Controller
             ? $periode
             : ($daftarPeriode->first()['v'] ?? now()->format('Y-m'));
 
+        /* ---------- Tren Total Honor bulan ini vs bulan lalu ---------- */
+        $blnIni  = now('Asia/Makassar');
+        $blnLalu = $blnIni->copy()->subMonthNoOverflow();
+
+        $honorBulan = fn(Carbon $tgl) => (int) DB::table('kontrak as k')
+            ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+            ->where('k.periode_tahun', $tgl->year)
+            ->where('k.periode_bulan', $tgl->month)
+            ->sum('kp.jumlah');
+
+        $honorBlnIni  = $honorBulan($blnIni);
+        $honorBlnLalu = $honorBulan($blnLalu);
+
+        if ($honorBlnLalu <= 0) {
+            $trenHonor = $honorBlnIni <= 0
+                ? ['teks' => 'Tetap 0%', 'kelas' => 'neutral']
+                : ['teks' => 'Baru bln ini', 'kelas' => 'lime'];
+        } else {
+            $diff = (int) round((($honorBlnIni - $honorBlnLalu) / $honorBlnLalu) * 100);
+            if ($diff > 0) {
+                $trenHonor = ['teks' => 'Naik ' . $diff . '%', 'kelas' => 'lime'];
+            } elseif ($diff < 0) {
+                $trenHonor = ['teks' => 'Turun ' . abs($diff) . '%', 'kelas' => 'warn'];
+            } else {
+                $trenHonor = ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+            }
+        }
+
         return view('admin.kontrak', compact(
             'daftar',
             'q',
             'status',
             'periode',
             'ringkasan',
+            'trenHonor',
             'daftarPeriode',
             'daftarWilayah',
             'saranPerPeriode',
-            'periodeDefaultGenerate'
+            'periodeDefaultGenerate',
+            'perPage'
         ));
     }
 
@@ -415,6 +450,116 @@ class KontrakController extends Controller
         return response($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $namaFile . '"',
+        ]);
+    }
+
+    /** Export hasil filter kontrak ke CSV atau PDF */
+    public function export(Request $request)
+    {
+        $format  = $request->query('format') === 'pdf' ? 'pdf' : 'csv';
+        $status  = in_array($request->query('status'), ['belum_nomor', 'belum_kontrak', 'menunggu_spj', 'lengkap'], true)
+            ? $request->query('status')
+            : 'semua';
+
+        $periode = (string) $request->query('periode', '');
+        if ($periode !== '' && !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $periode)) {
+            $periode = '';
+        }
+
+        $daftar = $this->filterQuery($request, $periode)
+            ->with([
+                'mitra:id,user_id,wilayah',
+                'mitra.user:id,name,username',
+            ])
+            ->withCount('pekerjaan')
+            ->withSum('pekerjaan as total_honor', 'jumlah')
+            ->orderByDesc('periode_tahun')
+            ->orderByDesc('periode_bulan')
+            ->orderBy('id')
+            ->get();
+
+        $namaFile = 'kontrak-mitra-' . now()->format('Ymd-His');
+
+        if ($format === 'csv') {
+            return response()->streamDownload(function () use ($daftar) {
+                $out = fopen('php://output', 'w');
+                fwrite($out, "\xEF\xBB\xBF");
+
+                fputcsv($out, [
+                    'No',
+                    'Nama Mitra',
+                    'Sobat ID',
+                    'Wilayah',
+                    'Periode',
+                    'Jumlah Tugas',
+                    'No. Urut',
+                    'Nomor Kontrak',
+                    'Tanggal SPK',
+                    'Total Honor',
+                    'Cek Kontrak',
+                    'Cek SPJ',
+                ], ';', '"', '');
+
+                foreach ($daftar as $i => $k) {
+                    $user = $k->mitra?->user;
+                    fputcsv($out, [
+                        $i + 1,
+                        $user?->name ?? '-',
+                        '="' . ($user?->username ?? '-') . '"',
+                        $k->mitra?->wilayah ?? '-',
+                        $k->periode_label,
+                        (int) $k->pekerjaan_count,
+                        $k->nomor_urut_kontrak ?: '-',
+                        $k->nomor_kontrak ?: 'Belum bernomor',
+                        $k->tanggal_spk ? $k->tanggal_spk->format('d/m/Y') : '-',
+                        (int) ($k->total_honor ?? 0),
+                        $k->cek_kontrak ? 'Terverifikasi' : 'Belum',
+                        $k->cek_spj ? 'Lengkap' : 'Belum',
+                    ], ';', '"', '');
+                }
+                fclose($out);
+            }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
+
+        $statusLabel = [
+            'semua'         => 'Semua',
+            'belum_nomor'   => 'Belum Bernomor',
+            'belum_kontrak' => 'Belum Verif. Kontrak',
+            'menunggu_spj'  => 'Menunggu SPJ',
+            'lengkap'       => 'Lengkap',
+        ][$status];
+
+        $keterangan = ['Status: ' . $statusLabel];
+        if (trim((string) $request->query('q')) !== '') {
+            $keterangan[] = 'Pencarian: "' . trim((string) $request->query('q')) . '"';
+        }
+        if ($periode !== '') {
+            [$th, $bl] = array_map('intval', explode('-', $periode));
+            $keterangan[] = 'Periode: ' . Carbon::create($th, $bl, 1)->locale('id')->translatedFormat('F Y');
+        }
+        if ($request->filled('wilayah')) {
+            $keterangan[] = 'Wilayah: ' . $request->query('wilayah');
+        }
+
+        $html = view('admin.export-kontrak', [
+            'daftar'     => $daftar,
+            'keterangan' => $keterangan,
+            'tanggal'    => now()->translatedFormat('d F Y H:i'),
+            'totalHonor' => (int) $daftar->sum('total_honor'),
+        ])->render();
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isRemoteEnabled', false);
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html);
+        $pdf->setPaper('A4', 'landscape');
+        $pdf->render();
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $namaFile . '.pdf"',
         ]);
     }
 

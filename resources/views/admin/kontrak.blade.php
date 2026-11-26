@@ -13,48 +13,79 @@
         $ringkasan['total_kontrak'] > 0
             ? (int) round(($ringkasan['cek_kontrak'] / $ringkasan['total_kontrak']) * 100)
             : 0;
+
+    $belumKontrak = max(0, (int) $ringkasan['total_kontrak'] - (int) $ringkasan['cek_kontrak']);
+    $belumSpj = max(0, (int) $ringkasan['total_kontrak'] - (int) $ringkasan['cek_spj']);
 @endphp
 
 <x-admin.main>
     <x-slot:titlex>Kontrak Bulanan Mitra</x-slot:titlex>
 
-    {{-- HEADER HALAMAN --}}
-    <x-header judul="Kontrak Bulanan Mitra" subjudul="Manajemen Kontrak Mitra BPS Kota Kendari" />
+    {{-- HEADER HALAMAN (tanpa subjudul) --}}
+    <x-header judul="Kontrak Bulanan Mitra" />
 
     {{-- KARTU STATISTIK --}}
-    <section class="stats-mitra">
+    <section class="stats-mitra stats-mitra-4">
         <div class="card hero">
-            <h2><svg>
+            <h2>
+                <svg>
                     <use href="#i-ring" />
-                </svg> Verifikasi Kontrak</h2>
-            <p class="num hijau">{{ $persenKontrak }}%</p>
+                </svg>
+                Verifikasi Kontrak
+            </h2>
+            <p class="num">{{ $persenKontrak }}%</p>
+            <div class="progress"><span style="width: {{ $persenKontrak }}%"></span></div>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-list" />
-                </svg> Total Kontrak</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M7 14h4" />
+                </svg>
+                Total Kontrak
+            </h2>
             <p class="num kecil">{{ $ringkasan['total_kontrak'] }} Kontrak</p>
+            <span class="badge {{ $belumKontrak > 0 ? 'warn' : 'lime' }}">
+                {{ $belumKontrak }} Belum Diverifikasi
+            </span>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-list" />
-                </svg> SPJ Terverifikasi</h2>
-            <p class="num kecil">{{ $ringkasan['cek_spj'] }} / {{ $ringkasan['total_kontrak'] }}</p>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <path d="M13 6H5.5A2.5 2.5 0 0 0 3 8.5v7A2.5 2.5 0 0 0 5.5 18h13a2.5 2.5 0 0 0 2.5-2.5V12" />
+                    <path d="M3 10h10M7 14h4M15.5 6.5l2 2 4-4" />
+                </svg>
+                Total SPJ
+            </h2>
+            <p class="num kecil">{{ $ringkasan['total_kontrak'] }} SPJ</p>
+            <span class="badge {{ $belumSpj > 0 ? 'warn' : 'lime' }}">
+                {{ $belumSpj }} Belum Diverifikasi
+            </span>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Total Honor</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M15 14h3" />
+                </svg>
+                Total Honor
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['total_honor'], 0, ',', '.') }}</p>
+            <span class="badge {{ $trenHonor['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                {{ $trenHonor['teks'] }}
+            </span>
         </div>
     </section>
 
     {{-- PENCARIAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
         <form method="GET" action="{{ route('admin.kontrak') }}" style="display: contents">
+            @if (request()->filled('per_page'))
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
             <label class="mitra-search">
@@ -88,38 +119,27 @@
     {{-- TABEL KONTRAK --}}
     <section class="table-card">
         <div class="table-heading">
-            <h2><svg>
-                    <use href="#i-list" />
-                </svg> Daftar Kontrak Mitra</h2>
-
-            <button type="button" class="primary-btn" id="bukaGenerateModal">
-                <svg viewBox="0 0 24 24"
-                    style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round">
-                    <path d="M12 5v14M5 12h14" />
+            <h2>
+                <svg>
+                    <use href="#i-table" />
                 </svg>
-                Generate Nomor Kontrak
-            </button>
-        </div>
+                Daftar Kontrak Mitra
+            </h2>
 
-        {{-- Bar aksi massal --}}
-        <div class="bulk-bar" id="bulkBar" hidden>
-            <div class="bulk-info">
-                <strong><span id="bulkCount">0</span> kontrak dipilih</strong>
-                <span id="bulkHint" hidden>
-                    Semua kontrak di halaman ini dipilih.
-                    <button type="button" class="bulk-link" id="bulkPilihHasil">
-                        Pilih semua {{ $daftar->total() }} kontrak hasil filter
-                    </button>
-                </span>
-                <span id="bulkHasilOn" hidden>
-                    Seluruh {{ $daftar->total() }} kontrak hasil filter dipilih.
-                    <button type="button" class="bulk-link" id="bulkBatalHasil">Batalkan</button>
-                </span>
-            </div>
-            <div class="bulk-actions">
-                <button type="button" class="primary-btn" data-bulk-mode="verifikasi">Verifikasi</button>
-                <button type="button" class="outline-btn" data-bulk-mode="batal">Batal Verifikasi</button>
-                <button type="button" class="outline-btn" id="bulkReset">Batal pilih</button>
+            <div class="table-heading-actions">
+                <button type="button" class="outline-btn" id="exportKontrak">
+                    <span>Export</span>
+                    <svg>
+                        <use href="#i-export" />
+                    </svg>
+                </button>
+
+                <button type="button" class="dark-pill-btn" id="bukaGenerateModal">
+                    <span>Generate Nomor Kontrak</span>
+                    <svg>
+                        <use href="#i-plus-circle" />
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -238,32 +258,62 @@
             </div>
 
             <div class="table-footer">
-                <span>
+                <div class="table-footer-left">
                     @if ($daftar->total() > 0)
-                        Menampilkan {{ $daftar->firstItem() }}–{{ $daftar->lastItem() }}
-                        dari {{ $daftar->total() }} kontrak
+                        <span>Menampilkan</span>
+                        <x-admin.per-page :current="$perPage" />
+                        <span>dari {{ $daftar->total() }} Kontrak</span>
                     @else
-                        Tidak ada data
+                        <span>Tidak ada data</span>
                     @endif
-                </span>
+                </div>
 
                 @if ($daftar->hasPages())
-                    <span style="display:flex;gap:8px;align-items:center">
-                        @unless ($daftar->onFirstPage())
-                            <a class="outline-btn btn-link" href="{{ $daftar->url(1) }}">&lt;&lt;</a>
-                            <a class="outline-btn btn-link" href="{{ $daftar->previousPageUrl() }}">&lt;</a>
-                        @endunless
-                        <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
-                        @if ($daftar->hasMorePages())
-                            <a class="outline-btn btn-link" href="{{ $daftar->nextPageUrl() }}">&gt;</a>
-                            <a class="outline-btn btn-link" href="{{ $daftar->url($daftar->lastPage()) }}">&gt;&gt;</a>
+                    @php
+                        $cur = $daftar->currentPage();
+                        $last = $daftar->lastPage();
+                        $pages = collect([1, $cur - 1, $cur, $cur + 1, $last])
+                            ->filter(fn($p) => $p >= 1 && $p <= $last)
+                            ->unique()
+                            ->sort()
+                            ->values();
+                        $prev = null;
+                    @endphp
+
+                    <nav class="page-nav" aria-label="Navigasi halaman">
+                        @if ($daftar->onFirstPage())
+                            <span class="page-btn disabled" aria-disabled="true">&lsaquo;</span>
+                        @else
+                            <a class="page-btn" href="{{ $daftar->previousPageUrl() }}"
+                                aria-label="Halaman sebelumnya">&lsaquo;</a>
                         @endif
-                    </span>
+
+                        @foreach ($pages as $p)
+                            @if ($prev !== null && $p - $prev > 1)
+                                <span class="page-dots">...</span>
+                            @endif
+
+                            @if ($p === $cur)
+                                <span class="page-btn active" aria-current="page">{{ $p }}</span>
+                            @else
+                                <a class="page-btn" href="{{ $daftar->url($p) }}">{{ $p }}</a>
+                            @endif
+
+                            @php $prev = $p; @endphp
+                        @endforeach
+
+                        @if ($daftar->hasMorePages())
+                            <a class="page-btn" href="{{ $daftar->nextPageUrl() }}"
+                                aria-label="Halaman berikutnya">&rsaquo;</a>
+                        @else
+                            <span class="page-btn disabled" aria-disabled="true">&rsaquo;</span>
+                        @endif
+                    </nav>
                 @endif
             </div>
         </section>
 
-        {{-- POPOVER AKSI KONTRAK (seperti di halaman Penugasan) --}}
+        {{-- POPOVER AKSI KONTRAK --}}
         <div class="mitra-popover" id="kontrakPopover" role="dialog" aria-label="Detail kontrak mitra">
             <div class="pop-field">
                 <span class="pop-label">Mitra</span>
@@ -332,9 +382,10 @@
             </div>
         </div>
 
-        {{-- MODAL GENERATE NOMOR KONTRAK --}}
+        {{-- MODAL OVERLAY BERSAMA --}}
         <div class="modal-overlay" id="kontrakOverlay"></div>
 
+        {{-- MODAL GENERATE NOMOR KONTRAK --}}
         <div class="kontrak-modal" id="generateModal" role="dialog" aria-modal="true" aria-labelledby="genTitle"
             aria-hidden="true">
             <div class="kontrak-modal-head">
@@ -442,10 +493,62 @@
             </form>
         </div>
 
+        {{-- MODAL EXPORT KONTRAK --}}
+        <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
+            aria-hidden="true">
+            <form method="GET" action="{{ Route::has('admin.kontrak.export') ? route('admin.kontrak.export') : '#' }}"
+                id="exportForm">
+                <input type="hidden" name="q" value="{{ $q }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                {!! $hiddenFilter !!}
+
+                <h2 id="exportTitle" class="export-title">Export Kontrak Mitra</h2>
+                <p class="export-sub">Data kontrak yang diexport berdasarkan hasil filter</p>
+
+                <div class="export-options">
+                    <label class="export-option">
+                        <input type="radio" name="format" value="csv" checked>
+                        <svg class="export-icon" viewBox="0 0 32 32">
+                            <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                            <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                fill="currentColor" stroke="none">CSV</text>
+                        </svg>
+                        <span class="export-text">
+                            <strong>CSV</strong>
+                            <small>Dokumen diekspor dengan format CSV</small>
+                        </span>
+                        <span class="export-radio"></span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="radio" name="format" value="pdf">
+                        <svg class="export-icon" viewBox="0 0 32 32">
+                            <path d="M8 3h11l7 7v19H8zM19 3v7h7" />
+                            <text x="16" y="25" text-anchor="middle" font-size="7" font-weight="600"
+                                fill="currentColor" stroke="none">PDF</text>
+                        </svg>
+                        <span class="export-text">
+                            <strong>PDF</strong>
+                            <small>Dokumen diekspor dengan format PDF</small>
+                        </span>
+                        <span class="export-radio"></span>
+                    </label>
+                </div>
+
+                <div class="export-footer">
+                    <button type="button" class="btn-cancel" id="exportCancel">Cancel</button>
+                    <button type="submit" class="btn-apply">Download</button>
+                </div>
+            </form>
+        </div>
+
         {{-- PANEL FILTER --}}
         <div class="filter-overlay" id="filterOverlay"></div>
         <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Kontrak" aria-hidden="true">
             <form method="GET" action="{{ route('admin.kontrak') }}" id="filterForm" class="filter-form">
+                @if (request()->filled('per_page'))
+                    <input type="hidden" name="per_page" value="{{ $perPage }}">
+                @endif
                 <input type="hidden" name="q" value="{{ $q }}">
                 <input type="hidden" name="status" value="{{ $status }}">
 
@@ -468,79 +571,91 @@
 
         <x-admin.filter-js />
 
-        {{-- MODAL VERIFIKASI MASSAL --}}
-        <div class="kontrak-modal" id="bulkVerifModal" role="dialog" aria-modal="true"
-            aria-labelledby="bulkModalTitle" aria-hidden="true">
-            <div class="kontrak-modal-head">
-                <h2 id="bulkModalTitle">Verifikasi Massal</h2>
-                {{-- <button type="button" class="outline-btn kontrak-modal-close" id="bulkClose">&times;</button> --}}
+        {{-- Floating Bar Aksi Massal + Bar Pilihan Verifikasi di Atasnya --}}
+        <div class="bulk-dock-wrap" id="bulkBar" hidden>
+            <div class="bulk-dock-hint" id="bulkHintWrap" hidden>
+                <span id="bulkHint" hidden>
+                    Semua di halaman ini dipilih.
+                    <button type="button" class="bulk-link" id="bulkPilihHasil">
+                        Pilih semua {{ $daftar->total() }} kontrak hasil filter
+                    </button>
+                </span>
+                <span id="bulkHasilOn" hidden>
+                    Seluruh {{ $daftar->total() }} kontrak hasil filter dipilih.
+                    <button type="button" class="bulk-link" id="bulkBatalHasil">Batalkan</button>
+                </span>
             </div>
 
-            <form method="POST" action="{{ route('admin.kontrak.verifikasi-massal') }}" id="bulkVerifForm">
-                @csrf
-                <input type="hidden" name="mode" id="bulkVerifMode">
-                <input type="hidden" name="semua_hasil" id="bulkVerifSemua" value="0">
-                <input type="hidden" name="q" value="{{ $q }}">
-                <input type="hidden" name="status" value="{{ $status }}">
-                {!! $hiddenFilter !!}
-                <div id="bulkVerifIds"></div>
+            <div class="bulk-verif-pop" id="bulkVerifPanel" hidden>
+                <form method="POST" action="{{ route('admin.kontrak.verifikasi-massal') }}" id="bulkVerifForm">
+                    @csrf
+                    <input type="hidden" name="mode" id="bulkVerifMode">
+                    <input type="hidden" name="semua_hasil" id="bulkVerifSemua" value="0">
+                    <input type="hidden" name="q" value="{{ $q }}">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    {!! $hiddenFilter !!}
+                    <div id="bulkVerifIds"></div>
 
-                <p id="bulkModalSub" class="kontrak-modal-sub"></p>
-                <style>
-                    #bulkVerifModal .kontrak-field label.bulk-check-item {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        margin: 0;
-                        cursor: pointer;
-                        line-height: 1.4;
-                    }
+                    <p class="bulk-verif-title" id="bulkModalTitle">Pilih jenis verifikasi yang ingin diterapkan</p>
 
-                    #bulkVerifModal .kontrak-field label.bulk-check-item input[type="checkbox"] {
-                        width: 17px;
-                        height: 17px;
-                        margin: 0;
-                        padding: 0;
-                        flex: 0 0 auto;
-                        accent-color: var(--primary);
-                        cursor: pointer;
-                    }
-
-                    #bulkVerifModal .kontrak-field label.bulk-check-item span {
-                        display: inline-block;
-                        margin: 0;
-                        padding: 0;
-                        line-height: 1.4;
-                    }
-                </style>
-
-                <div class="kontrak-modal-grid">
-                    <div class="kontrak-field full">
-                        <label class="kontrak-field-check bulk-check-item">
+                    <div class="bulk-verif-checks">
+                        <label class="bulk-verif-check">
                             <input type="checkbox" name="targets[]" value="kontrak" id="bulkTargetKontrak">
-                            <span id="bulkLabelKontrak">Verifikasi Kontrak (Cek Kontrak)</span>
+                            <span id="bulkLabelKontrak">Verifikasi Kontrak</span>
                         </label>
-                    </div>
 
-                    <div class="kontrak-field full">
-                        <label class="kontrak-field-check bulk-check-item">
+                        <label class="bulk-verif-check">
                             <input type="checkbox" name="targets[]" value="spj" id="bulkTargetSpj">
-                            <span id="bulkLabelSpj">Verifikasi SPJ (Cek SPJ)</span>
+                            <span id="bulkLabelSpj">SPJ</span>
                         </label>
                     </div>
-                </div>
 
-                <div class="kontrak-preview-box" id="bulkModalInfo" hidden>
-                    <small>Catatan:</small>
-                    <div>Verifikasi kontrak hanya berlaku untuk kontrak yang sudah memiliki Nomor Kontrak &amp; Tanggal SPK.
+                    <div class="bulk-verif-note" id="bulkModalInfo" hidden>
+                        Catatan: Verifikasi kontrak hanya berlaku untuk kontrak yang sudah memiliki Nomor Kontrak &amp;
+                        Tanggal SPK.
                     </div>
-                </div>
 
-                <div class="kontrak-modal-footer">
-                    <button type="button" class="btn-cancel" id="bulkCancel">Batal</button>
-                    <button type="submit" class="btn-apply" id="bulkVerifSubmit" disabled>Terapkan</button>
-                </div>
-            </form>
+                    <div class="bulk-verif-actions">
+                        <button type="button" class="outline-btn" id="bulkCancel">Batal</button>
+                        <button type="submit" class="dark-pill-btn" id="bulkVerifSubmit" disabled>Ya,
+                            verifikasi</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bulk-dock" role="region" aria-label="Aksi massal kontrak">
+                <span class="bulk-dock-count" id="bulkCount">0</span>
+
+                <button type="button" class="dock-btn-lime" data-bulk-mode="verifikasi">
+                    <span>Verifikasi</span>
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+                    </svg>
+                </button>
+
+                <button type="button" class="dock-btn-warn" data-bulk-mode="batal">
+                    <span>Batal Verifikasi</span>
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M14.8 9.2l-5.6 5.6M9.2 9.2l5.6 5.6" />
+                    </svg>
+                </button>
+
+                <button type="button" class="dock-btn-del" id="bulkHapusKontrak" title="Hapus kontrak"
+                    aria-label="Hapus kontrak">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                    </svg>
+                </button>
+
+                <button type="button" class="dock-btn-close" id="bulkReset" title="Batal pilih"
+                    aria-label="Batal pilih">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         @push('scripts')
@@ -550,6 +665,7 @@
                     const overlay = document.getElementById('kontrakOverlay');
                     const genModal = document.getElementById('generateModal');
                     const editModal = document.getElementById('editKontrakModal');
+                    const exportModal = document.getElementById('exportModal');
 
                     const pesanError = teks =>
                         typeof popup === 'function' ? popup({
@@ -558,10 +674,8 @@
                             pesan: teks
                         }) : alert(teks);
 
-                    const bulkModal = document.getElementById('bulkVerifModal');
-
                     function tutupSemuaModal() {
-                        [genModal, editModal, bulkModal].forEach(m => {
+                        [genModal, editModal, exportModal].filter(Boolean).forEach(m => {
                             m.classList.remove('open');
                             m.setAttribute('aria-hidden', 'true');
                         });
@@ -574,6 +688,22 @@
                         overlay.classList.add('open');
                         modal.setAttribute('aria-hidden', 'false');
                     }
+
+                    /* ===== Export Modal ===== */
+                    document.getElementById('exportKontrak')?.addEventListener('click', () => {
+                        tutupPopover();
+                        bukaModal(exportModal);
+                    });
+                    document.getElementById('exportCancel')?.addEventListener('click', tutupSemuaModal);
+                    document.getElementById('exportForm')?.addEventListener('submit', e => {
+                        if (e.target.getAttribute('action') === '#') {
+                            e.preventDefault();
+                            tutupSemuaModal();
+                            pesanError('Route admin.kontrak.export belum ditambahkan di routes/web.php.');
+                            return;
+                        }
+                        setTimeout(tutupSemuaModal, 400);
+                    });
 
                     /* ===== Popover Aksi Kontrak ===== */
                     const pop = document.getElementById('kontrakPopover');
@@ -745,11 +875,11 @@
                     });
                     genPeriode.addEventListener('change', isiSaranPeriode);
                     [genKodeX, genMulaiY, genKodeUnit].forEach(el => el.addEventListener('input', updatePreview));
-                    document.getElementById('genClose').addEventListener('click', tutupSemuaModal);
-                    document.getElementById('genCancel').addEventListener('click', tutupSemuaModal);
+                    document.getElementById('genClose')?.addEventListener('click', tutupSemuaModal);
+                    document.getElementById('genCancel')?.addEventListener('click', tutupSemuaModal);
 
-                    document.getElementById('editClose').addEventListener('click', tutupSemuaModal);
-                    document.getElementById('editCancel').addEventListener('click', tutupSemuaModal);
+                    document.getElementById('editClose')?.addEventListener('click', tutupSemuaModal);
+                    document.getElementById('editCancel')?.addEventListener('click', tutupSemuaModal);
                     overlay.addEventListener('click', tutupSemuaModal);
                     document.addEventListener('keydown', e => {
                         if (e.key === 'Escape') {
@@ -758,23 +888,64 @@
                         }
                     });
 
-                    /* ===== Aksi Massal ===== */
+                    /* ===== Aksi Massal (Floating Dock + Panel Verifikasi) ===== */
                     const semua = document.getElementById('selectAll');
                     const bar = document.getElementById('bulkBar');
                     const hitung = document.getElementById('bulkCount');
                     const hint = document.getElementById('bulkHint');
                     const hasilOn = document.getElementById('bulkHasilOn');
+                    const hintWrap = document.getElementById('bulkHintWrap');
                     const bulkForm = document.getElementById('bulkVerifForm');
+                    const verifPanel = document.getElementById('bulkVerifPanel');
+                    const modeBtns = bar.querySelectorAll('[data-bulk-mode]');
                     const TOTAL = @json($daftar->total());
                     const ADA_HALAMAN_LAIN = @json($daftar->hasPages());
                     let semuaHasil = false;
 
+                    const bulkModalTitle = document.getElementById('bulkModalTitle');
+                    const bulkVerifMode = document.getElementById('bulkVerifMode');
+                    const bulkTargetKontrak = document.getElementById('bulkTargetKontrak');
+                    const bulkTargetSpj = document.getElementById('bulkTargetSpj');
+                    const bulkLabelKontrak = document.getElementById('bulkLabelKontrak');
+                    const bulkLabelSpj = document.getElementById('bulkLabelSpj');
+                    const bulkModalInfo = document.getElementById('bulkModalInfo');
+                    const bulkVerifSubmit = document.getElementById('bulkVerifSubmit');
+
                     const baris = () => [...document.querySelectorAll('#kontrakBody .row-check')];
+
+                    function tutupVerifPanel() {
+                        verifPanel.hidden = true;
+                        modeBtns.forEach(b => b.classList.remove('is-active'));
+                    }
+
+                    function segarkanTombolVerif() {
+                        const adaDipilih = bulkTargetKontrak.checked || bulkTargetSpj.checked;
+                        bulkVerifSubmit.disabled = !adaDipilih;
+                        bulkModalInfo.hidden = !(bulkVerifMode.value === 'verifikasi' && bulkTargetKontrak.checked);
+                    }
+
+                    function isiIdsVerif() {
+                        const dipilih = baris().filter(c => c.checked);
+                        const wadah = document.getElementById('bulkVerifIds');
+                        wadah.innerHTML = '';
+                        if (!semuaHasil) {
+                            dipilih.forEach(c => {
+                                const i = document.createElement('input');
+                                i.type = 'hidden';
+                                i.name = 'ids[]';
+                                i.value = c.value;
+                                wadah.appendChild(i);
+                            });
+                        }
+                    }
 
                     function segarkan() {
                         const cek = baris();
                         const n = cek.filter(c => c.checked).length;
-                        if (n === 0) semuaHasil = false;
+                        if (n === 0) {
+                            semuaHasil = false;
+                            tutupVerifPanel();
+                        }
 
                         semua.checked = cek.length > 0 && n === cek.length;
                         semua.indeterminate = n > 0 && n < cek.length;
@@ -783,6 +954,7 @@
                         hitung.textContent = semuaHasil ? TOTAL : n;
                         hint.hidden = !(ADA_HALAMAN_LAIN && n > 0 && n === cek.length && !semuaHasil);
                         hasilOn.hidden = !semuaHasil;
+                        if (hintWrap) hintWrap.hidden = hint.hidden && hasilOn.hidden;
                         document.getElementById('bulkVerifSemua').value = semuaHasil ? '1' : '0';
                     }
 
@@ -806,76 +978,49 @@
                     });
                     document.getElementById('bulkReset').addEventListener('click', () => {
                         semuaHasil = false;
+                        tutupVerifPanel();
                         baris().forEach(c => c.checked = false);
                         segarkan();
                     });
 
-                    const bulkModalTitle = document.getElementById('bulkModalTitle');
-                    const bulkModalSub = document.getElementById('bulkModalSub');
-                    const bulkVerifMode = document.getElementById('bulkVerifMode');
-                    const bulkTargetKontrak = document.getElementById('bulkTargetKontrak');
-                    const bulkTargetSpj = document.getElementById('bulkTargetSpj');
-                    const bulkLabelKontrak = document.getElementById('bulkLabelKontrak');
-                    const bulkLabelSpj = document.getElementById('bulkLabelSpj');
-                    const bulkModalInfo = document.getElementById('bulkModalInfo');
-                    const bulkVerifSubmit = document.getElementById('bulkVerifSubmit');
-
-                    function segarkanTombolBulkModal() {
-                        const adaDipilih = bulkTargetKontrak.checked || bulkTargetSpj.checked;
-                        bulkVerifSubmit.disabled = !adaDipilih;
-                        bulkModalInfo.hidden = !(bulkVerifMode.value === 'verifikasi' && bulkTargetKontrak.checked);
-                    }
-
                     [bulkTargetKontrak, bulkTargetSpj].forEach(cb => {
-                        cb.addEventListener('change', segarkanTombolBulkModal);
+                        cb.addEventListener('change', segarkanTombolVerif);
                     });
 
-                    document.getElementById('bulkClose')?.addEventListener('click', tutupSemuaModal);
-                    document.getElementById('bulkCancel')?.addEventListener('click', tutupSemuaModal);
+                    document.getElementById('bulkCancel')?.addEventListener('click', tutupVerifPanel);
 
-                    bar.querySelectorAll('[data-bulk-mode]').forEach(btn => {
+                    modeBtns.forEach(btn => {
                         btn.addEventListener('click', () => {
                             const dipilih = baris().filter(c => c.checked);
                             const jumlah = semuaHasil ? TOTAL : dipilih.length;
                             if (jumlah === 0) return;
 
                             const mode = btn.dataset.bulkMode;
-                            const isVerif = mode === 'verifikasi';
+                            const sudahTerbukaSama = !verifPanel.hidden && bulkVerifMode.value === mode;
+                            if (sudahTerbukaSama) {
+                                tutupVerifPanel();
+                                return;
+                            }
 
+                            const isVerif = mode === 'verifikasi';
                             bulkVerifMode.value = mode;
-                            bulkModalTitle.textContent = isVerif ? 'Verifikasi Massal' :
-                                'Batalkan Verifikasi Massal';
-                            bulkModalSub.textContent = (isVerif ?
-                                    'Pilih jenis verifikasi yang ingin diterapkan untuk ' :
-                                    'Pilih jenis verifikasi yang ingin dibatalkan untuk ') +
-                                jumlah + ' kontrak terpilih:';
+                            bulkModalTitle.textContent = isVerif ?
+                                'Pilih jenis verifikasi yang ingin diterapkan' :
+                                'Pilih jenis verifikasi yang ingin dibatalkan';
 
                             bulkLabelKontrak.textContent = isVerif ?
-                                'Verifikasi Kontrak (Cek Kontrak)' :
-                                'Batalkan Verifikasi Kontrak (Cek Kontrak)';
-                            bulkLabelSpj.textContent = isVerif ?
-                                'Verifikasi SPJ (Cek SPJ)' :
-                                'Batalkan Verifikasi SPJ (Cek SPJ)';
-                            bulkVerifSubmit.textContent = isVerif ? 'Ya, Verifikasi' : 'Ya, Batalkan';
-
-                            const wadah = document.getElementById('bulkVerifIds');
-                            wadah.innerHTML = '';
-                            if (!semuaHasil) {
-                                dipilih.forEach(c => {
-                                    const i = document.createElement('input');
-                                    i.type = 'hidden';
-                                    i.name = 'ids[]';
-                                    i.value = c.value;
-                                    wadah.appendChild(i);
-                                });
-                            }
+                                'Verifikasi Kontrak' :
+                                'Batalkan Verifikasi Kontrak';
+                            bulkLabelSpj.textContent = isVerif ? 'SPJ' : 'Batalkan SPJ';
+                            bulkVerifSubmit.textContent = isVerif ? 'Ya, verifikasi' : 'Ya, batalkan';
 
                             bulkTargetKontrak.checked = false;
                             bulkTargetSpj.checked = false;
-                            segarkanTombolBulkModal();
+                            segarkanTombolVerif();
 
+                            modeBtns.forEach(b => b.classList.toggle('is-active', b === btn));
                             tutupPopover();
-                            bukaModal(bulkModal);
+                            verifPanel.hidden = false;
                         });
                     });
 
@@ -883,6 +1028,28 @@
                         if (!bulkTargetKontrak.checked && !bulkTargetSpj.checked) {
                             e.preventDefault();
                             pesanError('Pilih minimal satu jenis verifikasi (Kontrak atau SPJ).');
+                            return;
+                        }
+                        isiIdsVerif();
+                    });
+
+                    document.getElementById('bulkHapusKontrak')?.addEventListener('click', async () => {
+                        const pesan = 'Kontrak tidak dapat dihapus langsung dari halaman ini. ' +
+                            'Jika ingin menghapus kontrak, harus melalui tabel Penugasan lalu pilih dan hapus mitra yang bersangkutan di penugasan.';
+
+                        if (typeof popup === 'function') {
+                            const kePenugasan = await popup({
+                                jenis: 'peringatan',
+                                judul: 'Hapus melalui Penugasan',
+                                pesan,
+                                tombolOk: 'Buka Penugasan',
+                                tombolBatal: 'Tutup'
+                            });
+                            if (kePenugasan) {
+                                window.location.href = @json(route('admin.penugasan'));
+                            }
+                        } else {
+                            alert(pesan);
                         }
                     });
 

@@ -31,24 +31,22 @@ class DashboardController extends Controller
             $bulan = Carbon::create((int) $mm[1], (int) $mm[2], 1, 0, 0, 0, $tz);
         }
 
-        $bulanKey   = $bulan->format('Y-m');
-        $awalBulan  = $bulan->copy()->startOfMonth();
-        $akhirBulan = $bulan->copy()->endOfMonth()->startOfDay();
-        $awalStr    = $awalBulan->toDateString();
-        $akhirStr   = $akhirBulan->toDateString();
+        $bulanKey        = $bulan->format('Y-m');
+        $bulanSebelumnya = $bulan->copy()->subMonth()->format('Y-m');
+        $bulanBerikutnya = $bulan->copy()->addMonth()->format('Y-m');
+        $awalBulan       = $bulan->copy()->startOfMonth();
+        $akhirBulan      = $bulan->copy()->endOfMonth()->startOfDay();
+        $awalStr         = $awalBulan->toDateString();
+        $akhirStr        = $akhirBulan->toDateString();
 
         $bulanIni   = $bulanKey === $sekarang->format('Y-m');
         $bulanLewat = ! $bulanIni && $akhirBulan->lt($sekarang->copy()->startOfDay());
 
-        // Tanggal acuan untuk "sedang berlangsung" dan tanggal yang terpilih di kalender
         if ($bulanIni) {
-            $acuan = $hariIni;
             $hariDipilih = $hariIni;
         } elseif ($bulanLewat) {
-            $acuan = $akhirStr;
-            $hariDipilih = $awalStr;
+            $hariDipilih = $akhirStr;
         } else {
-            $acuan = $awalStr;
             $hariDipilih = $awalStr;
         }
 
@@ -103,10 +101,11 @@ class DashboardController extends Controller
             ->whereHas('user', fn($u) => $u->where('is_active', true))
             ->get();
 
-        $tersedia = collect();
-        $progres  = [];
-        $hampirPenuh = 0;
-        $mitraPenuh  = 0;
+        $daftarStatus = collect();
+        $progres      = [];
+        $hampirPenuh  = 0;
+        $mitraPenuh   = 0;
+        $mitraTersedia = 0;
 
         foreach ($mitraAktif as $m) {
             $h     = $honorBulan->get($m->id);
@@ -116,19 +115,21 @@ class DashboardController extends Controller
 
             if ($penuh) {
                 $mitraPenuh++;
-            } elseif ($batas > 0 && $honor >= $batas * 0.8) {
-                $hampirPenuh++;
+                $statusLabel = 'Penuh';
+            } else {
+                $mitraTersedia++;
+                if ($batas > 0 && $honor >= $batas * 0.8) {
+                    $hampirPenuh++;
+                }
+                $statusLabel = $honor > 0 ? 'Bertugas' : 'Tersedia';
             }
 
-            if (! $penuh) {
-                $tersedia->push([
-                    'nama'    => $nama,
-                    'sobat'   => $m->user?->username ?? '-',
-                    'wilayah' => $m->wilayah ?: '-',
-                    'honor'   => $honor,
-                    'status'  => $honor > 0 ? 'Bertugas' : 'Tersedia',
-                ]);
-            }
+            $daftarStatus->push([
+                'nama'   => $nama,
+                'sobat'  => $m->user?->username ?? '-',
+                'honor'  => $honor,
+                'status' => $statusLabel,
+            ]);
 
             if ($honor > 0) {
                 $progres[] = [
@@ -142,39 +143,23 @@ class DashboardController extends Controller
             }
         }
 
-        $mitraTersedia = $tersedia->count();
+        // Status Mitra: prioritaskan Bertugas, Penuh, dan Tersedia
+        $bertugasList = $daftarStatus->where('status', 'Bertugas')->sortBy([['honor', 'desc'], ['nama', 'asc']])->values();
+        $penuhList    = $daftarStatus->where('status', 'Penuh')->sortBy([['honor', 'desc'], ['nama', 'asc']])->values();
+        $tersediaList = $daftarStatus->where('status', 'Tersedia')->sortBy('nama')->values();
 
-        // Status Mitra: yang bertugas dulu, sisa slot (sampai 4) diisi yang tersedia
-        $bertugasList = $tersedia->where('status', 'Bertugas')
-            ->sortBy([['honor', 'desc'], ['nama', 'asc']])->values();
-        $tersediaList = $tersedia->where('status', 'Tersedia')
-            ->sortBy('nama')->values();
+        $statusMitra = $bertugasList->concat($penuhList)->concat($tersediaList)->take(12)->values();
 
-        $statusMitra = $bertugasList->concat($tersediaList)->take(4)->values();
-
-        $statusMitraLabel = $bertugasList->isEmpty()
-            ? 'Tersedia'
-            : ($bertugasList->count() >= 4 ? 'Sedang bertugas' : 'Bertugas & tersedia');
-
-        // Grafik: volume terbanyak lebih dulu
-        usort($progres, fn($a, $b) => $b['total'] <=> $a['total']);
+        // Grafik: progres selesai terbanyak lebih dulu
+        usort($progres, fn($a, $b) => ($b['selesai'] <=> $a['selesai']) ?: ($b['total'] <=> $a['total']));
         $progres = array_slice($progres, 0, 60);
 
-        /* ---------- Kalender & ringkasan bulan terpilih ---------- */
+        /* ---------- Kalender (awal minggu Senin - Minggu) ---------- */
         $kunci  = "concat_ws('|', uraian_pekerjaan, tanggal_mulai, tanggal_selesai)";
         $hitung = fn() => DB::table('kontrak_pekerjaan')->selectRaw("count(distinct $kunci) as n");
 
-        $kalender = [
-            'deadline'    => (int) $hitung()->whereBetween('tanggal_selesai', [$awalStr, $akhirStr])->value('n'),
-            'selesai'     => (int) $hitung()->whereBetween('tanggal_selesai', [$awalStr, $akhirStr])
-                ->where('tanggal_selesai', '<', $hariIni)->value('n'),
-            'berlangsung' => (int) $hitung()->where('tanggal_mulai', '<=', $acuan)
-                ->where('tanggal_selesai', '>=', $acuan)->value('n'),
-        ];
-
-        // Tugas per tanggal untuk seluruh kotak kalender
-        $calStart = $bulan->copy()->startOfMonth()->startOfWeek(Carbon::SUNDAY)->startOfDay();
-        $calEnd   = $bulan->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY)->startOfDay();
+        $calStart = $bulan->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $calEnd   = $bulan->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY)->startOfDay();
 
         $grup = DB::table('kontrak_pekerjaan as kp')
             ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
@@ -183,59 +168,74 @@ class DashboardController extends Controller
             ->where('kp.tanggal_mulai', '<=', $calEnd->toDateString())
             ->where('kp.tanggal_selesai', '>=', $calStart->toDateString())
             ->groupBy('kp.uraian_pekerjaan', 'kp.tanggal_mulai', 'kp.tanggal_selesai')
-            ->selectRaw('kp.uraian_pekerjaan, kp.tanggal_mulai, kp.tanggal_selesai, count(distinct k.mitra_id) as mitra')
+            ->selectRaw('kp.uraian_pekerjaan, kp.tanggal_mulai, kp.tanggal_selesai')
             ->get();
+
+        $formatRentang = function (Carbon $mulai, Carbon $selesai) {
+            if ($mulai->year === $selesai->year && $mulai->month === $selesai->month) {
+                return $mulai->day . ' sd. ' . $selesai->copy()->locale('id')->translatedFormat('j F');
+            }
+            if ($mulai->year === $selesai->year) {
+                return $mulai->copy()->locale('id')->translatedFormat('j M')
+                    . ' sd. ' . $selesai->copy()->locale('id')->translatedFormat('j M');
+            }
+            return $mulai->copy()->locale('id')->translatedFormat('j M Y')
+                . ' sd. ' . $selesai->copy()->locale('id')->translatedFormat('j M Y');
+        };
 
         $tugas = [];
         foreach ($grup as $g) {
             $mulai   = Carbon::parse($g->tanggal_mulai, $tz)->startOfDay();
             $selesai = Carbon::parse($g->tanggal_selesai, $tz)->startOfDay();
+            $rentang = $formatRentang($mulai, $selesai);
 
             $dari   = $mulai->greaterThan($calStart) ? $mulai : $calStart->copy();
             $sampai = $selesai->lessThan($calEnd) ? $selesai : $calEnd->copy();
 
             for ($d = $dari->copy(); $d->lte($sampai); $d->addDay()) {
+                $sisa = (int) $d->diffInDays($selesai, false);
+                $badge = null;
+                if ($sisa === 0) {
+                    $badge = 'Hari Ini';
+                } elseif ($sisa > 0 && $sisa <= 7) {
+                    $badge = $sisa . ' Hari Lagi';
+                }
+
                 $tugas[$d->toDateString()][] = [
                     'judul'    => $g->uraian_pekerjaan ?: '(tanpa uraian)',
+                    'rentang'  => $rentang,
                     'deadline' => $d->isSameDay($selesai),
-                    'mitra'    => (int) $g->mitra,
+                    'badge'    => $badge,
                 ];
             }
         }
 
-        // Yang deadline-nya hari itu tampil paling atas
         $tugas = collect($tugas)
             ->map(fn($items) => collect($items)->sortByDesc('deadline')->values()->all())
             ->all();
 
-        /* ---------- Aktivitas penugasan (yang beririsan dengan bulan terpilih) ---------- */
-        $formatTgl = fn($d, $denganTahun = false) => Carbon::parse($d, $tz)->locale('id')
-            ->translatedFormat($denganTahun ? 'j M Y' : 'j M');
-
+        /* ---------- Aktivitas penugasan (bulan terpilih) ---------- */
         $aktivitas = DB::table('kontrak_pekerjaan as kp')
-            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
-            ->leftJoin('users as u', 'u.id', '=', 'kp.koordinator_id')
             ->whereNotNull('kp.uraian_pekerjaan')
             ->where('kp.tanggal_mulai', '<=', $akhirStr)
             ->where('kp.tanggal_selesai', '>=', $awalStr)
             ->groupBy('kp.uraian_pekerjaan', 'kp.tanggal_mulai', 'kp.tanggal_selesai')
-            ->selectRaw('kp.uraian_pekerjaan as judul, kp.tanggal_mulai as mulai, kp.tanggal_selesai as selesai,
-                         max(u.name) as koordinator, count(distinct k.mitra_id) as mitra, max(kp.id) as terakhir')
+            ->selectRaw('kp.uraian_pekerjaan as judul, kp.tanggal_mulai as mulai, kp.tanggal_selesai as selesai, max(kp.id) as terakhir')
             ->orderByDesc('terakhir')
             ->limit(20)
             ->get()
-            ->map(function ($a) use ($formatTgl) {
-                $a->koordinator = $a->koordinator ? Nama::rapikan($a->koordinator) : null;
+            ->map(function ($a) use ($tz, $formatRentang) {
+                $mulai   = $a->mulai ? Carbon::parse($a->mulai, $tz)->startOfDay() : null;
+                $selesai = $a->selesai ? Carbon::parse($a->selesai, $tz)->startOfDay() : null;
 
-                $bedaTahun = $a->mulai && $a->selesai
-                    && substr((string) $a->mulai, 0, 4) !== substr((string) $a->selesai, 0, 4);
-                $a->periode = ($a->mulai ? $formatTgl($a->mulai, $bedaTahun) : '-')
-                    . ' - ' . ($a->selesai ? $formatTgl($a->selesai, $bedaTahun) : '-');
+                $a->periode = ($mulai && $selesai) ? $formatRentang($mulai, $selesai) : '-';
 
                 return $a;
             });
 
         /* ---------- Perlu perhatian (bulan terpilih) ---------- */
+        $acuan = $bulanIni ? $hariIni : ($bulanLewat ? $akhirStr : $awalStr);
+
         $telat = (int) DB::table('kontrak_pekerjaan')
             ->whereBetween('tanggal_selesai', [$awalStr, $akhirStr])
             ->where('tanggal_selesai', '<', $hariIni)
@@ -254,11 +254,11 @@ class DashboardController extends Controller
             ->count();
 
         $perhatian = collect([
-            ['judul' => $mitraPenuh . ' Mitra',        'ket' => 'Sudah mencapai batas honor',             'tag' => 'Honor',      'level' => 'merah',  'jumlah' => $mitraPenuh,    'url' => route('admin.datamitra')],
-            ['judul' => $deadlineDekat . ' Pekerjaan', 'ket' => 'Berakhir dalam waktu dekat (7 hari)',    'tag' => 'Deadline',   'level' => 'kuning', 'jumlah' => $deadlineDekat, 'url' => route('admin.penugasan')],
-            ['judul' => $belumVerif . ' Kontrak',      'ket' => 'Belum diverifikasi (kontrak / SPJ)',     'tag' => 'Kontrak',    'level' => 'ungu',   'jumlah' => $belumVerif,    'url' => null],
-            ['judul' => $hampirPenuh . ' Mitra',       'ket' => 'Mendekati batas honor (80% atau lebih)', 'tag' => 'Honor',      'level' => 'kuning', 'jumlah' => $hampirPenuh,   'url' => route('admin.datamitra')],
-            ['judul' => $telat . ' Tugas',             'ket' => 'Lewat deadline, honor belum dibayar',    'tag' => 'Pembayaran', 'level' => 'merah',  'jumlah' => $telat,         'url' => route('admin.penugasan', ['status' => 'belum'])],
+            ['judul' => $belumVerif . ' Kontrak',      'ket' => 'Belum Diverifikasi',                     'level' => 'merah',  'jumlah' => $belumVerif,    'url' => route('admin.kontrak')],
+            ['judul' => $mitraPenuh . ' Mitra',        'ket' => 'Mencapai Batas Honor',                   'level' => 'merah',  'jumlah' => $mitraPenuh,    'url' => route('admin.datamitra')],
+            ['judul' => $deadlineDekat . ' Pekerjaan', 'ket' => 'Berakhir dalam waktu dekat (7 hari)',    'level' => 'kuning', 'jumlah' => $deadlineDekat, 'url' => route('admin.penugasan')],
+            ['judul' => $hampirPenuh . ' Mitra',       'ket' => 'Mendekati batas honor (80% atau lebih)', 'level' => 'kuning', 'jumlah' => $hampirPenuh,   'url' => route('admin.datamitra')],
+            ['judul' => $telat . ' Tugas',             'ket' => 'Lewat deadline, honor belum dibayar',    'level' => 'merah',  'jumlah' => $telat,         'url' => route('admin.penugasan', ['status' => 'belum'])],
         ])->filter(fn($p) => $p['jumlah'] > 0)->values();
 
         /* ---------- Sebaran wilayah mitra aktif ---------- */
@@ -315,30 +315,28 @@ class DashboardController extends Controller
         /* ---------- Kartu angka ---------- */
         $totalMitra = Mitra::count();
         $totalKoor  = User::where('role', 'koordinator')->count();
-        $koorAktif  = User::where('role', 'koordinator')->where('is_active', true)->count();
 
         return view('admin.dashboard', compact(
             'persenBayar',
             'totalMitra',
             'mitraTersedia',
             'totalKoor',
-            'koorAktif',
-            'kalender',
             'tugas',
             'progres',
             'statusMitra',
             'aktivitas',
             'perhatian',
             'sebaran',
-            'bulan',
             'bulanKey',
+            'bulanSebelumnya',
+            'bulanBerikutnya',
             'labelBulan',
             'opsiBulan',
             'hariIni',
             'hariDipilih',
             'calStart',
             'calEnd',
-            'statusMitraLabel',
+            'bulan',
             'totalSebaran',
             'notifikasi',
             'notifPenting'

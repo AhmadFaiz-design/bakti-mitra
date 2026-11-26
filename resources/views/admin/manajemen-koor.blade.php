@@ -14,42 +14,61 @@
         ->implode('');
 @endphp
 <x-admin.main>
-    {{-- HEADER HALAMAN --}}
-    <x-header judul="Koordinator BPS Kota Kendari" subjudul="Manajemen Data Koordinator BPS Kota Kendari" />
+    {{-- HEADER HALAMAN (tanpa subjudul) --}}
+    <x-header judul="Data Koordinator" />
 
     {{-- KARTU STATISTIK --}}
-    <section class="stats-koor">
+    <section class="stats-mitra stats-mitra-4">
+        <div class="card hero">
+            <h2>
+                <svg>
+                    <use href="#i-ring" />
+                </svg>
+                Presentasi Koordinator Aktif
+            </h2>
+            <p class="num">{{ $persenAktif }}%</p>
+            <div class="progress"><span style="width: {{ $persenAktif }}%"></span></div>
+        </div>
+
         <div class="card stat">
             <h2>
                 <svg>
-                    <use href="#i-user" />
+                    <use href="#i-koor" />
                 </svg>
                 Total Koordinator
             </h2>
             <p class="num">{{ $total }}</p>
+            <span class="badge">{{ $aktif }} Aktif</span>
         </div>
+
         <div class="card stat">
             <h2>
                 <svg>
                     <use href="#i-user" />
                 </svg>
-                Koordinator Aktif
+                Partisipan Mitra
             </h2>
-            <p class="num">{{ $aktif }}</p>
+            <p class="num">{{ $partisipanMitra }}</p>
+            <span class="badge">{{ $mitraTersedia }} Tersedia</span>
         </div>
+
         <div class="card stat">
             <h2>
                 <svg>
-                    <use href="#i-user" />
+                    <use href="#i-briefcase" />
                 </svg>
-                Koordinator Non Aktif
+                Jumlah Pekerjaan
             </h2>
-            <p class="num">{{ $nonaktif }}</p>
+            <p class="num">{{ $jumlahPekerjaan }}</p>
         </div>
     </section>
 
-    {{-- PENCARIAN, EXPORT, STATUS, URUTAN --}}
+    {{-- PENCARIAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
+        @if (request()->filled('per_page'))
+            <input type="hidden" name="per_page" value="{{ $perPage }}">
+        @endif
+
         <form id="formKoor" method="GET" action="{{ route('admin.datakoor') }}" style="display: contents">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="sort" value="{{ $sort }}">
@@ -62,13 +81,6 @@
                     placeholder="Cari nama atau NIP koordinator..." autocomplete="off">
             </label>
         </form>
-
-        <button type="button" class="outline-btn" id="exportKoor">
-            <svg>
-                <use href="#i-download" />
-            </svg>
-            Export
-        </button>
 
         <x-admin.status-dropdown :options="['semua' => 'Semua', 'active' => 'Active', 'inactive' => 'Inactive']" :current="$status" label="Status" />
 
@@ -88,17 +100,26 @@
         <div class="table-heading">
             <h2>
                 <svg>
-                    <use href="#i-user" />
+                    <use href="#i-table" />
                 </svg>
-                List Koordinator
+                Tabel Koordinator
             </h2>
 
-            <a href="{{ route('admin.tambahkoor') }}" class="primary-btn" style="text-decoration:none">
-                <svg>
-                    <use href="#i-plus" />
-                </svg>
-                Add Koordinator
-            </a>
+            <div class="table-heading-actions">
+                <button type="button" class="outline-btn" id="exportKoor">
+                    <span>Export</span>
+                    <svg>
+                        <use href="#i-export" />
+                    </svg>
+                </button>
+
+                <a href="{{ route('admin.tambahkoor') }}" class="dark-pill-btn">
+                    <span>Tambah Koordinator</span>
+                    <svg>
+                        <use href="#i-plus-circle" />
+                    </svg>
+                </a>
+            </div>
         </div>
 
         <x-admin.bulk-delete :action="route('admin.koordinator.hapus-massal')" body="koorTableBody" noun="koordinator"
@@ -125,8 +146,8 @@
                 <tbody id="koorTableBody">
                     @forelse ($daftarKoordinator as $k)
                         @php
-                            $jumlahPekerjaan = (int) $k->jumlah_pekerjaan;
-                            $jumlahMitra = (int) $k->jumlah_mitra;
+                            $jumlahPekerjaanBaris = (int) $k->jumlah_pekerjaan;
+                            $jumlahMitraBaris = (int) $k->jumlah_mitra;
                             $tugas = $pekerjaanPerKoordinator[$k->id] ?? [];
                         @endphp
                         <tr>
@@ -148,11 +169,11 @@
                             <td class="id-cell">{{ $k->username }}</td>
 
                             <td>
-                                <span class="profile-name">{{ $jumlahPekerjaan }} pekerjaan</span>
+                                <span class="profile-name">{{ $jumlahPekerjaanBaris }} pekerjaan</span>
                             </td>
 
                             <td>
-                                <span class="profile-name">{{ $jumlahMitra }} mitra</span>
+                                <span class="profile-name">{{ $jumlahMitraBaris }} mitra</span>
                             </td>
 
                             <td>
@@ -166,8 +187,8 @@
                             <td class="action-cell">
                                 <button type="button" class="action-btn" aria-label="Detail {{ $k->name }}"
                                     aria-haspopup="true" aria-expanded="false" data-nama="{{ $k->name }}"
-                                    data-username="{{ $k->username }}" data-pekerjaan="{{ $jumlahPekerjaan }}"
-                                    data-mitra="{{ $jumlahMitra }}" data-tugas="{{ json_encode($tugas) }}"
+                                    data-username="{{ $k->username }}" data-pekerjaan="{{ $jumlahPekerjaanBaris }}"
+                                    data-mitra="{{ $jumlahMitraBaris }}" data-tugas="{{ json_encode($tugas) }}"
                                     data-edit-url="{{ Route::has('admin.koordinator.edit') ? route('admin.koordinator.edit', $k->id) : '' }}"
                                     data-delete-url="{{ route('admin.koordinator.destroy', $k->id) }}">
                                     &#8942;
@@ -190,42 +211,62 @@
         </div>
 
         <div class="table-footer">
-            <span>
+            <div class="table-footer-left">
                 @if ($daftarKoordinator->total() > 0)
-                    Menampilkan {{ $daftarKoordinator->firstItem() }}–{{ $daftarKoordinator->lastItem() }}
-                    dari {{ $daftarKoordinator->total() }} koordinator
+                    <span>Menampilkan</span>
+                    <x-admin.per-page :current="$perPage" />
+                    <span>dari {{ $daftarKoordinator->total() }} Koordinator</span>
                 @else
-                    Tidak ada data
+                    <span>Tidak ada data</span>
                 @endif
-            </span>
+            </div>
 
             @if ($daftarKoordinator->hasPages())
-                <span style="display:flex;gap:8px;align-items:center">
-                    @unless ($daftarKoordinator->onFirstPage())
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftarKoordinator->url(1) }}"
-                            aria-label="Halaman pertama" title="Halaman pertama">&lt;&lt;</a>
-                        <a class="outline-btn" style="text-decoration:none"
-                            href="{{ $daftarKoordinator->previousPageUrl() }}" aria-label="Halaman sebelumnya"
-                            title="Halaman sebelumnya">&lt;</a>
-                    @endunless
+                @php
+                    $cur = $daftarKoordinator->currentPage();
+                    $last = $daftarKoordinator->lastPage();
+                    $pages = collect([1, $cur - 1, $cur, $cur + 1, $last])
+                        ->filter(fn($p) => $p >= 1 && $p <= $last)
+                        ->unique()
+                        ->sort()
+                        ->values();
+                    $prev = null;
+                @endphp
 
-                    <span>Halaman {{ $daftarKoordinator->currentPage() }} dari
-                        {{ $daftarKoordinator->lastPage() }}</span>
+                <nav class="page-nav" aria-label="Navigasi halaman">
+                    @if ($daftarKoordinator->onFirstPage())
+                        <span class="page-btn disabled" aria-disabled="true">&lsaquo;</span>
+                    @else
+                        <a class="page-btn" href="{{ $daftarKoordinator->previousPageUrl() }}"
+                            aria-label="Halaman sebelumnya">&lsaquo;</a>
+                    @endif
+
+                    @foreach ($pages as $p)
+                        @if ($prev !== null && $p - $prev > 1)
+                            <span class="page-dots">...</span>
+                        @endif
+
+                        @if ($p === $cur)
+                            <span class="page-btn active" aria-current="page">{{ $p }}</span>
+                        @else
+                            <a class="page-btn" href="{{ $daftarKoordinator->url($p) }}">{{ $p }}</a>
+                        @endif
+
+                        @php $prev = $p; @endphp
+                    @endforeach
 
                     @if ($daftarKoordinator->hasMorePages())
-                        <a class="outline-btn" style="text-decoration:none"
-                            href="{{ $daftarKoordinator->nextPageUrl() }}" aria-label="Halaman berikutnya"
-                            title="Halaman berikutnya">&gt;</a>
-                        <a class="outline-btn" style="text-decoration:none"
-                            href="{{ $daftarKoordinator->url($daftarKoordinator->lastPage()) }}"
-                            aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
+                        <a class="page-btn" href="{{ $daftarKoordinator->nextPageUrl() }}"
+                            aria-label="Halaman berikutnya">&rsaquo;</a>
+                    @else
+                        <span class="page-btn disabled" aria-disabled="true">&rsaquo;</span>
                     @endif
-                </span>
+                </nav>
             @endif
         </div>
     </section>
 
-    {{-- POPOVER DETAIL KOORDINATOR (satu untuk semua baris) --}}
+    {{-- POPOVER DETAIL KOORDINATOR --}}
     <div class="mitra-popover" id="koorPopover" role="dialog" aria-label="Detail koordinator">
         <div class="pop-field">
             <span class="pop-label">Name</span>
@@ -291,6 +332,9 @@
         @endphp
 
         <form method="GET" action="{{ route('admin.datakoor') }}" id="filterForm" class="filter-form">
+            @if (request()->filled('per_page'))
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="sort" value="{{ $sort }}">
@@ -328,7 +372,6 @@
     <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
         aria-hidden="true">
         <form method="GET" action="{{ route('admin.koordinator.export') }}" id="exportForm">
-            {{-- bawa pencarian dan semua filter yang sedang aktif --}}
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="sort" value="{{ $sort }}">
@@ -478,7 +521,7 @@
                     const url = aktif?.dataset.deleteUrl;
                     const nama = aktif?.dataset.nama;
 
-                    tutup(); // tutup popover aksi lebih dulu
+                    tutup();
                     if (!url) return;
 
                     const lanjut = await popup({

@@ -17,6 +17,10 @@ class MitraController extends Controller
 
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
         // ---- Batas atas slider honor (total honor tertinggi, dibulatkan ke atas per Rp100.000) ----
         $honorTertinggi = (int) DB::table('kontrak_pekerjaan as kp')
             ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
@@ -34,7 +38,7 @@ class MitraController extends Controller
             : 'name';
         $q = trim((string) $request->query('q', ''));
 
-        $daftarMitra = $this->buildQuery($request)->paginate(10)->withQueryString();
+        $daftarMitra = $this->buildQuery($request)->paginate($perPage)->withQueryString();
         if ($daftarMitra->isEmpty() && $daftarMitra->currentPage() > 1) {
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftarMitra->lastPage()]));
         }
@@ -82,9 +86,13 @@ class MitraController extends Controller
             ->withCount(['pekerjaan as tugas_bulan_ini' => $filterBulanIni])
             ->get();
 
-        $penuh    = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini >= $batas)->count();
-        $bertugas = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini < $batas && (int) $m->tugas_bulan_ini > 0)->count();
-        $tersedia = $aktifSemua->count() - $penuh - $bertugas;
+        $penuh       = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini >= $batas)->count();
+        $bertugas    = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini < $batas && (int) $m->tugas_bulan_ini > 0)->count();
+        $hampirPenuh = $aktifSemua->filter(fn($m) => $batas > 0
+            && (int) $m->honor_bulan_ini >= ($batas * 0.8)
+            && (int) $m->honor_bulan_ini < $batas
+            && (int) $m->tugas_bulan_ini > 0)->count();
+        $tersedia    = $aktifSemua->count() - $penuh - $bertugas;
 
         $jumlahAktif = $aktifSemua->count();
         $persen = $jumlahAktif > 0
@@ -96,10 +104,13 @@ class MitraController extends Controller
             'tugasPerMitra',
             'daftarWilayah',
             'daftarTugas',
+            'honorMaks',
             'total',
             'tersedia',
             'bertugas',
+            'hampirPenuh',
             'penuh',
+            'perPage',
             'persen',
             'status',
             'sort',

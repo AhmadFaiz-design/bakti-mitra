@@ -19,6 +19,11 @@ class KoordinatorController extends Controller
     /** Daftar koordinator */
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
         $status = in_array($request->query('status'), ['active', 'inactive'], true)
             ? $request->query('status')
             : 'semua';
@@ -27,7 +32,7 @@ class KoordinatorController extends Controller
             : 'name';
         $q = trim((string) $request->query('q', ''));
 
-        $daftarKoordinator = $this->buildQuery($request)->paginate(10)->withQueryString();
+        $daftarKoordinator = $this->buildQuery($request)->paginate($perPage)->withQueryString();
         if ($daftarKoordinator->isEmpty() && $daftarKoordinator->currentPage() > 1) {
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftarKoordinator->lastPage()]));
         }
@@ -51,9 +56,38 @@ class KoordinatorController extends Controller
             ->pluck('uraian_pekerjaan');
 
         // Statistik dari seluruh koordinator
-        $total    = User::where('role', 'koordinator')->count();
-        $aktif    = User::where('role', 'koordinator')->where('is_active', true)->count();
-        $nonaktif = $total - $aktif;
+        $total       = User::where('role', 'koordinator')->count();
+        $aktif       = User::where('role', 'koordinator')->where('is_active', true)->count();
+        $nonaktif    = $total - $aktif;
+        $persenAktif = $total > 0 ? (int) round(($aktif / $total) * 100) : 0;
+
+        // Total mitra unik yang ditangani koordinator & jumlah pekerjaan unik
+        $partisipanMitra = (int) DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->whereNotNull('kp.koordinator_id')
+            ->distinct()
+            ->count('k.mitra_id');
+
+        $jumlahPekerjaan = (int) DB::table('kontrak_pekerjaan')
+            ->whereNotNull('koordinator_id')
+            ->whereNotNull('uraian_pekerjaan')
+            ->distinct()
+            ->count('uraian_pekerjaan');
+
+        // Mitra aktif yang tersedia (belum bertugas bulan ini), selaras dengan Data Mitra
+        $bulanIni = now();
+        $mitraTersedia = DB::table('mitra')
+            ->join('users', 'users.id', '=', 'mitra.user_id')
+            ->where('users.is_active', true)
+            ->whereNotExists(function ($s) use ($bulanIni) {
+                $s->select(DB::raw(1))
+                    ->from('kontrak_pekerjaan as kp')
+                    ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                    ->whereColumn('k.mitra_id', 'mitra.id')
+                    ->where('k.periode_tahun', $bulanIni->year)
+                    ->where('k.periode_bulan', $bulanIni->month);
+            })
+            ->count();
 
         return view('admin.manajemen-koor', compact(
             'daftarKoordinator',
@@ -62,6 +96,11 @@ class KoordinatorController extends Controller
             'total',
             'aktif',
             'nonaktif',
+            'perPage',
+            'persenAktif',
+            'partisipanMitra',
+            'mitraTersedia',
+            'jumlahPekerjaan',
             'status',
             'sort',
             'q'

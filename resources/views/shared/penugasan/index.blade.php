@@ -34,59 +34,70 @@
 <x-dynamic-component :component="$layout">
     <x-slot:titlex>Penugasan Mitra</x-slot:titlex>
 
-    {{-- HEADER HALAMAN --}}
-    <x-header
-    :judul="$role === 'koordinator' ? 'Data Penugasan' : 'Penugasan Mitra'"
-    :subjudul="$role === 'koordinator'
-        ? 'Daftar tugas yang Anda kelola, mitra yang ditugaskan, dan status pembayaran honornya'
-        : 'Daftar tugas, petugas yang ditugaskan, dan status pembayaran honornya'"
-/>
+    {{-- HEADER HALAMAN (tanpa subjudul) --}}
+    <x-header :judul="$role === 'koordinator' ? 'Data Penugasan' : 'Penugasan Mitra'" />
 
     {{-- KARTU STATISTIK --}}
-    <section class="stats-mitra">
+    <section class="stats-mitra stats-mitra-4">
         <div class="card hero">
-            <h2><svg>
+            <h2>
+                <svg>
                     <use href="#i-ring" />
-                </svg> Progres Pembayaran</h2>
-            <p class="num hijau">{{ $persen }}%</p>
+                </svg>
+                Progres Pembayaran
+            </h2>
+            <p class="num">{{ $persen }}%</p>
+            <div class="progress"><span style="width: {{ $persen }}%"></span></div>
         </div>
 
         <div class="card stat">
             <h2>
                 <svg viewBox="0 0 24 24">
-                    <rect x="3" y="6" width="18" height="13" rx="2" />
-                    <path d="M3 10h18M16 14.5h2" />
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M7 14h4" />
                 </svg>
                 Total Honor
             </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['total'], 0, ',', '.') }}</p>
+            <span class="badge {{ $tren['total']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                {{ $tren['total']['teks'] }}
+            </span>
         </div>
 
         <div class="card stat">
             <h2>
                 <svg viewBox="0 0 24 24">
-                    <rect x="3" y="6" width="18" height="13" rx="2" />
-                    <path d="M3 10h18M16 14.5h2" />
+                    <path d="M13 6H5.5A2.5 2.5 0 0 0 3 8.5v7A2.5 2.5 0 0 0 5.5 18h13a2.5 2.5 0 0 0 2.5-2.5V12" />
+                    <path d="M3 10h10M7 14h4M15.5 6.5l2 2 4-4" />
                 </svg>
-                Sudah Dibayar
+                Dibayar
             </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['dibayar'], 0, ',', '.') }}</p>
+            <span class="badge {{ $tren['dibayar']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                {{ $tren['dibayar']['teks'] }}
+            </span>
         </div>
 
         <div class="card stat">
             <h2>
                 <svg viewBox="0 0 24 24">
-                    <rect x="3" y="6" width="18" height="13" rx="2" />
-                    <path d="M3 10h18M16 14.5h2" />
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M15 14h3" />
                 </svg>
                 Belum Dibayar
             </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['belum'], 0, ',', '.') }}</p>
+            <span class="badge {{ $tren['belum']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                {{ $tren['belum']['teks'] }}
+            </span>
         </div>
     </section>
 
-    {{-- PENCARIAN, EXPORT, STATUS, FILTER --}}
+    {{-- PENCARIAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
+        @if (request()->filled('per_page'))
+            <input type="hidden" name="per_page" value="{{ $perPage }}">
+        @endif
         <form method="GET" action="{{ route($routes['index']) }}" style="display: contents">
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
@@ -98,13 +109,6 @@
                     placeholder="Cari uraian pekerjaan, RO, atau nama mitra..." autocomplete="off">
             </label>
         </form>
-
-        <button type="button" class="outline-btn" id="exportPenugasan">
-            <svg>
-                <use href="#i-download" />
-            </svg>
-            Export
-        </button>
 
         <x-admin.status-dropdown :options="[
             'semua' => 'Semua',
@@ -127,46 +131,31 @@
     {{-- TABEL PENUGASAN --}}
     <section class="table-card">
         <div class="table-heading">
-            <h2><svg>
-                    <use href="#i-list" />
-                </svg> List Penugasan</h2>
-
-            <a href="{{ route($routes['buat']) }}" class="primary-btn btn-link">
-                <svg viewBox="0 0 24 24"
-                    style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round">
-                    <path d="M12 5v14M5 12h14" />
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                    <path d="M3 10h18M9 4v16" />
                 </svg>
-                Tambah Tugas
-            </a>
-        </div>
+                Tabel Tugas
+            </h2>
 
-        {{-- Bar aksi massal --}}
-        <div class="bulk-bar" id="bulkBar" hidden>
-            <div class="bulk-info">
-                <strong><span id="bulkCount">0</span> tugas dipilih</strong>
-                <span id="bulkHint" hidden>
-                    Semua tugas di halaman ini dipilih.
-                    <button type="button" class="bulk-link" id="bulkPilihHasil">
-                        Pilih semua {{ $daftar->total() }} tugas hasil filter
-                    </button>
-                </span>
-                <span id="bulkHasilOn" hidden>
-                    Seluruh {{ $daftar->total() }} tugas hasil filter dipilih.
-                    <button type="button" class="bulk-link" id="bulkBatalHasil">Batalkan</button>
-                </span>
-            </div>
-            <div class="bulk-actions">
-                @if ($bisaKelolaBayar)
-                    <button type="button" class="primary-btn" data-aksi="bayar">Tandai Dibayar</button>
-                    <button type="button" class="outline-btn" data-aksi="batal">Tandai Belum Dibayar</button>
-                @endif
-                <button type="button" class="outline-btn" id="bulkReset">Batal pilih</button>
-                <button type="button" class="danger-btn" id="bulkHapus">
+            <div class="table-heading-actions">
+                <button type="button" class="outline-btn" id="exportPenugasan">
+                    <span>Export</span>
                     <svg viewBox="0 0 24 24">
-                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <path d="M17 8l-5-5-5 5" />
+                        <path d="M12 3v12" />
                     </svg>
-                    Hapus
                 </button>
+
+                <a href="{{ route($routes['buat']) }}" class="dark-pill-btn">
+                    <span>Tambah Tugas</span>
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 8.5v7M8.5 12h7" />
+                    </svg>
+                </a>
             </div>
         </div>
 
@@ -222,7 +211,7 @@
                             $alasan = $adaDibayar
                                 ? 'Tugas tidak bisa diubah atau dihapus karena sudah ada petugas yang honornya dibayar.'
                                 : ($adaDiverifikasi
-                                    ? 'Tugas tidak bisa diubah atau dihapus karena kontrak salah satu petugas sudah diverifikasi.'
+                                    ? 'Tugas tidak bisa diubah atau dihapus karena kontrak salah satu petugas pada tugas ini sudah diverifikasi.'
                                     : '');
 
                             $statusTeks =
@@ -369,33 +358,57 @@
             </div>
 
             <div class="table-footer">
-                <span>
+                <div class="table-footer-left">
                     @if ($daftar->total() > 0)
-                        Menampilkan {{ $daftar->firstItem() }}–{{ $daftar->lastItem() }}
-                        dari {{ $daftar->total() }} tugas
+                        <span>Menampilkan</span>
+                        <x-admin.per-page :current="$perPage" />
+                        <span>dari {{ $daftar->total() }} Penugasan</span>
                     @else
-                        Tidak ada data
+                        <span>Tidak ada data</span>
                     @endif
-                </span>
+                </div>
 
                 @if ($daftar->hasPages())
-                    <span style="display:flex;gap:8px;align-items:center">
-                        @unless ($daftar->onFirstPage())
-                            <a class="outline-btn btn-link" href="{{ $daftar->url(1) }}" aria-label="Halaman pertama"
-                                title="Halaman pertama">&lt;&lt;</a>
-                            <a class="outline-btn btn-link" href="{{ $daftar->previousPageUrl() }}"
-                                aria-label="Halaman sebelumnya" title="Halaman sebelumnya">&lt;</a>
-                        @endunless
+                    @php
+                        $cur = $daftar->currentPage();
+                        $last = $daftar->lastPage();
+                        $pages = collect([1, $cur - 1, $cur, $cur + 1, $last])
+                            ->filter(fn($p) => $p >= 1 && $p <= $last)
+                            ->unique()
+                            ->sort()
+                            ->values();
+                        $prev = null;
+                    @endphp
 
-                        <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
+                    <nav class="page-nav" aria-label="Navigasi halaman">
+                        @if ($daftar->onFirstPage())
+                            <span class="page-btn disabled" aria-disabled="true">&lsaquo;</span>
+                        @else
+                            <a class="page-btn" href="{{ $daftar->previousPageUrl() }}"
+                                aria-label="Halaman sebelumnya">&lsaquo;</a>
+                        @endif
+
+                        @foreach ($pages as $p)
+                            @if ($prev !== null && $p - $prev > 1)
+                                <span class="page-dots">...</span>
+                            @endif
+
+                            @if ($p === $cur)
+                                <span class="page-btn active" aria-current="page">{{ $p }}</span>
+                            @else
+                                <a class="page-btn" href="{{ $daftar->url($p) }}">{{ $p }}</a>
+                            @endif
+
+                            @php $prev = $p; @endphp
+                        @endforeach
 
                         @if ($daftar->hasMorePages())
-                            <a class="outline-btn btn-link" href="{{ $daftar->nextPageUrl() }}"
-                                aria-label="Halaman berikutnya" title="Halaman berikutnya">&gt;</a>
-                            <a class="outline-btn btn-link" href="{{ $daftar->url($daftar->lastPage()) }}"
-                                aria-label="Halaman terakhir" title="Halaman terakhir">&gt;&gt;</a>
+                            <a class="page-btn" href="{{ $daftar->nextPageUrl() }}"
+                                aria-label="Halaman berikutnya">&rsaquo;</a>
+                        @else
+                            <span class="page-btn disabled" aria-disabled="true">&rsaquo;</span>
                         @endif
-                    </span>
+                    </nav>
                 @endif
             </div>
         </section>
@@ -480,6 +493,9 @@
 
         <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Penugasan" aria-hidden="true">
             <form method="GET" action="{{ route($routes['index']) }}" id="filterForm" class="filter-form">
+                @if (request()->filled('per_page'))
+                    <input type="hidden" name="per_page" value="{{ $perPage }}">
+                @endif
                 <input type="hidden" name="q" value="{{ $q }}">
                 <input type="hidden" name="status" value="{{ $status }}">
                 <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
@@ -645,6 +661,8 @@
                         document.getElementById('bulkHapusForm').submit();
                     });
 
+                    const hintWrap = document.getElementById('bulkHintWrap');
+
                     function segarkan() {
                         const cek = baris();
                         const n = cek.filter(c => c.checked).length;
@@ -657,6 +675,7 @@
                         hitung.textContent = semuaHasil ? TOTAL : n;
                         hint.hidden = !(ADA_HALAMAN_LAIN && n > 0 && n === cek.length && !semuaHasil);
                         hasilOn.hidden = !semuaHasil;
+                        if (hintWrap) hintWrap.hidden = hint.hidden && hasilOn.hidden;
 
                         const bulkSemuaEl = document.getElementById('bulkSemuaHasil');
                         if (bulkSemuaEl) bulkSemuaEl.value = semuaHasil ? '1' : '0';
@@ -935,4 +954,56 @@
                 })();
             </script>
         @endpush
+
+        {{-- Floating Bar Aksi Massal --}}
+        <div class="bulk-dock-wrap" id="bulkBar" hidden>
+            <div class="bulk-dock-hint" id="bulkHintWrap" hidden>
+                <span id="bulkHint" hidden>
+                    Semua di halaman ini dipilih.
+                    <button type="button" class="bulk-link" id="bulkPilihHasil">
+                        Pilih semua {{ $daftar->total() }} tugas hasil filter
+                    </button>
+                </span>
+                <span id="bulkHasilOn" hidden>
+                    Seluruh {{ $daftar->total() }} tugas hasil filter dipilih.
+                    <button type="button" class="bulk-link" id="bulkBatalHasil">Batalkan</button>
+                </span>
+            </div>
+
+            <div class="bulk-dock" role="region" aria-label="Aksi massal penugasan">
+                <span class="bulk-dock-count" id="bulkCount">0</span>
+
+                @if ($bisaKelolaBayar)
+                    <button type="button" class="dock-btn-lime" data-aksi="bayar">
+                        <span>Dibayar</span>
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+                        </svg>
+                    </button>
+
+                    <button type="button" class="dock-btn-warn" data-aksi="batal">
+                        <span>Belum Dibayar</span>
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M14.8 9.2l-5.6 5.6M9.2 9.2l5.6 5.6" />
+                        </svg>
+                    </button>
+                @endif
+
+                <button type="button" class="dock-btn-del" id="bulkHapus" title="Hapus tugas terpilih"
+                    aria-label="Hapus tugas terpilih">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                    </svg>
+                </button>
+
+                <button type="button" class="dock-btn-close" id="bulkReset" title="Batal pilih"
+                    aria-label="Batal pilih">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
     </x-dynamic-component>

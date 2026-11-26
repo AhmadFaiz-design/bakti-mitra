@@ -17,7 +17,7 @@
     </div>
 
     <div class="topbar-right">
-        {{-- PILIH BULAN (muncul otomatis pada halaman yang mengirim $opsiBulan, mis. Dashboard semua role) --}}
+        {{-- PILIH BULAN --}}
         @if (!empty($opsiBulan))
             <div class="dropdown bulan-dd" x-data="{ open: false }" @click.outside="open = false"
                 x-init="$watch('open', v => v && $nextTick(() => {
@@ -47,16 +47,12 @@
             </div>
         @endif
 
-        {{-- Slot tambahan opsional jika suatu halaman butuh tombol ekstra di header --}}
+        {{-- Slot tambahan opsional --}}
         {{ $slot }}
 
         <div class="user">
             <x-notif :notifikasi="$notifikasi" :notif-penting="$notifPenting" />
-
             <span>{{ auth()->user()->name }}</span>
-            <div class="avatar">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-            </div>
         </div>
     </div>
 </header>

@@ -1,17 +1,21 @@
 @props(['action', 'body', 'noun', 'catatan' => ''])
 
-<div class="bulk-bar" id="bulkBar" hidden>
-    <div class="bulk-info">
-        <strong><span id="bulkCount">0</span> {{ $noun }} dipilih</strong>
-    </div>
-    <div class="bulk-actions">
-        <button type="button" class="danger-btn" id="bulkHapus">
+<div class="bulk-dock-wrap" id="bulkBar" hidden>
+    <div class="bulk-dock" role="region" aria-label="Aksi massal {{ $noun }}">
+        <span class="bulk-dock-count" id="bulkCount" title="Jumlah dipilih">0</span>
+
+        <button type="button" class="dock-btn-del" id="bulkHapus" title="Hapus {{ $noun }} terpilih"
+            aria-label="Hapus {{ $noun }} terpilih">
             <svg viewBox="0 0 24 24">
                 <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
             </svg>
-            Hapus
         </button>
-        <button type="button" class="outline-btn" id="bulkReset">Batal pilih</button>
+
+        <button type="button" class="dock-btn-close" id="bulkReset" title="Batal pilih" aria-label="Batal pilih">
+            <svg viewBox="0 0 24 24">
+                <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+        </button>
     </div>
 </div>
 

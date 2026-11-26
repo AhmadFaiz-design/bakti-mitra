@@ -32,6 +32,12 @@ abstract class BasePenugasanController extends Controller
     /** Daftar tugas (1 baris = 1 penugasan, tidak duplikat meski banyak mitra) */
     public function index(Request $request)
     {
+
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
         $maxQuery = DB::table('kontrak_pekerjaan as kp')
             ->join('penugasan as p', 'p.id', '=', 'kp.penugasan_id')
             ->when($this->hanyaTugasSendiri, fn($q) => $q->where('p.koordinator_id', Auth::id()))
@@ -58,6 +64,66 @@ abstract class BasePenugasanController extends Controller
         ];
         $ringkasan['belum'] = $ringkasan['total'] - $ringkasan['dibayar'];
 
+        $ringkasan = [
+            'total'   => (int) (clone $ringkasanQuery)->sum('jumlah'),
+            'dibayar' => (int) (clone $ringkasanQuery)->where('honor_dibayar', true)->sum('jumlah'),
+        ];
+        $ringkasan['belum'] = $ringkasan['total'] - $ringkasan['dibayar'];
+
+        /* ---------- Tren bulan ini vs bulan lalu untuk badge kartu ---------- */
+        $blnIni  = now('Asia/Makassar');
+        $blnLalu = $blnIni->copy()->subMonthNoOverflow();
+
+        $ambilRingkasanBulan = function (Carbon $tgl) {
+            $row = DB::table('kontrak_pekerjaan as kp')
+                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                ->where('k.periode_tahun', $tgl->year)
+                ->where('k.periode_bulan', $tgl->month)
+                ->when($this->hanyaTugasSendiri, fn($q) => $q->where('kp.koordinator_id', Auth::id()))
+                ->selectRaw('COALESCE(SUM(kp.jumlah), 0) as total,
+                             COALESCE(SUM(CASE WHEN kp.honor_dibayar = 1 THEN kp.jumlah ELSE 0 END), 0) as dibayar')
+                ->first();
+
+            $total   = (int) ($row->total ?? 0);
+            $dibayar = (int) ($row->dibayar ?? 0);
+
+            return [
+                'total'   => $total,
+                'dibayar' => $dibayar,
+                'belum'   => $total - $dibayar,
+            ];
+        };
+
+        $dataBlnIni  = $ambilRingkasanBulan($blnIni);
+        $dataBlnLalu = $ambilRingkasanBulan($blnLalu);
+
+        $hitungTren = function (int $sekarang, int $lalu, bool $balikWarna = false): array {
+            if ($lalu <= 0) {
+                if ($sekarang <= 0) {
+                    return ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+                }
+
+                return ['teks' => 'Baru bulan ini', 'kelas' => $balikWarna ? 'warn' : 'lime'];
+            }
+
+            $diff = (int) round((($sekarang - $lalu) / $lalu) * 100);
+
+            if ($diff > 0) {
+                return ['teks' => 'Naik ' . $diff . '%', 'kelas' => $balikWarna ? 'warn' : 'lime'];
+            }
+            if ($diff < 0) {
+                return ['teks' => 'Turun ' . abs($diff) . '%', 'kelas' => $balikWarna ? 'lime' : 'warn'];
+            }
+
+            return ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+        };
+
+        $tren = [
+            'total'   => $hitungTren($dataBlnIni['total'], $dataBlnLalu['total']),
+            'dibayar' => $hitungTren($dataBlnIni['dibayar'], $dataBlnLalu['dibayar']),
+            'belum'   => $hitungTren($dataBlnIni['belum'], $dataBlnLalu['belum'], true),
+        ];
+
         $daftar = $query
             ->with([
                 'koordinator:id,name,username',
@@ -74,7 +140,7 @@ abstract class BasePenugasanController extends Controller
             ->withSum('pekerjaan as total_volume', 'volume')
             ->withSum('pekerjaan as total_honor', 'jumlah')
             ->latest('id')
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
 
         if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
@@ -97,10 +163,12 @@ abstract class BasePenugasanController extends Controller
             'q',
             'status',
             'ringkasan',
+            'tren',
             'honorMaks',
             'daftarWilayah',
             'daftarTugas',
-            'daftarKoordinator'
+            'daftarKoordinator',
+            'perPage'
         ));
     }
 
@@ -764,9 +832,9 @@ abstract class BasePenugasanController extends Controller
         $ids = $request->boolean('semua_hasil')
             ? $this->filterQuery($request)->pluck('penugasan.id')
             : Penugasan::query()
-                ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
-                ->whereIn('id', collect((array) $request->input('ids', []))->filter()->values())
-                ->pluck('id');
+            ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
+            ->whereIn('id', collect((array) $request->input('ids', []))->filter()->values())
+            ->pluck('id');
 
         if ($ids->isEmpty()) {
             return back()->with('gagal', 'Belum ada tugas yang dipilih.');
