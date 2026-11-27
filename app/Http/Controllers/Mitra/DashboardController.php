@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\BatasHonor;
 
 class DashboardController extends Controller
 {
@@ -20,7 +21,6 @@ class DashboardController extends Controller
         $tz         = 'Asia/Makassar';
         $sekarang   = now($tz);
         $hariIni    = $sekarang->toDateString();
-        $batasHonor = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
 
         /* ---------- Bulan yang dilihat (?bulan=YYYY-MM) ---------- */
         $param = $request->query('bulan');
@@ -94,8 +94,8 @@ class DashboardController extends Controller
         $totalHonor   = (int) ($bayar->total ?? 0);
         $honorDibayar = (int) ($bayar->dibayar ?? 0);
         $persenBayar  = $totalHonor > 0 ? (int) round(($honorDibayar / $totalHonor) * 100) : 0;
-        $persenBatas  = $batasHonor > 0 ? min(100, (int) round(($totalHonor / $batasHonor) * 100)) : 0;
 
+        /* ---------- Daftar tugas bulan terpilih ---------- */
         /* ---------- Daftar tugas bulan terpilih ---------- */
         $rowsBulan = $tugasSaya()
             ->leftJoin('users as koor', 'koor.id', '=', 'kp.koordinator_id')
@@ -104,6 +104,7 @@ class DashboardController extends Controller
             ->select(
                 'kp.id',
                 'kp.uraian_pekerjaan',
+                'kp.sebagai',
                 'kp.volume',
                 'kp.satuan',
                 'kp.jumlah',
@@ -115,6 +116,13 @@ class DashboardController extends Controller
             )
             ->orderByDesc('kp.id')
             ->get();
+
+        // Hitung batas honor dinamis (Kendari/Konkep & Pendata/Pengolah, ambil yang tertinggi jika >1 peran)
+        $batasHonor = BatasHonor::untukMitra(
+            $mitra?->wilayah,
+            $rowsBulan->pluck('sebagai')->filter()->unique()->values()->all()
+        );
+        $persenBatas = $batasHonor > 0 ? min(100, (int) round(($totalHonor / $batasHonor) * 100)) : 0;
 
         /* ---------- Grafik Progres Honor per Tugas (filter berdasarkan waktu tugas) ---------- */
         $progres = $rowsBulan->map(function ($r) use ($hariIni) {
@@ -263,10 +271,10 @@ class DashboardController extends Controller
 
         $kontrakBulan = $mitraId
             ? DB::table('kontrak')
-                ->where('mitra_id', $mitraId)
-                ->where('periode_tahun', $bulan->year)
-                ->where('periode_bulan', $bulan->month)
-                ->first()
+            ->where('mitra_id', $mitraId)
+            ->where('periode_tahun', $bulan->year)
+            ->where('periode_bulan', $bulan->month)
+            ->first()
             : null;
 
         $belumVerifKontrak = ($rowsBulan->isNotEmpty() && $kontrakBulan && ! $kontrakBulan->cek_kontrak) ? 1 : 0;

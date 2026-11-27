@@ -38,6 +38,15 @@
                             placeholder="Contoh: Pengolahan Dokumen Pencacahan Susenas September" required>
                     </div>
 
+                    <div class="form-group full-width">
+                        <label for="sebagai">Sebagai</label>
+                        <select id="sebagai" name="sebagai" required>
+                            <option value="" selected disabled>Pilih Sebagai (Pengolah / Pendata)</option>
+                            <option value="Pengolah" @selected(old('sebagai') === 'Pengolah')>Pengolah</option>
+                            <option value="Pendata" @selected(old('sebagai') === 'Pendata')>Pendata</option>
+                        </select>
+                    </div>
+
                     @if ($bisaPilihKoordinator)
                         <div class="form-group full-width">
                             <label for="koordinator_id">Koordinator</label>

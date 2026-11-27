@@ -258,8 +258,18 @@
 
                             <td class="cell-wrap">
                                 <span class="profile-name">{{ $t->uraian_pekerjaan }}</span>
-                                @if ($t->ro)
-                                    <span class="cell-sub">RO: {{ $t->ro }}</span>
+                                @if ($t->sebagai || $t->ro)
+                                    <span class="cell-sub">
+                                        @if ($t->sebagai)
+                                            {{ $t->sebagai }}
+                                        @endif
+                                        @if ($t->sebagai && $t->ro)
+                                            &middot;
+                                        @endif
+                                        @if ($t->ro)
+                                            RO: {{ $t->ro }}
+                                        @endif
+                                    </span>
                                 @endif
                             </td>
 
@@ -418,6 +428,11 @@
             <div class="pop-field">
                 <span class="pop-label">Uraian Pekerjaan</span>
                 <strong class="pop-name" id="popUraian"></strong>
+            </div>
+
+            <div class="pop-field">
+                <span class="pop-label">Sebagai</span>
+                <strong class="pop-value" id="popSebagai"></strong>
             </div>
 
             <div class="pop-field">
@@ -816,6 +831,7 @@
                         }
 
                         document.getElementById('popUraian').textContent = info.uraian;
+                        document.getElementById('popSebagai').textContent = info.sebagai || '-';
                         document.getElementById('popRo').textContent = info.ro;
                         document.getElementById('popHonor').textContent = info.honor;
                         if (popKoordinator) popKoordinator.textContent = info.koordinator;

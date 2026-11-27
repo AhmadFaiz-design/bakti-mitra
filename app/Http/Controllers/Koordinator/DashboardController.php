@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\BatasHonor;
 
 class DashboardController extends Controller
 {
@@ -18,7 +19,6 @@ class DashboardController extends Controller
         $tz       = 'Asia/Makassar';
         $sekarang = now($tz);
         $hariIni  = $sekarang->toDateString();
-        $batas    = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
 
         /* ---------- Bulan yang dilihat (?bulan=YYYY-MM) ---------- */
         $param = $request->query('bulan');
@@ -99,6 +99,18 @@ class DashboardController extends Controller
             ->get()
             ->keyBy('mitra_id');
 
+        $peranBulan = DB::table('kontrak as k')
+            ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+            ->whereIn('k.mitra_id', $idBinaan)
+            ->where('k.periode_tahun', $bulan->year)
+            ->where('k.periode_bulan', $bulan->month)
+            ->whereNotNull('kp.sebagai')
+            ->select('k.mitra_id', 'kp.sebagai')
+            ->distinct()
+            ->get()
+            ->groupBy('mitra_id')
+            ->map(fn ($rows) => $rows->pluck('sebagai')->all());
+
         /* ---------- Volume tugas SAYA per mitra (untuk grafik) ---------- */
         $volumeku = $milikku()
             ->where('k.periode_tahun', $bulan->year)
@@ -125,7 +137,8 @@ class DashboardController extends Controller
         $mitraPenuh  = 0;
         $hampirPenuh = 0;
 
-        foreach ($mitraBinaan as $m) {
+foreach ($mitraBinaan as $m) {
+            $batas = BatasHonor::untukMitra($m->wilayah, $peranBulan->get($m->id, []));
             $honor = (int) ($honorBulan->get($m->id)->honor ?? 0);
             $penuh = $batas > 0 && $honor >= $batas;
             $nama  = Nama::rapikan($m->user?->name);
