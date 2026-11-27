@@ -1,153 +1,222 @@
-/* Tema Mitra: Biru Royal + Mint */
+/* ========================================
+   TEMA MITRA (berbasis #F2AC79 + hangat oranye-peach)
+   Dimuat setelah style.css
+======================================== */
+
 :root {
-    --primary: #4BA3F2;
-    --primary-dark: #1F6FBF;
-    --ink: #112A44;
-    --bg: #EFF7FE;
-    --tint: #D6EAFB;
+    --primary: #E28546;
+    --primary-dark: #B5581A;
+    --ink: #241811;
+    --bg: #FAFAFC;
+    --tint: #FDE7D4;
     --white: #fff;
-    --lime: #FFD84D;
-    --muted: #5F7A94;
-    --radius: 24px;
+    --lime: #F2AC79;
+    --muted: #846D5E;
+    --border: #dddddd;
+    --radius: 22px;
 }
 
-.sidebar,
+/* ---- Sidebar Mitra ---- */
+.sidebar {
+    /* background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(180deg, #F2AC79 0%, #FDE7D4 52%, #FAD3B6 100%) border-box;
+    box-shadow:
+        0 12px 32px rgba(226, 133, 70, .12),
+        0 18px 34px rgba(242, 172, 121, .18); */
+    color: var(--ink);
+}
+
 .menu a,
-.menu button,
-.toggle,
-.sidebar-collapse {
-    color: #BFDBFE;
+.menu button {
+    color: var(--ink);
+}
+
+.menu a:hover,
+.menu button:hover {
+    background: #FFF3E8;
+    color: var(--primary-dark);
 }
 
 .menu .active,
-.menu a:hover,
-.toggle:hover {
+.menu .active:hover {
+    background: linear-gradient(90deg, #DE7E3E 0%, #F2AC79 100%);
     color: var(--white);
+    box-shadow: 0 6px 16px rgba(226, 133, 70, .28);
 }
 
-.has-sub.open > .sub-toggle {
+.sidebar-user {
+    background: linear-gradient(155deg, #2B180D 0%, #75401C 52%, #E59256 100%);
+}
+
+.sidebar-collapse {
+    border-color: #EBDDD2;
     color: var(--ink);
+}
+
+.sidebar-collapse:hover {
+    background: #FFF3E8;
+    border-color: var(--primary);
+}
+
+/* ---- Card Hero (#F2AC79) ---- */
+.dash .stats .hero,
+.stats-mitra.stats-mitra-4 .hero {
+    /* border: 1px solid transparent; */
+    background: linear-gradient(128deg, #FFF5EC 0%, #FAD0AE 48%, #F2AC79 100%);
+    color: var(--ink);
+}
+
+.dash .stats .hero .progress,
+.stats-mitra.stats-mitra-4 .hero .progress {
+    background: rgba(255, 255, 255, .92);
+}
+
+.dash .stats .hero .progress span,
+.stats-mitra.stats-mitra-4 .hero .progress span {
+    background: #D96B27;
+}
+
+/* Angka Total Honor di Dashboard Mitra agar pas 1 baris & tinggi card sejajar */
+.mitra-dash .stats .num.kecil {
+    font-size: clamp(18px, 1.45vw, 23px);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* Batang Grafik Progres Honor & ruang sumbu Y (jt / rb) */
+.mitra-dash .bar {
+    background: #F2AC79;
+}
+
+.mitra-dash .bars {
+    left: 54px;
+}
+
+.mitra-dash .chart.paged .bars {
+    left: 92px;
+}
+
+.mitra-dash .chart-labels {
+    padding-left: 54px;
+}
+
+.mitra-dash .chart-empty {
+    left: 54px;
+}
+
+.mitra-dash .chart-nav.prev {
+    left: 58px;
+}
+
+/* Placeholder Kartu Posisi */
+.mitra-dash .posisi-placeholder {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    text-align: center;
+}
+
+.mitra-dash .posisi-placeholder .seb-kosong {
+    margin: 0;
+}
+
+/* ---- Warna Badge Disamakan dengan Role Admin ---- */
+.dash .stats .stat .badge,
+.stats-mitra.stats-mitra-4 .stat .badge,
+.dash .note-badge {
+    background: #EBE6FF;
+    color: #181528;
+}
+
+.dash .badge.warn,
+.stats-mitra.stats-mitra-4 .stat .badge.warn {
+    background: #F9E7AC;
+    color: #3D3106;
+}
+
+.dash .badge.lime,
+.stats-mitra.stats-mitra-4 .stat .badge.lime {
+    background: #E9F9AD;
+    color: #2C3908;
+}
+
+.dash .badge.bertugas,
+.status-badge.bertugas {
+    background: #BCEEEB;
+    color: #133A3A;
+}
+
+.dash .badge.tersedia,
+.status-badge.tersedia {
+    background: #E9F9AD;
+    color: #2C3908;
+}
+
+.dash .badge.penuh,
+.status-badge.penuh {
+    background: #FCD7D4;
+    color: #5C1D19;
+}
+
+/* ---- Border, Hover, Focus, Scrollbar ---- */
+.notif .bell,
+.mitra-search,
+.outline-btn,
+.per-page-btn,
+.page-btn,
+.dd-btn {
+    border-color: #DDDDDD;
+}
+
+.notif .bell:hover,
+.notif .bell[aria-expanded="true"],
+.outline-btn:hover,
+.per-page-btn:hover,
+a.page-btn:hover {
+    background: #FFF3E8;
+    border-color: var(--primary);
+    color: var(--primary-dark);
 }
 
 .mitra-search:focus-within,
 .rupiah-input:focus-within,
 .form-group input:focus,
 .form-group select:focus {
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
-}
-
-.mitra-search,
-.outline-btn,
-.status-switch,
-.dd-btn {
-    border-color: #CBD5E1;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(226, 133, 70, .14);
 }
 
 .mitra-table tbody tr:hover,
-.dash a.notif-item:hover {
-    background: #F1F5FD;
+.dash a.notif-item:hover,
+.dash a.perhatian:hover {
+    background: #FFF8F2;
 }
 
 .mitra-table td {
-    border-bottom-color: #E2E8F0;
+    border-bottom-color: #F3E8DF;
 }
 
 .dash .scroll,
 .dash .notif-list,
 .dash .cal-notes {
-    scrollbar-color: #93C5FD transparent;
+    scrollbar-color: #F6C5A2 transparent;
 }
 
-.dash .scroll::-webkit-scrollbar-thumb {
-    background: #93C5FD;
+.dash .scroll::-webkit-scrollbar-thumb,
+.dash .notif-list::-webkit-scrollbar-thumb {
+    background: #F6C5A2;
 }
 
 .dash .scroll:hover::-webkit-scrollbar-thumb,
+.dash .notif-list:hover::-webkit-scrollbar-thumb,
 .dash .cal-notes::-webkit-scrollbar-thumb {
     background: var(--primary);
 }
 
-.dash .perhatian.ungu {
-    background: var(--tint);
-}
-
-/* Layout khusus Dashboard Mitra (tanpa grafik, anti tumpang tindih & sejajar) */
-.mitra-dash .dash-top {
-    height: auto !important;
-    min-height: 0 !important;
-    grid-template-rows: auto !important;
-    align-items: stretch;
-}
-
-.mitra-dash .dash-left {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    height: auto !important;
-    min-height: 0 !important;
-    min-width: 0;
-}
-
-.mitra-dash .calendar-card {
-    height: auto !important;
-    margin: 0 !important;
-}
-
-.mitra-dash .dash-left > .pair {
-    flex: 1 1 auto;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-    height: auto !important;
-    min-height: 0;
-    align-items: stretch;
-}
-
-.mitra-dash .dash-left > .pair > .card {
-    display: flex;
-    flex-direction: column;
-    margin: 0 !important;
-    height: auto;
-    min-height: 0;
-    min-width: 0;
-}
-
-.mitra-dash .dash-left > .pair > .card > .list {
-    flex: 1;
-    max-height: 290px;
-}
-
-.mitra-dash .mitra-bottom {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-    height: auto !important;
-    min-height: 0;
-    align-items: stretch;
-}
-
-.mitra-dash .mitra-bottom > .card {
-    display: flex;
-    flex-direction: column;
-    margin: 0 !important;
-    height: auto;
-    min-height: 0;
-    min-width: 0;
-}
-
-.mitra-dash .mitra-bottom .perlu-wrap,
-.mitra-dash .mitra-bottom .perhatian-list {
-    flex: 1;
-    max-height: 240px;
-}
-
-@media (max-width: 900px) {
-    .mitra-dash .dash-left > .pair,
-    .mitra-dash .mitra-bottom {
-        grid-template-columns: 1fr;
-    }
-}
-/* Halaman Daftar Tugas Mitra & Modal Detail Jobdesk */
+/* ========================================
+   HALAMAN DAFTAR TUGAS MITRA & MODAL JOBDESK
+======================================== */
 .mitra-tugas-table th:first-child,
 .mitra-tugas-table td:first-child {
     width: 46px;
@@ -166,8 +235,8 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--tint);
+    border-radius: 99px;
+    border: 1px solid #EBDDD2;
     background: var(--bg);
     color: var(--primary-dark);
     font: 600 12px 'Poppins', sans-serif;
@@ -194,34 +263,34 @@
 .waktu-badge {
     display: inline-block;
     margin-top: 4px;
-    padding: 2px 8px;
+    padding: 2px 10px;
     border-radius: 999px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .waktu-badge.berlangsung {
-    background: var(--tint);
-    color: var(--primary-dark);
+    background: #BCEEEB;
+    color: #133A3A;
 }
 
 .waktu-badge.akan {
-    background: #FEF3C7;
-    color: #92400E;
+    background: #F9E7AC;
+    color: #3D3106;
 }
 
 .waktu-badge.selesai {
-    background: #E2E8F0;
-    color: #475569;
+    background: #E9F9AD;
+    color: #2C3908;
 }
 
 .pulsa-chip {
     display: inline-block;
     margin-top: 4px;
-    padding: 2px 8px;
+    padding: 2px 10px;
     border-radius: 999px;
-    background: #DCFCE7;
-    color: #166534;
+    background: #EBE6FF;
+    color: #181528;
     font-size: 11px;
     font-weight: 500;
 }
@@ -239,7 +308,7 @@
     background: var(--white);
     border-radius: var(--radius);
     padding: 24px 26px;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+    box-shadow: 0 24px 60px rgba(36, 24, 17, .22);
     z-index: 1200;
     opacity: 0;
     pointer-events: none;
@@ -269,8 +338,8 @@
 .jobdesk-close {
     width: 34px;
     height: 34px;
-    border-radius: 10px;
-    border: 1px solid #CBD5E1;
+    border-radius: 50%;
+    border: 1px solid #EBDDD2;
     background: var(--white);
     color: var(--muted);
     font-size: 20px;
@@ -329,7 +398,7 @@
     display: flex;
     justify-content: flex-end;
     padding-top: 14px;
-    border-top: 1px solid #E2E8F0;
+    border-top: 1px solid #F3E8DF;
 }
 
 @media (max-width: 600px) {

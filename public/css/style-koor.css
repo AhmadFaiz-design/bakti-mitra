@@ -1,80 +1,194 @@
-/* Tema Koordinator: teal + amber */
+/* ========================================
+   TEMA KOORDINATOR (berbasis #7EF279 + hijau emerald)
+   Dimuat setelah style.css
+======================================== */
+
 :root {
-    --primary: #3FC1B0;
-    --primary-dark: #1B8074;
-    --ink: #123532;
-    --bg: #EFFAF8;
-    --tint: #D5F1EC;
+    --primary: #2BB868;
+    --primary-dark: #188649;
+    --ink: #142419;
+    --bg: #FAFAFC;
+    --tint: #DCFCE0;
     --white: #fff;
-    --lime: #C9A7FF;
-    --muted: #628581;
-    --radius: 24px;
+    --lime: #7EF279;
+    --muted: #657B6B;
+    --border: #dddddd;
+    --radius: 22px;
 }
 
-/* ---- Warna ungu yang tertulis langsung di style.css ---- */
-.sidebar,
+/* ---- Sidebar Koordinator ---- */
+/* .sidebar {
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(180deg, #7EF279 0%, #D9F9D7 52%, #9EEFE0 100%) border-box;
+    box-shadow:
+        0 12px 32px rgba(43, 184, 104, .11),
+        0 18px 34px rgba(126, 242, 121, .16);
+    color: var(--ink);
+} */
+
 .menu a,
-.menu button,
-.toggle,
-.sidebar-collapse {
-    color: #BFE6E0;
-}
-
-.menu .active,
-.menu a:hover,
-.toggle:hover {
-    color: var(--white);
-}
-
-.has-sub.open>.sub-toggle {
+.menu button {
     color: var(--ink);
 }
 
-.mitra-search:focus-within,
-.rupiah-input:focus-within,
-.form-group input:focus,
-.form-group select:focus {
-    box-shadow: 0 0 0 3px rgba(20, 168, 154, .14);
+.menu a:hover,
+.menu button:hover {
+    background: #EFFBF0;
+    color: var(--primary-dark);
 }
 
+.menu .active,
+.menu .active:hover {
+    background: linear-gradient(90deg, #27B463 0%, #44D67B 100%);
+    color: var(--white);
+    box-shadow: 0 6px 16px rgba(43, 184, 104, .26);
+}
+
+.sidebar-user {
+    background: linear-gradient(155deg, #102B1B 0%, #1B5A36 52%, #47CE6B 100%);
+}
+
+.sidebar-collapse {
+    border-color: #DCECE0;
+    color: var(--ink);
+}
+
+.sidebar-collapse:hover {
+    background: #EFFBF0;
+    border-color: var(--primary);
+}
+
+/* ---- Card Hero (#7EF279) ---- */
+.dash .stats .hero,
+.stats-mitra.stats-mitra-4 .hero {
+    /* border: 1px solid transparent; */
+    background: linear-gradient(128deg, #EDFDED 0%, #B4F8B2 48%, #7EF279 100%);
+    color: var(--ink);
+}
+
+.dash .stats .hero .progress,
+.stats-mitra.stats-mitra-4 .hero .progress {
+    background: rgba(255, 255, 255, .92);
+}
+
+.dash .stats .hero .progress span,
+.stats-mitra.stats-mitra-4 .hero .progress span {
+    background: #1C9B53;
+}
+
+/* ---- Warna Badge Disamakan dengan Role Admin ---- */
+.dash .stats .stat .badge,
+.stats-mitra.stats-mitra-4 .stat .badge,
+.dash .note-badge {
+    background: #EBE6FF;
+    color: #181528;
+}
+
+.stats-mitra.stats-mitra-4 .stat .badge.warn {
+    background: #F9E7AC;
+    color: #3D3106;
+}
+
+.stats-mitra.stats-mitra-4 .stat .badge.lime {
+    background: #E9F9AD;
+    color: #2C3908;
+}
+
+.stats-mitra.stats-mitra-4 .stat .badge.neutral {
+    background: #EFEFF4;
+    color: #7B7791;
+}
+
+.dash .badge.bertugas,
+.status-badge.bertugas {
+    background: #BCEEEB;
+    color: #133A3A;
+}
+
+.dash .badge.tersedia,
+.status-badge.tersedia {
+    background: #E9F9AD;
+    color: #2C3908;
+}
+
+.dash .badge.penuh,
+.status-badge.penuh {
+    background: #FCD7D4;
+    color: #5C1D19;
+}
+
+.status-badge.partial {
+    background: #FFF4E0;
+    color: #9A5B00;
+}
+
+/* ---- Border, Hover, Focus, Scrollbar & Floating Dock ---- */
+.notif .bell,
 .mitra-search,
 .outline-btn,
-.status-switch,
+.per-page-btn,
+.page-btn,
 .dd-btn {
-    border-color: #C9E3DF;
+    border-color: #DDDDDD;
+}
+
+.notif .bell:hover,
+.notif .bell[aria-expanded="true"],
+.outline-btn:hover,
+.per-page-btn:hover,
+a.page-btn:hover {
+    background: #EFFBF0;
+    border-color: var(--primary);
+    color: var(--primary-dark);
+}
+
+.mitra-search:focus-within,
+.create-page .form-group input:focus,
+.create-page .form-group select:focus,
+.picker-bar input[type="search"]:focus,
+.mass-vol-box input:focus,
+.assign-vol-input:focus,
+.inline-vol-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(43, 184, 104, .14);
 }
 
 .mitra-table tbody tr:hover,
-.dash a.notif-item:hover {
-    background: #F1FAF8;
+.dash a.notif-item:hover,
+.dash a.perhatian:hover {
+    background: #F4FBF5;
 }
 
 .mitra-table td {
-    border-bottom-color: #E4F3F0;
+    border-bottom-color: #E8F2EA;
 }
 
-/* Scrollbar dashboard */
 .dash .scroll,
-.dash .notif-list,
-.dash .cal-notes {
-    scrollbar-color: #8FD9CF transparent;
+.dash .notif-list {
+    scrollbar-color: #9FE5AD transparent;
 }
 
-.dash .scroll::-webkit-scrollbar-thumb {
-    background: #8FD9CF;
+.dash .scroll::-webkit-scrollbar-thumb,
+.dash .notif-list::-webkit-scrollbar-thumb {
+    background: #9FE5AD;
 }
 
 .dash .scroll:hover::-webkit-scrollbar-thumb,
-.dash .cal-notes::-webkit-scrollbar-thumb {
+.dash .notif-list:hover::-webkit-scrollbar-thumb {
     background: var(--primary);
 }
 
-/* Tombol Perlu Perhatian ungu */
-.dash .perhatian.ungu {
-    background: var(--tint);
+.bulk-dock,
+.bulk-verif-pop {
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(90deg, #7EF279 0%, #D9F9D7 50%, #9EEFE0 100%) border-box;
+    box-shadow:
+        0 12px 32px rgba(43, 184, 104, .15),
+        0 14px 30px rgba(126, 242, 121, .2);
 }
 
-/* Penugasan Bersama & Assign Petugas (Tema Koordinator: Teal + Amber) */
 .picker,
 .picker-bar,
 .terpilih,
@@ -85,22 +199,13 @@
 .inline-vol-form input,
 .mini-btn,
 .chip {
-    border-color: #C9E3DF;
+    border-color: #DCECE0;
 }
 
 .assign-row {
-    border-bottom-color: #E4F3F0;
+    border-bottom-color: #E8F2EA;
 }
 
-.picker-bar input[type="search"]:focus,
-.mass-vol-box input:focus,
-.assign-vol-input:focus,
-.inline-vol-form input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(20, 168, 154, .14);
-}
-
-.status-badge.partial {
-    background: #FFF4E0;
-    color: #9A5B00;
+.assign-page .picker-bar {
+    background: #F8FCF8;
 }

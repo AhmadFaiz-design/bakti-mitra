@@ -8,7 +8,7 @@
     --white: #fff;
     --lime: #D2F456;
     --muted: #7B7791;
-    --border: #EAE8F2;
+    --border: #dddddd;
     --radius: 22px;
 }
 
@@ -329,8 +329,8 @@ svg {
     border-radius: 50%;
     display: grid;
     place-items: center;
-    background: #D9D9DF;
-    color: #2B2644;
+    background: var(--primary-dark);
+    color: var(--white);
     font-size: 14px;
     font-weight: 600;
 }
@@ -815,7 +815,7 @@ svg {
     height: 42px;
     padding: 0 15px;
     background: var(--white);
-    border: 1px solid #D5D0E5;
+    border: 1px solid #DDDDDD;
     border-radius: 14px;
     color: var(--muted);
 }
@@ -5057,6 +5057,7 @@ a.notif-item:hover {
         opacity: 0;
         transform: translateY(6px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -5420,4 +5421,83 @@ main:has(.bulk-dock-wrap:not([hidden])) .table-card {
         left: 50%;
         bottom: 14px;
     }
+}
+
+/* ========================================
+   HALAMAN ASSIGN PETUGAS (.assign-page)
+======================================== */
+
+.assign-page .form-card-head {
+    margin-bottom: 16px;
+}
+
+.assign-page .form-card-head .form-card-heading {
+    margin-bottom: 0;
+}
+
+.assign-page .picker {
+    border: 1px solid var(--border);
+    border-radius: 20px;
+}
+
+.assign-page .picker-bar {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #FAFAFD;
+}
+
+.assign-page .picker-bar input[type="search"],
+.assign-page .mass-vol-box input,
+.assign-page .assign-vol-input,
+.assign-page .inline-vol-form input {
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid #E4E1EE;
+    border-radius: 99px;
+    font-size: 13px;
+}
+
+.assign-page .inline-vol-form input {
+    height: 34px;
+    padding: 0 12px;
+}
+
+.assign-page .mass-vol-btn,
+.assign-page .mini-btn {
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 99px;
+}
+
+.assign-page .mini-btn {
+    height: 34px;
+}
+
+.assign-page .picker-count {
+    padding: 4px 12px;
+    border-radius: 99px;
+    background: #EBE6FF;
+    color: #181528;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.assign-page .terpilih {
+    border-bottom: 1px solid var(--border);
+    background: #F8F7FC;
+}
+
+.assign-page .kuota-badge.aman {
+    background: #EBE6FF;
+    color: #181528;
+}
+
+.assign-page .kuota-badge.sisa {
+    background: #F9E7AC;
+    color: #3D3106;
+}
+
+.assign-page .kuota-badge.penuh {
+    background: #FCD7D4;
+    color: #5C1D19;
 }

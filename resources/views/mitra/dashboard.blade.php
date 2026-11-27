@@ -3,15 +3,17 @@
         <x-header judul="Dashboard" :opsi-bulan="$opsiBulan" :bulan-key="$bulanKey" :label-bulan="$labelBulan" :notifikasi="$notifikasi"
             :notif-penting="$notifPenting" />
 
-        {{-- BARIS ATAS: KIRI (STATS + RINCIAN TUGAS & JADWAL PENUGASAN) | KANAN (KALENDER) --}}
         <div class="dash-top">
             <div class="dash-left">
                 <section class="stats">
                     <div class="card hero">
-                        <h2><svg>
+                        <h2>
+                            <svg>
                                 <use href="#i-ring" />
-                            </svg>Progres Pembayaran</h2>
-                        <p class="num" style="font-size:28px;font-weight:600;margin:10px 0">{{ $persenBayar }}%</p>
+                            </svg>
+                            Progres Pembayaran
+                        </h2>
+                        <p class="num">{{ $persenBayar }}%</p>
                         <div class="progress"><span style="width: {{ $persenBayar }}%"></span></div>
                     </div>
 
@@ -22,83 +24,123 @@
                             </svg>
                             Total Honor
                         </h2>
-                        <p class="num" style="font-size:20px;line-height:1.3;margin:10px 0 8px">
-                            Rp {{ number_format($totalHonor, 0, ',', '.') }}
-                        </p>
-                        <span class="badge {{ $persenBatas < 100 ? 'lime' : '' }}">
-                            {{ $persenBatas }}% dari batas
-                        </span>
+                        <p class="num kecil">Rp {{ number_format($totalHonor, 0, ',', '.') }}</p>
+                        <span class="badge">{{ $persenBatas }}% Dari batas</span>
                     </div>
 
                     <div class="card stat">
-                        <h2><svg>
+                        <h2>
+                            <svg>
                                 <use href="#i-list" />
-                            </svg>Pekerjaan</h2>
+                            </svg>
+                            Pekerjaan
+                        </h2>
                         <p class="num">{{ $totalPekerjaan }}</p>
-                        <span class="badge">{{ $kalender['berlangsung'] }} Berlangsung</span>
                     </div>
                 </section>
 
-                <div class="pair">
-                    {{-- RINCIAN TUGAS & PEMBAYARAN --}}
-                    <div class="card">
-                        <h2><svg>
-                                <use href="#i-list" />
-                            </svg>Rincian Tugas
+                {{-- PROGRES HONOR --}}
+                <section class="card chart-card" x-data="progresHonorChart(@js($progres), @js($batasHonor))">
+                    <div class="chart-head">
+                        <h2>
+                            <svg>
+                                <use href="#i-chart" />
+                            </svg>
+                            Progres Honor
                         </h2>
-                        <ul class="list scroll longgar">
-                            @forelse ($daftarTugas as $t)
-                                <li>
-                                    <span class="dot"></span>
-                                    <span class="info">
-                                        <strong class="nama" title="{{ $t['judul'] }}">{{ $t['judul'] }}</strong>
-                                        <small>{{ $t['koordinator'] }} · {{ $t['volume'] }}</small>
-                                    </span>
-                                    <span class="kanan">
-                                        <small>Rp {{ number_format($t['honor'], 0, ',', '.') }}</small>
-                                        <span class="badge {{ $t['dibayar'] ? 'lime' : '' }}">
-                                            {{ $t['dibayar'] ? 'Dibayar' : 'Belum' }}
-                                        </span>
-                                    </span>
-                                </li>
-                            @empty
-                                <li>Belum ada tugas pada bulan ini.</li>
-                            @endforelse
-                        </ul>
+
+                        <div class="dropdown" @click.outside="buka = false">
+                            <button type="button" class="pill" @click="buka = !buka" :aria-expanded="buka">
+                                <span x-text="label"></span>
+                                <svg :class="{ 'rotate': buka }">
+                                    <use href="#i-down" />
+                                </svg>
+                            </button>
+
+                            <ul class="dropdown-menu" x-show="buka" x-transition.opacity.duration.150ms x-cloak>
+                                <template x-for="o in opsi" :key="o.k">
+                                    <li>
+                                        <button type="button" :class="{ 'active': pilih === o.k }"
+                                            @click="pilih = o.k; buka = false" x-text="o.t"></button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
-                    {{-- JADWAL PENUGASAN --}}
-                    <div class="card">
-                        <h2><svg>
-                                <use href="#i-cal" />
-                            </svg>Jadwal Penugasan</h2>
-                        <ul class="list scroll longgar">
-                            @forelse ($aktivitas as $a)
-                                <li class="task">
-                                    <span class="judul" title="{{ $a->judul }}">
-                                        <strong>{{ $a->judul }}</strong>
-                                        <small>{{ $a->koordinator ? $a->koordinator . ' · ' : '' }}{{ $a->periode }}</small>
-                                    </span>
-                                    <span class="mt">{{ $a->status_waktu }}</span>
-                                </li>
-                            @empty
-                                <li>Belum ada jadwal tugas pada bulan ini.</li>
-                            @endforelse
-                        </ul>
+                    <div class="chart" x-ref="chart" :class="{ 'paged': paged }">
+                        <div class="axis">
+                            <template x-for="(t, i) in ticks" :key="i">
+                                <span x-text="t"></span>
+                            </template>
+                        </div>
+
+                        <div class="bars">
+                            <template x-for="m in batang" :key="m.id">
+                                <div class="bar-slot">
+                                    <div class="bar" :style="`--t:${m.t}%`"
+                                        :title="`${m.nama}: ${fmtRp(m.total)} (${m.status_waktu})`">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <button type="button" class="chart-nav prev" x-show="paged" x-cloak :disabled="halaman === 0"
+                            @click="halaman--" aria-label="Sebelumnya">
+                            <svg>
+                                <use href="#i-left" />
+                            </svg>
+                        </button>
+                        <button type="button" class="chart-nav next" x-show="paged" x-cloak
+                            :disabled="halaman >= jumlahHal - 1" @click="halaman++" aria-label="Berikutnya">
+                            <svg class="flip">
+                                <use href="#i-left" />
+                            </svg>
+                        </button>
+
+                        <p class="chart-empty" x-show="terfilter.length === 0" x-cloak>
+                            Belum ada tugas pada status ini.
+                        </p>
                     </div>
-                </div>
+
+                    <div class="chart-labels" :class="{ 'paged': paged }">
+                        <div class="lbls">
+                            <template x-for="m in batang" :key="m.id">
+                                <span class="lbl" x-text="m.label" :title="m.nama"></span>
+                            </template>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             {{-- KALENDER --}}
             <aside class="card calendar-card">
-                <h2><svg>
-                        <use href="#i-cal" />
-                    </svg>{{ $bulan->copy()->locale('id')->translatedFormat('F') }}</h2>
+                <div class="cal-head">
+                    <h2>
+                        <svg>
+                            <use href="#i-cal" />
+                        </svg>
+                        Kalender
+                    </h2>
 
-                <div class="cal-summary">
-                    <div class="box-cal"><small>Deadline</small><strong>{{ $kalender['deadline'] }}</strong></div>
-                    <div><small>Selesai</small><strong>{{ $kalender['selesai'] }}</strong></div>
-                    <div><small>Berlangsung</small><strong>{{ $kalender['berlangsung'] }}</strong></div>
+                    <div class="cal-nav">
+                        <a href="{{ request()->fullUrlWithQuery(['bulan' => $bulanSebelumnya]) }}"
+                            aria-label="Bulan sebelumnya">
+                            <svg>
+                                <use href="#i-left" />
+                            </svg>
+                        </a>
+                        <a href="{{ request()->fullUrlWithQuery(['bulan' => $bulanBerikutnya]) }}"
+                            aria-label="Bulan berikutnya">
+                            <svg class="flip">
+                                <use href="#i-left" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="cal-weekdays" aria-hidden="true">
+                    <span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
                 </div>
 
                 <div class="cal-grid">
@@ -118,80 +160,215 @@
                     @endfor
                 </div>
 
-                <div class="cal-notes">
+                <div class="cal-notes scroll">
                     <div id="calNotesList"></div>
                 </div>
             </aside>
         </div>
 
-        {{-- BARIS BAWAH: PERLU PERHATIAN & KUOTA HONOR (FULL WIDTH 50/50) --}}
-        <section class="dash-bottom mitra-bottom">
-            {{-- PERLU PERHATIAN --}}
-            <div class="card perlu">
-                <h2><svg>
-                        <use href="#i-bell" />
-                    </svg>Perlu Perhatian
-                    <span class="card-sub">{{ $perhatian->count() }} item</span>
-                </h2>
-
-                <div class="perlu-wrap">
-                    <ul class="perhatian-list scroll" id="perhatianList">
-                        @forelse ($perhatian as $p)
-                            @php $tag = $p['url'] ? 'a' : 'div'; @endphp
+        {{-- BARIS BAWAH: 4 KARTU --}}
+        <section class="dash-bottom">
+            <div class="pair">
+                {{-- DAFTAR TUGAS --}}
+                <div class="card">
+                    <h2>
+                        <svg>
+                            <use href="#i-list" />
+                        </svg>
+                        Daftar Tugas
+                    </h2>
+                    <ul class="list scroll longgar">
+                        @forelse ($daftarTugas as $t)
                             <li>
-                                <{{ $tag }}
-                                    @if ($p['url']) href="{{ $p['url'] }}" @endif
-                                    class="perhatian {{ $p['level'] }}">
-                                    <span class="p-teks">
-                                        <strong>{{ $p['judul'] }}</strong>
-                                        <small>{{ $p['ket'] }}</small>
-                                    </span>
-                                    <span class="p-tag">{{ $p['tag'] }}</span>
-                                    </{{ $tag }}>
+                                <span class="info">
+                                    <strong class="nama" title="{{ $t['judul'] }}">{{ $t['judul'] }}</strong>
+                                    <small>{{ $t['tanggal_label'] }}</small>
+                                </span>
+                                <span class="kanan">
+                                    <span class="badge {{ $t['badge_kelas'] }}">{{ $t['badge_teks'] }}</span>
+                                </span>
                             </li>
                         @empty
-                            <li class="kosong">Semua aman. Tidak ada yang perlu ditindaklanjuti.</li>
+                            <li class="kosong-item">Tidak ada tugas yang sedang berjalan.</li>
+                        @endforelse
+                    </ul>
+                </div>
+
+                {{-- RIWAYAT TUGAS --}}
+                <div class="card">
+                    <h2>
+                        <svg>
+                            <use href="#i-list" />
+                        </svg>
+                        Riwayat Tugas
+                    </h2>
+                    <ul class="list scroll longgar">
+                        @forelse ($riwayatTugas as $r)
+                            <li>
+                                <span class="info">
+                                    <strong class="nama" title="{{ $r['judul'] }}">{{ $r['judul'] }}</strong>
+                                    <small>{{ $r['tanggal_label'] }}</small>
+                                </span>
+                                <span class="kanan">
+                                    <span class="badge tersedia">Selesai</span>
+                                </span>
+                            </li>
+                        @empty
+                            <li class="kosong-item">Belum ada tugas yang selesai pada bulan ini.</li>
                         @endforelse
                     </ul>
                 </div>
             </div>
 
-            {{-- KOMPOSISI HONOR & KUOTA --}}
-            @php $warnaKomp = ['var(--primary)', 'var(--lime)', '#CBD5E1']; @endphp
-            <div class="card sebaran">
-                <h2>
-                    <svg>
-                        <use href="#i-cash" />
-                    </svg>
-                    Kuota &amp; Honor
-                </h2>
+            <div class="dash-side">
+                {{-- PERLU PERHATIAN --}}
+                <div class="card perlu">
+                    <h2>
+                        <svg>
+                            <use href="#i-alarm" />
+                        </svg>
+                        Perlu Perhatian
+                    </h2>
 
-                @if ($komposisiHonor->isEmpty())
-                    <p class="seb-kosong">Belum ada data honor pada bulan ini.</p>
-                @else
-                    <div class="seb-bar" role="img" aria-label="Proporsi pembayaran dan sisa kuota honor">
-                        @foreach ($komposisiHonor as $i => $item)
-                            <span style="--c: {{ $warnaKomp[$i % 3] }}; --n: {{ $item->jumlah }}"
-                                title="{{ $item->label }}: Rp {{ number_format($item->jumlah, 0, ',', '.') }}"></span>
-                        @endforeach
+                    <div class="perlu-wrap">
+                        <ul class="perhatian-list scroll" id="perhatianList">
+                            @forelse ($perhatian as $p)
+                                @php $tag = $p['url'] ? 'a' : 'div'; @endphp
+                                <li>
+                                    <{{ $tag }}
+                                        @if ($p['url']) href="{{ $p['url'] }}" @endif
+                                        class="perhatian {{ $p['level'] }}">
+                                        <span class="p-bar" aria-hidden="true"></span>
+                                        <span class="p-teks">
+                                            <strong>{{ $p['judul'] }}</strong>
+                                            <small>{{ $p['ket'] }}</small>
+                                        </span>
+                                    </{{ $tag }}>
+                                </li>
+                            @empty
+                                <li class="kosong">Semua aman. Tidak ada yang perlu ditindaklanjuti.</li>
+                            @endforelse
+                        </ul>
                     </div>
+                </div>
 
-                    <ul class="seb-legend scroll">
-                        @foreach ($komposisiHonor as $i => $item)
-                            <li style="--c: {{ $warnaKomp[$i % 3] }}">
-                                <span class="nm"><i></i><span class="nm-t">{{ $item->label }}</span></span>
-                                <span class="vl">Rp
-                                    {{ number_format($item->jumlah, 0, ',', '.') }}<em>{{ round(($item->jumlah / max(1, $totalKomposisi)) * 100) }}%</em></span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+                {{-- POSISI (PCL / PML) --}}
+                <div class="card sebaran">
+                    <h2>
+                        <svg>
+                            <use href="#i-pin" />
+                        </svg>
+                        Posisi
+                    </h2>
+                    <div class="posisi-placeholder">
+                        <p class="seb-kosong">Fitur belum tersedia.</p>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
 
     @push('scripts')
         <script>
+            /* Grafik progres honor mitra (Alpine) - filter waktu tugas & sumbu Y menyesuaikan batas honor */
+            window.progresHonorChart = function(data, batasHonor) {
+                const SLOT = 84;
+                const SUMBU = 54;
+                const NAV = 76;
+
+                return {
+                    data,
+                    batasHonor: Number(batasHonor || 0),
+                    pilih: 'semua',
+                    buka: false,
+                    halaman: 0,
+                    perHal: 6,
+                    paged: false,
+                    opsi: [{
+                            k: 'semua',
+                            t: 'Semua'
+                        },
+                        {
+                            k: 'berlangsung',
+                            t: 'Berlangsung'
+                        },
+                        {
+                            k: 'selesai',
+                            t: 'Selesai'
+                        },
+                        {
+                            k: 'akan',
+                            t: 'Akan Datang'
+                        },
+                    ],
+                    init() {
+                        this.$nextTick(() => {
+                            this.ukur();
+                            if ('ResizeObserver' in window) {
+                                new ResizeObserver(() => this.ukur()).observe(this.$refs.chart);
+                            }
+                        });
+                        this.$watch('pilih', () => {
+                            this.halaman = 0;
+                            this.ukur();
+                        });
+                    },
+                    ukur() {
+                        const el = this.$refs.chart;
+                        if (!el) return;
+                        const lebar = Math.max(0, el.clientWidth - SUMBU);
+                        const muat = Math.max(1, Math.floor(lebar / SLOT));
+
+                        if (this.terfilter.length <= muat) {
+                            this.paged = false;
+                            this.perHal = muat;
+                        } else {
+                            this.paged = true;
+                            this.perHal = Math.max(1, Math.floor((lebar - NAV) / SLOT));
+                        }
+                        this.halaman = Math.min(this.halaman, this.jumlahHal - 1);
+                    },
+                    get label() {
+                        return this.opsi.find(o => o.k === this.pilih).t;
+                    },
+                    get terfilter() {
+                        return this.data.filter(m => this.pilih === 'semua' || m.waktu === this.pilih);
+                    },
+                    get jumlahHal() {
+                        return Math.max(1, Math.ceil(this.terfilter.length / this.perHal));
+                    },
+                    get puncak() {
+                        const maks = Math.max(0, ...this.terfilter.map(m => m.total));
+                        return Math.max(this.batasHonor, maks, 1);
+                    },
+                    get ticks() {
+                        const p = this.puncak;
+                        return [0, 0.25, 0.5, 0.75, 1].map(f => this.fmtAxis(p * f));
+                    },
+                    get batang() {
+                        const p = this.puncak;
+                        const awal = this.halaman * this.perHal;
+                        return this.terfilter.slice(awal, awal + this.perHal).map(m => ({
+                            ...m,
+                            t: m.total > 0 ? Math.max(8, Math.min(100, (m.total / p) * 100)) : 5,
+                        }));
+                    },
+                    fmtAxis(v) {
+                        if (v <= 0) return '0';
+                        if (v >= 1000000) {
+                            return Number((v / 1000000).toFixed(2)).toLocaleString('id-ID') + ' jt';
+                        }
+                        if (v >= 1000) {
+                            return Math.round(v / 1000).toLocaleString('id-ID') + ' rb';
+                        }
+                        return String(Math.round(v));
+                    },
+                    fmtRp(v) {
+                        return 'Rp ' + Number(v || 0).toLocaleString('id-ID');
+                    },
+                };
+            };
+
             /* Kalender: tugas milik mitra pada tanggal terpilih */
             (function() {
                 const tugas = @json($tugas);
@@ -213,31 +390,29 @@
 
                     items.forEach(item => {
                         const row = document.createElement('div');
-                        row.className = 'note' + (item.deadline ? ' deadline' : '');
+                        row.className = 'note';
 
-                        const judul = document.createElement('span');
+                        const rentang = document.createElement('small');
+                        rentang.className = 'note-rentang';
+                        rentang.textContent = item.rentang;
+
+                        const bawah = document.createElement('div');
+                        bawah.className = 'note-row';
+
+                        const judul = document.createElement('strong');
                         judul.className = 'note-judul';
                         judul.textContent = item.judul;
                         judul.title = item.judul;
+                        bawah.appendChild(judul);
 
-                        const meta = document.createElement('span');
-                        meta.className = 'note-meta';
-
-                        if (item.koordinator) {
-                            const k = document.createElement('span');
-                            k.className = 'note-mitra';
-                            k.textContent = item.koordinator;
-                            meta.appendChild(k);
+                        if (item.badge) {
+                            const badge = document.createElement('span');
+                            badge.className = 'note-badge';
+                            badge.textContent = item.badge;
+                            bawah.appendChild(badge);
                         }
 
-                        if (item.deadline) {
-                            const t = document.createElement('span');
-                            t.className = 'tag-deadline';
-                            t.textContent = 'Deadline';
-                            meta.appendChild(t);
-                        }
-
-                        row.append(judul, meta);
+                        row.append(rentang, bawah);
                         list.appendChild(row);
                     });
                 }

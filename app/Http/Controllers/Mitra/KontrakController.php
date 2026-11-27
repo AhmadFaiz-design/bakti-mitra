@@ -16,6 +16,11 @@ class KontrakController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
         $mitra   = Mitra::where('user_id', Auth::id())->first();
         $mitraId = $mitra?->id;
 
@@ -59,6 +64,87 @@ class KontrakController extends Controller
                 ->sum('jumlah'),
         ];
 
+        /* ---------- Hari Kontrak & Jumlah Tugas Bulan Sekarang ---------- */
+        $tz         = 'Asia/Makassar';
+        $sekarang   = now($tz);
+        $awalBulan  = $sekarang->copy()->startOfMonth()->startOfDay();
+        $akhirBulan = $sekarang->copy()->endOfMonth()->startOfDay();
+        $awalStr    = $awalBulan->toDateString();
+        $akhirStr   = $akhirBulan->toDateString();
+
+        $hariKontrak   = 0;
+        $tugasBulanIni = 0;
+
+        if ($mitraId !== null) {
+            $tugasAktifBulan = DB::table('kontrak_pekerjaan as kp')
+                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                ->where('k.mitra_id', $mitraId)
+                ->where(function ($w) use ($sekarang, $awalStr, $akhirStr) {
+                    $w->where(function ($d) use ($awalStr, $akhirStr) {
+                        $d->whereNotNull('kp.tanggal_mulai')
+                            ->whereNotNull('kp.tanggal_selesai')
+                            ->where('kp.tanggal_mulai', '<=', $akhirStr)
+                            ->where('kp.tanggal_selesai', '>=', $awalStr);
+                    })->orWhere(function ($p) use ($sekarang) {
+                        $p->where(fn($n) => $n->whereNull('kp.tanggal_mulai')->orWhereNull('kp.tanggal_selesai'))
+                            ->where('k.periode_tahun', $sekarang->year)
+                            ->where('k.periode_bulan', $sekarang->month);
+                    });
+                })
+                ->select('kp.id', 'kp.tanggal_mulai', 'kp.tanggal_selesai')
+                ->get();
+
+            $tugasBulanIni = $tugasAktifBulan->count();
+
+            $hariUnik = [];
+            foreach ($tugasAktifBulan as $row) {
+                if (!$row->tanggal_mulai || !$row->tanggal_selesai) {
+                    continue;
+                }
+                $mulai   = Carbon::parse($row->tanggal_mulai, $tz)->startOfDay();
+                $selesai = Carbon::parse($row->tanggal_selesai, $tz)->startOfDay();
+
+                $dari   = $mulai->greaterThan($awalBulan) ? $mulai : $awalBulan->copy();
+                $sampai = $selesai->lessThan($akhirBulan) ? $selesai : $akhirBulan->copy();
+
+                for ($d = $dari->copy(); $d->lte($sampai); $d->addDay()) {
+                    $hariUnik[$d->toDateString()] = true;
+                }
+            }
+            $hariKontrak = count($hariUnik);
+        }
+
+        /* ---------- Tren Total Honor bulan ini vs bulan lalu ---------- */
+        $blnIni  = $sekarang;
+        $blnLalu = $sekarang->copy()->subMonthNoOverflow();
+
+        $honorBulan = fn(Carbon $tgl) => $mitraId === null
+            ? 0
+            : (int) DB::table('kontrak as k')
+                ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+                ->where('k.mitra_id', $mitraId)
+                ->where('k.periode_tahun', $tgl->year)
+                ->where('k.periode_bulan', $tgl->month)
+                ->sum('kp.jumlah');
+
+        $honorBlnIni  = $honorBulan($blnIni);
+        $honorBlnLalu = $honorBulan($blnLalu);
+
+        if ($honorBlnLalu <= 0) {
+            $trenHonor = $honorBlnIni <= 0
+                ? ['teks' => 'Tetap 0%', 'kelas' => 'neutral']
+                : ['teks' => 'Baru bln ini', 'kelas' => 'lime'];
+        } else {
+            $diff = (int) round((($honorBlnIni - $honorBlnLalu) / $honorBlnLalu) * 100);
+            if ($diff > 0) {
+                $trenHonor = ['teks' => 'Naik ' . $diff . '%', 'kelas' => 'lime'];
+            } elseif ($diff < 0) {
+                $trenHonor = ['teks' => 'Turun ' . abs($diff) . '%', 'kelas' => 'warn'];
+            } else {
+                $trenHonor = ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+            }
+        }
+
         $daftar = $query
             ->with([
                 'pekerjaan' => fn($p) => $p->with('koordinator:id,name')->orderBy('urutan')->orderBy('id'),
@@ -67,33 +153,41 @@ class KontrakController extends Controller
             ->withSum('pekerjaan as total_honor', 'jumlah')
             ->orderByDesc('periode_tahun')
             ->orderByDesc('periode_bulan')
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
+
+        if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
+            return redirect()->to($request->fullUrlWithQuery(['page' => $daftar->lastPage()]));
+        }
 
         $daftarPeriode = $mitraId !== null
             ? DB::table('kontrak')
-            ->where('mitra_id', $mitraId)
-            ->select('periode_tahun', 'periode_bulan')
-            ->distinct()
-            ->orderByDesc('periode_tahun')
-            ->orderByDesc('periode_bulan')
-            ->get()
-            ->map(function ($r) {
-                $key = sprintf('%04d-%02d', $r->periode_tahun, $r->periode_bulan);
-                $label = Carbon::create((int) $r->periode_tahun, (int) $r->periode_bulan, 1)
-                    ->locale('id')
-                    ->translatedFormat('F Y');
+                ->where('mitra_id', $mitraId)
+                ->select('periode_tahun', 'periode_bulan')
+                ->distinct()
+                ->orderByDesc('periode_tahun')
+                ->orderByDesc('periode_bulan')
+                ->get()
+                ->map(function ($r) {
+                    $key = sprintf('%04d-%02d', $r->periode_tahun, $r->periode_bulan);
+                    $label = Carbon::create((int) $r->periode_tahun, (int) $r->periode_bulan, 1)
+                        ->locale('id')
+                        ->translatedFormat('F Y');
 
-                return ['v' => $key, 't' => $label];
-            })
+                    return ['v' => $key, 't' => $label];
+                })
             : collect();
 
         return view('mitra.kontrak', compact(
             'daftar',
+            'perPage',
             'q',
             'status',
             'periode',
             'ringkasan',
+            'hariKontrak',
+            'tugasBulanIni',
+            'trenHonor',
             'daftarPeriode'
         ));
     }

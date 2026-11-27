@@ -1,6 +1,11 @@
 @php
     $persen = $ringkasan['total'] > 0 ? (int) round(($ringkasan['dibayar'] / $ringkasan['total']) * 100) : 0;
 
+    $perPage = (int) ($perPage ?? request()->query('per_page', 10));
+    if (!in_array($perPage, [10, 25, 50, 100], true)) {
+        $perPage = 10;
+    }
+
     $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
 
     $parseRp = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
@@ -35,43 +40,77 @@
 <x-mitra.main>
     <x-slot:titlex>Daftar Tugas</x-slot:titlex>
 
-    {{-- HEADER HALAMAN --}}
-    <x-header judul="Daftar Tugas Saya" subjudul="Lihaat Detail Jobdesk, Periode Pelaksanaan, Target Volume, dan Status Pembayaran Honor Anda" />
+    {{-- HEADER HALAMAN (tanpa subjudul) --}}
+    <x-header judul="Daftar Tugas Saya" />
 
     {{-- KARTU STATISTIK --}}
-    <section class="stats-mitra">
+    <section class="stats-mitra stats-mitra-4">
         <div class="card hero">
-            <h2><svg>
+            <h2>
+                <svg>
                     <use href="#i-ring" />
-                </svg> Progres Pembayaran</h2>
-            <p class="num hijau">{{ $persen }}%</p>
+                </svg>
+                Progres Pembayaran
+            </h2>
+            <p class="num">{{ $persen }}%</p>
+            <div class="progress"><span style="width: {{ $persen }}%"></span></div>
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Total Honor</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M7 14h4" />
+                </svg>
+                Total Honor
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['total'], 0, ',', '.') }}</p>
+            @isset($tren)
+                <span class="badge {{ $tren['total']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                    {{ $tren['total']['teks'] }}
+                </span>
+            @endisset
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Sudah Dibayar</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <path d="M13 6H5.5A2.5 2.5 0 0 0 3 8.5v7A2.5 2.5 0 0 0 5.5 18h13a2.5 2.5 0 0 0 2.5-2.5V12" />
+                    <path d="M3 10h10M7 14h4M15.5 6.5l2 2 4-4" />
+                </svg>
+                Dibayar
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['dibayar'], 0, ',', '.') }}</p>
+            @isset($tren)
+                <span class="badge {{ $tren['dibayar']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                    {{ $tren['dibayar']['teks'] }}
+                </span>
+            @endisset
         </div>
 
         <div class="card stat">
-            <h2><svg>
-                    <use href="#i-cash" />
-                </svg> Belum Dibayar</h2>
+            <h2>
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="6" width="18" height="12" rx="2.5" />
+                    <path d="M3 10h18M15 14h3" />
+                </svg>
+                Belum Dibayar
+            </h2>
             <p class="num kecil">Rp {{ number_format($ringkasan['belum'], 0, ',', '.') }}</p>
+            @isset($tren)
+                <span class="badge {{ $tren['belum']['kelas'] }}" title="Perbandingan bulan ini vs bulan lalu">
+                    {{ $tren['belum']['teks'] }}
+                </span>
+            @endisset
         </div>
     </section>
 
     {{-- PENCARIAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
         <form method="GET" action="{{ route('mitra.tugas') }}" style="display: contents">
+            @if (request()->filled('per_page'))
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
             <label class="mitra-search">
@@ -99,9 +138,12 @@
     {{-- TABEL DAFTAR TUGAS --}}
     <section class="table-card">
         <div class="table-heading">
-            <h2><svg>
-                    <use href="#i-list" />
-                </svg> List Penugasan</h2>
+            <h2>
+                <svg>
+                    <use href="#i-table" />
+                </svg>
+                List Tugas
+            </h2>
         </div>
 
         <div class="table-scroll">
@@ -148,7 +190,7 @@
                                 : '-';
 
                             $verifKontrak = $kontrak
-                                ? (($kontrak->cek_kontrak && $kontrak->cek_spj)
+                                ? ($kontrak->cek_kontrak && $kontrak->cek_spj
                                     ? 'Kontrak & SPJ Terverifikasi'
                                     : ($kontrak->cek_kontrak
                                         ? 'Kontrak Terverifikasi (SPJ Menunggu)'
@@ -159,25 +201,36 @@
                                 ? 'Termasuk' . ($p->ro_paket_data_pulsa ? ' (RO: ' . $p->ro_paket_data_pulsa . ')' : '')
                                 : 'Tidak termasuk';
 
-                            $anggaran = collect([
-                                $p->kro_ro ? 'KRO: ' . $p->kro_ro : null,
-                                $p->komponen ? 'Komponen: ' . $p->komponen : null,
-                                $p->ro ? 'RO: ' . $p->ro : null,
-                            ])->filter()->implode(' · ') ?: '-';
+                            $anggaran =
+                                collect([
+                                    $p->kro_ro ? 'KRO: ' . $p->kro_ro : null,
+                                    $p->komponen ? 'Komponen: ' . $p->komponen : null,
+                                    $p->ro ? 'RO: ' . $p->ro : null,
+                                ])
+                                    ->filter()
+                                    ->implode(' · ') ?:
+                                '-';
 
                             $detail = [
-                                'uraian'      => $p->uraian_pekerjaan ?? '-',
-                                'koordinator' => ($p->koordinator?->name ?? '-') . ($p->koordinator?->username ? ' (' . $p->koordinator->username . ')' : ''),
-                                'periode'     => $mulai . ' s.d. ' . $selesai,
-                                'waktu'       => $waktuLabel,
-                                'volume'      => $volume . ' ' . $p->satuan,
-                                'tarif'       => 'Rp ' . number_format((int) ($p->harga_satuan ?? 0), 0, ',', '.') . ' / ' . $p->satuan,
-                                'honor'       => 'Rp ' . number_format((int) ($p->jumlah ?? 0), 0, ',', '.'),
-                                'kontrak'     => $periodeKontrak . ' — ' . $verifKontrak,
-                                'anggaran'    => $anggaran,
-                                'pulsa'       => $pulsaTeks,
-                                'pembayaran'  => $dibayar
-                                    ? 'Sudah Dibayar' . ($p->dibayar_pada ? ' (' . $p->dibayar_pada->format('d/m/Y H:i') . ')' : '')
+                                'uraian' => $p->uraian_pekerjaan ?? '-',
+                                'koordinator' =>
+                                    ($p->koordinator?->name ?? '-') .
+                                    ($p->koordinator?->username ? ' (' . $p->koordinator->username . ')' : ''),
+                                'periode' => $mulai . ' s.d. ' . $selesai,
+                                'waktu' => $waktuLabel,
+                                'volume' => $volume . ' ' . $p->satuan,
+                                'tarif' =>
+                                    'Rp ' .
+                                    number_format((int) ($p->harga_satuan ?? 0), 0, ',', '.') .
+                                    ' / ' .
+                                    $p->satuan,
+                                'honor' => 'Rp ' . number_format((int) ($p->jumlah ?? 0), 0, ',', '.'),
+                                'kontrak' => $periodeKontrak . ' — ' . $verifKontrak,
+                                'anggaran' => $anggaran,
+                                'pulsa' => $pulsaTeks,
+                                'pembayaran' => $dibayar
+                                    ? 'Sudah Dibayar' .
+                                        ($p->dibayar_pada ? ' (' . $p->dibayar_pada->format('d/m/Y H:i') . ')' : '')
                                     : 'Belum Dibayar',
                             ];
                         @endphp
@@ -212,7 +265,9 @@
 
                             <td class="honor-cell">
                                 Rp {{ number_format((int) ($p->jumlah ?? 0), 0, ',', '.') }}
-                                <span class="cell-sub">@ Rp {{ number_format((int) ($p->harga_satuan ?? 0), 0, ',', '.') }} / {{ $p->satuan }}</span>
+                                <span class="cell-sub">@ Rp
+                                    {{ number_format((int) ($p->harga_satuan ?? 0), 0, ',', '.') }} /
+                                    {{ $p->satuan }}</span>
                             </td>
 
                             <td>
@@ -254,34 +309,57 @@
         </div>
 
         <div class="table-footer">
-            <span>
+            <div class="table-footer-left">
                 @if ($daftar->total() > 0)
-                    Menampilkan {{ $daftar->firstItem() }}–{{ $daftar->lastItem() }}
-                    dari {{ $daftar->total() }} tugas
+                    <span>Menampilkan</span>
+                    <x-admin.per-page :current="$perPage" />
+                    <span>dari {{ $daftar->total() }} Tugas</span>
                 @else
-                    Tidak ada data
+                    <span>Tidak ada data</span>
                 @endif
-            </span>
+            </div>
 
             @if ($daftar->hasPages())
-                <span style="display:flex;gap:8px;align-items:center">
-                    @unless ($daftar->onFirstPage())
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->url(1) }}"
-                            aria-label="Halaman pertama" title="Halaman pertama">&lt;&lt;</a>
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->previousPageUrl() }}"
-                            aria-label="Halaman sebelumnya" title="Halaman sebelumnya">&lt;</a>
-                    @endunless
+                @php
+                    $cur = $daftar->currentPage();
+                    $last = $daftar->lastPage();
+                    $pages = collect([1, $cur - 1, $cur, $cur + 1, $last])
+                        ->filter(fn($p) => $p >= 1 && $p <= $last)
+                        ->unique()
+                        ->sort()
+                        ->values();
+                    $prev = null;
+                @endphp
 
-                    <span>Halaman {{ $daftar->currentPage() }} dari {{ $daftar->lastPage() }}</span>
+                <nav class="page-nav" aria-label="Navigasi halaman">
+                    @if ($daftar->onFirstPage())
+                        <span class="page-btn disabled" aria-disabled="true">&lsaquo;</span>
+                    @else
+                        <a class="page-btn" href="{{ $daftar->previousPageUrl() }}"
+                            aria-label="Halaman sebelumnya">&lsaquo;</a>
+                    @endif
+
+                    @foreach ($pages as $p)
+                        @if ($prev !== null && $p - $prev > 1)
+                            <span class="page-dots">...</span>
+                        @endif
+
+                        @if ($p === $cur)
+                            <span class="page-btn active" aria-current="page">{{ $p }}</span>
+                        @else
+                            <a class="page-btn" href="{{ $daftar->url($p) }}">{{ $p }}</a>
+                        @endif
+
+                        @php $prev = $p; @endphp
+                    @endforeach
 
                     @if ($daftar->hasMorePages())
-                        <a class="outline-btn" style="text-decoration:none" href="{{ $daftar->nextPageUrl() }}"
-                            aria-label="Halaman berikutnya" title="Halaman berikutnya">&gt;</a>
-                        <a class="outline-btn" style="text-decoration:none"
-                            href="{{ $daftar->url($daftar->lastPage()) }}" aria-label="Halaman terakhir"
-                            title="Halaman terakhir">&gt;&gt;</a>
+                        <a class="page-btn" href="{{ $daftar->nextPageUrl() }}"
+                            aria-label="Halaman berikutnya">&rsaquo;</a>
+                    @else
+                        <span class="page-btn disabled" aria-disabled="true">&rsaquo;</span>
                     @endif
-                </span>
+                </nav>
             @endif
         </div>
     </section>
@@ -345,7 +423,7 @@
         </div>
 
         <div class="jobdesk-footer">
-            <button type="button" class="btn-apply" id="jobdeskTutup">Tutup</button>
+            <button type="button" class="dark-pill-btn" id="jobdeskTutup">Tutup</button>
         </div>
     </div>
 
@@ -354,6 +432,9 @@
 
     <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Tugas" aria-hidden="true">
         <form method="GET" action="{{ route('mitra.tugas') }}" id="filterForm" class="filter-form">
+            @if (request()->filled('per_page'))
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="honor_mode" value="rentang" id="honorMode">
@@ -370,8 +451,7 @@
                     :dipilih="request()->filled('waktu') ? [request('waktu')] : []" />
 
                 <x-admin.filter-tugas judul="Koordinator" placeholder="Cari Koordinator" nama="koordinator"
-                    :banyak="false"
-                    :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])"
+                    :banyak="false" :opsi="collect($daftarKoordinator)->map(fn($k) => ['v' => $k->id, 't' => $k->name])"
                     :dipilih="request()->filled('koordinator') ? [request('koordinator')] : []" />
 
                 <x-admin.filter-tugas judul="Pekerjaan" placeholder="Cari Pekerjaan" :opsi="$daftarTugas"

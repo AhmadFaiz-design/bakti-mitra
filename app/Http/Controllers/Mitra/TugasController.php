@@ -16,6 +16,11 @@ class TugasController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
         $mitra   = Mitra::where('user_id', Auth::id())->first();
         $mitraId = $mitra?->id;
         $hariIni = now('Asia/Makassar')->toDateString();
@@ -43,13 +48,70 @@ class TugasController extends Controller
         ];
         $ringkasan['belum'] = $ringkasan['total'] - $ringkasan['dibayar'];
 
+        /* ---------- Tren bulan ini vs bulan lalu untuk badge kartu ---------- */
+        $blnIni  = now('Asia/Makassar');
+        $blnLalu = $blnIni->copy()->subMonthNoOverflow();
+
+        $ambilBulan = function (Carbon $tgl) use ($mitraId) {
+            if ($mitraId === null) {
+                return ['total' => 0, 'dibayar' => 0, 'belum' => 0];
+            }
+
+            $row = DB::table('kontrak_pekerjaan as kp')
+                ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+                ->where('k.mitra_id', $mitraId)
+                ->where('k.periode_tahun', $tgl->year)
+                ->where('k.periode_bulan', $tgl->month)
+                ->selectRaw('COALESCE(SUM(kp.jumlah), 0) as total,
+                             COALESCE(SUM(CASE WHEN kp.honor_dibayar = 1 THEN kp.jumlah ELSE 0 END), 0) as dibayar')
+                ->first();
+
+            $total   = (int) ($row->total ?? 0);
+            $dibayar = (int) ($row->dibayar ?? 0);
+
+            return [
+                'total'   => $total,
+                'dibayar' => $dibayar,
+                'belum'   => $total - $dibayar,
+            ];
+        };
+
+        $dataBlnIni  = $ambilBulan($blnIni);
+        $dataBlnLalu = $ambilBulan($blnLalu);
+
+        $hitungTren = function (int $sekarang, int $lalu, bool $balikWarna = false): array {
+            if ($lalu <= 0) {
+                if ($sekarang <= 0) {
+                    return ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+                }
+
+                return ['teks' => 'Baru bln ini', 'kelas' => $balikWarna ? 'warn' : 'lime'];
+            }
+
+            $diff = (int) round((($sekarang - $lalu) / $lalu) * 100);
+            if ($diff > 0) {
+                return ['teks' => 'Naik ' . $diff . '%', 'kelas' => $balikWarna ? 'warn' : 'lime'];
+            }
+            if ($diff < 0) {
+                return ['teks' => 'Turun ' . abs($diff) . '%', 'kelas' => $balikWarna ? 'lime' : 'warn'];
+            }
+
+            return ['teks' => 'Tetap 0%', 'kelas' => 'neutral'];
+        };
+
+        $tren = [
+            'total'   => $hitungTren($dataBlnIni['total'], $dataBlnLalu['total']),
+            'dibayar' => $hitungTren($dataBlnIni['dibayar'], $dataBlnLalu['dibayar']),
+            'belum'   => $hitungTren($dataBlnIni['belum'], $dataBlnLalu['belum'], true),
+        ];
+
         $daftar = $query
             ->with([
                 'kontrak:id,mitra_id,periode_tahun,periode_bulan,cek_kontrak,cek_spj',
                 'koordinator:id,name,username',
             ])
             ->latest('id')
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
 
         if ($daftar->isEmpty() && $daftar->currentPage() > 1) {
@@ -59,29 +121,29 @@ class TugasController extends Controller
         // Opsi filter Periode Kontrak milik mitra
         $daftarPeriode = $mitraId !== null
             ? DB::table('kontrak')
-                ->where('mitra_id', $mitraId)
-                ->select('periode_tahun', 'periode_bulan')
-                ->distinct()
-                ->orderByDesc('periode_tahun')
-                ->orderByDesc('periode_bulan')
-                ->get()
-                ->map(function ($row) {
-                    $key = sprintf('%04d-%02d', $row->periode_tahun, $row->periode_bulan);
-                    $label = Carbon::create((int) $row->periode_tahun, (int) $row->periode_bulan, 1)
-                        ->locale('id')
-                        ->translatedFormat('F Y');
+            ->where('mitra_id', $mitraId)
+            ->select('periode_tahun', 'periode_bulan')
+            ->distinct()
+            ->orderByDesc('periode_tahun')
+            ->orderByDesc('periode_bulan')
+            ->get()
+            ->map(function ($row) {
+                $key = sprintf('%04d-%02d', $row->periode_tahun, $row->periode_bulan);
+                $label = Carbon::create((int) $row->periode_tahun, (int) $row->periode_bulan, 1)
+                    ->locale('id')
+                    ->translatedFormat('F Y');
 
-                    return ['v' => $key, 't' => $label];
-                })
+                return ['v' => $key, 't' => $label];
+            })
             : collect();
 
         // Opsi filter Koordinator pemberi tugas pada mitra ini
         $koorIds = $mitraId !== null
             ? KontrakPekerjaan::query()
-                ->whereHas('kontrak', fn($k) => $k->where('mitra_id', $mitraId))
-                ->whereNotNull('koordinator_id')
-                ->distinct()
-                ->pluck('koordinator_id')
+            ->whereHas('kontrak', fn($k) => $k->where('mitra_id', $mitraId))
+            ->whereNotNull('koordinator_id')
+            ->distinct()
+            ->pluck('koordinator_id')
             : collect();
 
         $daftarKoordinator = $koorIds->isNotEmpty()
@@ -91,18 +153,20 @@ class TugasController extends Controller
         // Opsi filter Pekerjaan
         $daftarTugas = $mitraId !== null
             ? KontrakPekerjaan::query()
-                ->whereHas('kontrak', fn($k) => $k->where('mitra_id', $mitraId))
-                ->whereNotNull('uraian_pekerjaan')
-                ->distinct()
-                ->orderBy('uraian_pekerjaan')
-                ->pluck('uraian_pekerjaan')
+            ->whereHas('kontrak', fn($k) => $k->where('mitra_id', $mitraId))
+            ->whereNotNull('uraian_pekerjaan')
+            ->distinct()
+            ->orderBy('uraian_pekerjaan')
+            ->pluck('uraian_pekerjaan')
             : collect();
 
         return view('mitra.tugas', compact(
             'daftar',
+            'perPage',
             'q',
             'status',
             'ringkasan',
+            'tren',
             'honorMaks',
             'hariIni',
             'daftarPeriode',
