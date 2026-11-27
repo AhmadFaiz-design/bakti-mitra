@@ -1,7 +1,8 @@
 @php
     $hargaSatuan = (int) $penugasan->harga_satuan;
-    $batasHonor = (int) ($batasHonor ?? 3500000);
     $honorBulanMitra = $honorBulanMitra ?? [];
+    $batasBulanMitra = $batasBulanMitra ?? [];
+    $batasExistingMitra = $batasExistingMitra ?? [];
 
     $mulai = $penugasan->tanggal_mulai ? \Carbon\Carbon::parse($penugasan->tanggal_mulai)->format('d/m/Y') : '-';
     $selesai = $penugasan->tanggal_selesai ? \Carbon\Carbon::parse($penugasan->tanggal_selesai)->format('d/m/Y') : '-';
@@ -55,6 +56,10 @@
                     <strong>{{ $penugasan->uraian_pekerjaan }}</strong>
                 </div>
                 <div class="summary-item">
+                    <span>Sebagai</span>
+                    <strong>{{ $penugasan->sebagai ?: '-' }}</strong>
+                </div>
+                <div class="summary-item">
                     <span>Koordinator</span>
                     <strong>{{ $penugasan->koordinator?->name ?? '-' }}</strong>
                 </div>
@@ -67,9 +72,8 @@
                     <strong>Rp {{ number_format($hargaSatuan, 0, ',', '.') }} / {{ $penugasan->satuan }}</strong>
                 </div>
                 <div class="summary-item">
-                    <span>Kontrak &amp; Batas Honor</span>
-                    <strong>{{ $periodeKontrak }} &middot; Maks Rp
-                        {{ number_format($batasHonor, 0, ',', '.') }}</strong>
+                    <span>Kontrak &amp; Peran Tugas</span>
+                    <strong>{{ $periodeKontrak }} &middot; {{ $penugasan->sebagai ?: 'Umum' }}</strong>
                 </div>
                 <div class="summary-item">
                     <span>Petugas &amp; Total Honor Tugas</span>
@@ -151,11 +155,15 @@
                                     $checkedOld = in_array($m->id, (array) old('mitra_id', []));
                                     $volOld = old('volumes.' . $m->id, '');
                                     $honorSaatIni = (int) ($honorBulanMitra[$m->id] ?? 0);
-                                    $sisaKuota = max(0, $batasHonor - $honorSaatIni);
+                                    $batasMitra =
+                                        (int) ($batasBulanMitra[$m->id] ??
+                                            \App\Support\BatasHonor::untukPeran($m->wilayah, $penugasan->sebagai));
+                                    $sisaKuota = max(0, $batasMitra - $honorSaatIni);
                                 @endphp
                                 <div class="assign-row {{ $checkedOld ? 'selected' : '' }}"
                                     data-search="{{ strtolower($m->user->name . ' ' . $m->user->username . ' ' . ($m->wilayah ?? '')) }}"
-                                    data-nama="{{ $m->user->name }}" data-honor-bulan="{{ $honorSaatIni }}">
+                                    data-nama="{{ $m->user->name }}" data-honor-bulan="{{ $honorSaatIni }}"
+                                    data-batas="{{ $batasMitra }}">
                                     <input type="checkbox" id="mitra_{{ $m->id }}" class="assign-check"
                                         name="mitra_id[]" value="{{ $m->id }}" @checked($checkedOld)>
 
@@ -165,18 +173,20 @@
                                                 &middot; {{ $m->wilayah }}
                                             @endif
                                         </small>
-                                        @if ($batasHonor > 0 && $honorSaatIni >= $batasHonor)
+                                        @if ($batasMitra > 0 && $honorSaatIni >= $batasMitra)
                                             <span class="kuota-badge penuh">
-                                                Kuota Penuh (Rp {{ number_format($honorSaatIni, 0, ',', '.') }})
+                                                Kuota Penuh (Rp {{ number_format($honorSaatIni, 0, ',', '.') }} / Maks
+                                                Rp {{ number_format($batasMitra, 0, ',', '.') }})
                                             </span>
                                         @elseif ($honorSaatIni > 0)
                                             <span class="kuota-badge sisa">
                                                 Terpakai Rp {{ number_format($honorSaatIni, 0, ',', '.') }} &middot;
-                                                Sisa Rp {{ number_format($sisaKuota, 0, ',', '.') }}
+                                                Sisa Rp {{ number_format($sisaKuota, 0, ',', '.') }} (Maks Rp
+                                                {{ number_format($batasMitra, 0, ',', '.') }})
                                             </span>
                                         @else
                                             <span class="kuota-badge aman">
-                                                Sisa Kuota: Rp {{ number_format($batasHonor, 0, ',', '.') }}
+                                                Maks Batas: Rp {{ number_format($batasMitra, 0, ',', '.') }}
                                             </span>
                                         @endif
                                     </label>
@@ -259,6 +269,10 @@
                                 $totalBulanIni = $mitra
                                     ? (int) ($honorBulanMitra[$mitra->id] ?? $p->jumlah)
                                     : (int) $p->jumlah;
+                                $batasMitraExisting = $mitra
+                                    ? (int) ($batasExistingMitra[$mitra->id] ??
+                                        \App\Support\BatasHonor::untukPeran($mitra->wilayah, $penugasan->sebagai))
+                                    : \App\Support\BatasHonor::PENDATAAN_KENDARI;
                             @endphp
                             <tr>
                                 <td>{{ $i + 1 }}</td>
@@ -269,10 +283,10 @@
                                             &middot; {{ $mitra->wilayah }}
                                         @endif
                                     </span>
-                                    @if ($batasHonor > 0 && $totalBulanIni > $batasHonor)
+                                    @if ($batasMitraExisting > 0 && $totalBulanIni > $batasMitraExisting)
                                         <span class="cell-sub lock-note">
-                                            Total honor bulan ini: Rp {{ number_format($totalBulanIni, 0, ',', '.') }}
-                                            (melebihi batas)
+                                            Total bulan ini: Rp {{ number_format($totalBulanIni, 0, ',', '.') }}
+                                            (Maks Rp {{ number_format($batasMitraExisting, 0, ',', '.') }})
                                         </span>
                                     @endif
                                     @if ($diverifikasi)
@@ -385,17 +399,19 @@
                             const honorEl = row.querySelector('[data-row-honor]');
                             const warnEl = row.querySelector('[data-row-warn]');
                             const honorBulan = parseInt(row.dataset.honorBulan || '0', 10);
+                            const batasMitra = parseInt(row.dataset.batas || '0', 10);
                             const vol = parseNum(volInput.value);
                             const honor = vol > 0 ? Math.round(vol * HARGA_SATUAN) : 0;
                             const totalBaru = honorBulan + honor;
-                            const over = BATAS_HONOR > 0 && cb.checked && honor > 0 && totalBaru > BATAS_HONOR;
+                            const over = batasMitra > 0 && cb.checked && honor > 0 && totalBaru > batasMitra;
 
                             honorEl.textContent = formatRp(honor);
                             row.classList.toggle('selected', cb.checked);
                             row.classList.toggle('row-over-quota', over);
 
                             if (over) {
-                                warnEl.textContent = 'Total jadi ' + formatRp(totalBaru) + ' (melebihi batas)';
+                                warnEl.textContent = 'Total jadi ' + formatRp(totalBaru) + ' (maks ' + formatRp(batasMitra) +
+                                    ')';
                                 warnEl.hidden = false;
                             } else {
                                 warnEl.textContent = '';
@@ -420,12 +436,14 @@
                                 const volInput = row.querySelector('.assign-vol-input');
                                 const nama = row.dataset.nama;
                                 const honorBulan = parseInt(row.dataset.honorBulan || '0', 10);
+                                const batasMitra = parseInt(row.dataset.batas || '0', 10);
                                 const vol = parseNum(volInput.value);
                                 const honor = vol > 0 ? Math.round(vol * HARGA_SATUAN) : 0;
                                 totalHonor += honor;
 
-                                if (BATAS_HONOR > 0 && honor > 0 && (honorBulan + honor) > BATAS_HONOR) {
-                                    overList.push(nama + ' (' + formatRp(honorBulan + honor) + ')');
+                                if (batasMitra > 0 && honor > 0 && (honorBulan + honor) > batasMitra) {
+                                    overList.push(nama + ' (' + formatRp(honorBulan + honor) + ' / Maks ' + formatRp(
+                                        batasMitra) + ')');
                                 }
 
                                 const chip = document.createElement('span');
@@ -454,7 +472,7 @@
                             boxTerpilih.hidden = dipilih.length === 0;
 
                             if (overList.length > 0) {
-                                warnQuota.innerHTML = '<b>Perhatian batas honor (' + formatRp(BATAS_HONOR) + '):</b> ' +
+                                warnQuota.innerHTML = '<b>Perhatian batas honor:</b> ' +
                                     overList.join(', ') + ' akan melebihi batas honor bulanan.';
                                 warnQuota.hidden = false;
                             } else {

@@ -11,6 +11,7 @@ class Penugasan extends Model
     protected $fillable = [
         'koordinator_id',
         'uraian_pekerjaan',
+        'sebagai',
         'ro',
         'kro_ro',
         'komponen',

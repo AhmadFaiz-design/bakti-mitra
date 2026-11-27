@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Support\BatasHonor;
 
 abstract class BasePenugasanController extends Controller
 {
@@ -201,6 +202,7 @@ abstract class BasePenugasanController extends Controller
             $penugasan = Penugasan::create([
                 'koordinator_id'      => $koordinatorId,
                 'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
+                'sebagai'             => $data['sebagai'],
                 'ro'                  => $ro,
                 'kro_ro'              => $data['kro_ro'] ?? null,
                 'komponen'            => $data['komponen'] ?? null,
@@ -258,10 +260,9 @@ abstract class BasePenugasanController extends Controller
             ->sortBy(fn($m) => strtolower($m->user->name))
             ->values();
 
-        $tanggal    = Carbon::parse($penugasan->tanggal_mulai);
-        $batasHonor = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
+        $tanggal = Carbon::parse($penugasan->tanggal_mulai);
 
-        // Total honor setiap mitra pada bulan & tahun tugas ini (dari seluruh koordinator)
+        // Total honor setiap mitra pada bulan & tahun tugas ini
         $honorBulanMitra = DB::table('kontrak as k')
             ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
             ->where('k.periode_tahun', $tanggal->year)
@@ -272,11 +273,44 @@ abstract class BasePenugasanController extends Controller
             ->map(fn($v) => (int) $v)
             ->all();
 
+        // Daftar peran (Pendata/Pengolah) yang sudah dimiliki setiap mitra di bulan tersebut
+        $peranBulanMitra = DB::table('kontrak as k')
+            ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+            ->where('k.periode_tahun', $tanggal->year)
+            ->where('k.periode_bulan', $tanggal->month)
+            ->whereNotNull('kp.sebagai')
+            ->select('k.mitra_id', 'kp.sebagai')
+            ->distinct()
+            ->get()
+            ->groupBy('mitra_id')
+            ->map(fn($rows) => $rows->pluck('sebagai')->all())
+            ->all();
+
+        // Batas efektif untuk calon mitra (gabungan peran yang sudah ada + peran tugas ini, ambil nilai tertinggi)
+        $batasBulanMitra = [];
+        foreach ($mitraTersedia as $m) {
+            $peranGabung = array_merge($peranBulanMitra[$m->id] ?? [], [$penugasan->sebagai]);
+            $batasBulanMitra[$m->id] = BatasHonor::untukMitra($m->wilayah, $peranGabung);
+        }
+
+        // Batas efektif untuk mitra yang sudah ditugaskan
+        $batasExistingMitra = [];
+        foreach ($penugasan->pekerjaan as $p) {
+            $m = $p->kontrak?->mitra;
+            if ($m) {
+                $batasExistingMitra[$m->id] = BatasHonor::untukMitra(
+                    $m->wilayah,
+                    $peranBulanMitra[$m->id] ?? [$penugasan->sebagai]
+                );
+            }
+        }
+
         return view('shared.penugasan.assign', $this->sharedData() + compact(
             'penugasan',
             'mitraTersedia',
             'honorBulanMitra',
-            'batasHonor'
+            'batasBulanMitra',
+            'batasExistingMitra'
         ));
     }
 
@@ -315,7 +349,6 @@ abstract class BasePenugasanController extends Controller
 
         $tanggal     = Carbon::parse($penugasan->tanggal_mulai);
         $hargaSatuan = (int) $penugasan->harga_satuan;
-        $batasHonor  = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
 
         $dibuat       = 0;
         $dilewati     = [];
@@ -329,7 +362,6 @@ abstract class BasePenugasanController extends Controller
                 $volumes,
                 $tanggal,
                 $hargaSatuan,
-                $batasHonor,
                 &$dibuat,
                 &$dilewati,
                 &$terkunci,
@@ -366,6 +398,7 @@ abstract class BasePenugasanController extends Controller
 
                     $kembarPadaKontrak = $kontrak->pekerjaan()
                         ->where('uraian_pekerjaan', $penugasan->uraian_pekerjaan)
+                        ->where('sebagai', $penugasan->sebagai)
                         ->exists();
 
                     if ($kembarPadaKontrak) {
@@ -374,11 +407,13 @@ abstract class BasePenugasanController extends Controller
                     }
 
                     $honorSaatIni = (int) $kontrak->pekerjaan()->sum('jumlah');
+                    $peranAda     = $kontrak->pekerjaan()->whereNotNull('sebagai')->pluck('sebagai')->all();
+                    $batasMitra   = BatasHonor::untukMitra($mitra->wilayah, array_merge($peranAda, [$penugasan->sebagai]));
                     $vol          = (float) $volumes[$mitra->id];
                     $jumlah       = (int) round($vol * $hargaSatuan);
 
-                    if ($batasHonor > 0 && ($honorSaatIni + $jumlah) > $batasHonor) {
-                        $lewatBatas[] = $mitra->user->name;
+                    if ($batasMitra > 0 && ($honorSaatIni + $jumlah) > $batasMitra) {
+                        $lewatBatas[] = $mitra->user->name . ' (Maks Rp ' . number_format($batasMitra, 0, ',', '.') . ')';
                     }
 
                     $kontrak->pekerjaan()->create([
@@ -386,6 +421,7 @@ abstract class BasePenugasanController extends Controller
                         'koordinator_id'      => $penugasan->koordinator_id,
                         'urutan'              => (int) $kontrak->pekerjaan()->max('urutan') + 1,
                         'uraian_pekerjaan'    => $penugasan->uraian_pekerjaan,
+                        'sebagai'             => $penugasan->sebagai,
                         'ro'                  => $penugasan->ro,
                         'kro_ro'              => $penugasan->kro_ro,
                         'komponen'            => $penugasan->komponen,
@@ -473,12 +509,15 @@ abstract class BasePenugasanController extends Controller
             'jumlah' => $jumlah,
         ]);
 
-        $batasHonor = (int) config('mitra.batas_honor', config('penugasan.batas_honor', 3500000));
-        $totalBulan = (int) ($pekerjaan->kontrak?->pekerjaan()->sum('jumlah') ?? 0);
+        $kontrak    = $pekerjaan->kontrak;
+        $peranAda   = $kontrak ? $kontrak->pekerjaan()->whereNotNull('sebagai')->pluck('sebagai')->all() : [];
+        $batasMitra = BatasHonor::untukMitra($kontrak?->mitra?->wilayah, $peranAda ?: [$pekerjaan->sebagai]);
+        $totalBulan = (int) ($kontrak?->pekerjaan()->sum('jumlah') ?? 0);
         $pesan      = 'Volume untuk ' . $nama . ' berhasil diperbarui.';
 
-        if ($batasHonor > 0 && $totalBulan > $batasHonor) {
-            $pesan .= ' Perhatian: total honor bulan ini untuk ' . $nama . ' melebihi batas maksimal.';
+        if ($batasMitra > 0 && $totalBulan > $batasMitra) {
+            $pesan .= ' Perhatian: total honor bulan ini untuk ' . $nama . ' melebihi batas (Maks Rp '
+                . number_format($batasMitra, 0, ',', '.') . ').';
         }
 
         return redirect()
@@ -607,6 +646,7 @@ abstract class BasePenugasanController extends Controller
                 $penugasan->update([
                     'koordinator_id'      => $koordinatorId,
                     'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
+                    'sebagai'             => $data['sebagai'],
                     'ro'                  => $ro,
                     'kro_ro'              => $data['kro_ro'] ?? null,
                     'komponen'            => $data['komponen'] ?? null,
@@ -643,6 +683,7 @@ abstract class BasePenugasanController extends Controller
 
                     $kembar = $kontrak->pekerjaan()
                         ->where('uraian_pekerjaan', $data['uraian_pekerjaan'])
+                        ->where('sebagai', $data['sebagai'])
                         ->where('id', '!=', $pekerjaan->id)
                         ->exists();
 
@@ -661,6 +702,7 @@ abstract class BasePenugasanController extends Controller
                     $pekerjaan->forceFill([
                         'koordinator_id'      => $koordinatorId,
                         'uraian_pekerjaan'    => $data['uraian_pekerjaan'],
+                        'sebagai'             => $data['sebagai'],
                         'ro'                  => $ro,
                         'kro_ro'              => $data['kro_ro'] ?? null,
                         'komponen'            => $data['komponen'] ?? null,
@@ -726,6 +768,7 @@ abstract class BasePenugasanController extends Controller
             ->when($this->hanyaTugasSendiri, fn($query) => $query->where('koordinator_id', Auth::id()))
             ->when($q !== '', fn($query) => $query->where(function ($w) use ($q) {
                 $w->where('uraian_pekerjaan', 'like', "%{$q}%")
+                    ->orWhere('sebagai', 'like', "%{$q}%")
                     ->orWhere('ro', 'like', "%{$q}%")
                     ->orWhereHas('koordinator', fn($k) => $k
                         ->where('name', 'like', "%{$q}%")
@@ -1095,6 +1138,7 @@ abstract class BasePenugasanController extends Controller
     {
         $aturan = [
             'uraian_pekerjaan'    => 'required|string|max:255',
+            'sebagai'             => ['required', Rule::in(['Pengolah', 'Pendata'])],
             'kro_ro'              => ['nullable', 'required_with:komponen', Rule::in(config('penugasan.kro'))],
             'komponen'            => ['nullable', 'required_with:kro_ro', Rule::in(config('penugasan.komponen'))],
             'satuan'              => ['required', Rule::in(config('penugasan.satuan'))],
@@ -1120,6 +1164,8 @@ abstract class BasePenugasanController extends Controller
     {
         return [
             'uraian_pekerjaan.required'       => 'Uraian pekerjaan wajib diisi.',
+            'sebagai.required'                => 'Pilih peran tugas (Pengolah atau Pendata).',
+            'sebagai.in'                      => 'Pilihan peran tidak valid.',
             'koordinator_id.required'         => 'Pilih koordinator yang memegang tugas.',
             'koordinator_id.exists'           => 'Koordinator yang dipilih tidak valid atau tidak aktif.',
             'kro_ro.in'                       => 'Pilihan KRO tidak valid.',

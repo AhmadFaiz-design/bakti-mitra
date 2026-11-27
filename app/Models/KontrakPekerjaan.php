@@ -14,6 +14,7 @@ class KontrakPekerjaan extends Model
         'koordinator_id',
         'urutan',
         'uraian_pekerjaan',
+        'sebagai',
         'ro',
         'kro_ro',
         'komponen',

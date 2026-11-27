@@ -38,6 +38,15 @@
                             placeholder="Masukkan uraian pekerjaan" required>
                     </div>
 
+                    <div class="form-group full-width">
+                        <label for="sebagai">Sebagai</label>
+                        <select id="sebagai" name="sebagai" required>
+                            <option value="" disabled @selected(!old('sebagai', $penugasan->sebagai))>Pilih Sebagai (Pengolah / Pendata)</option>
+                            <option value="Pengolah" @selected(old('sebagai', $penugasan->sebagai) === 'Pengolah')>Pengolah</option>
+                            <option value="Pendata" @selected(old('sebagai', $penugasan->sebagai) === 'Pendata')>Pendata</option>
+                        </select>
+                    </div>
+
                     @if ($bisaPilihKoordinator)
                         <div class="form-group full-width">
                             <label for="koordinator_id">Koordinator</label>
