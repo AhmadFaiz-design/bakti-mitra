@@ -1,4 +1,6 @@
 @php
+    $bulan = $bulan ?? '';
+    $daftarBulan = $daftarBulan ?? collect();
     $persen = $ringkasan['total'] > 0 ? (int) round(($ringkasan['dibayar'] / $ringkasan['total']) * 100) : 0;
 
     $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
@@ -12,11 +14,12 @@
 
     $jumlahFilter =
         (int) $adaHonor +
+        (int) ($bulan !== '') +
         (int) request()->filled('wilayah') +
         (int) ($bisaPilihKoordinator && request()->filled('koordinator')) +
         count($tugasDipilih);
 
-    $kunciFilter = ['honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah'];
+    $kunciFilter = ['bulan', 'honor_mode', 'honor_jumlah', 'honor_dari', 'honor_sampai', 'wilayah'];
     if ($bisaPilihKoordinator) {
         $kunciFilter[] = 'koordinator';
     }
@@ -95,10 +98,10 @@
 
     {{-- PENCARIAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
-        @if (request()->filled('per_page'))
-            <input type="hidden" name="per_page" value="{{ $perPage }}">
-        @endif
         <form method="GET" action="{{ route($routes['index']) }}" style="display: contents">
+            @if (request()->filled('per_page'))
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
             <input type="hidden" name="status" value="{{ $status }}">
             {!! $hiddenFilter !!}
             <label class="mitra-search">
@@ -517,6 +520,9 @@
 
                 <div class="filter-body">
                     <h2 class="filter-title">Filter Penugasan</h2>
+
+                    <x-admin.filter-tugas judul="Bulan" placeholder="Cari Bulan / Tahun" nama="bulan"
+                        :banyak="false" :opsi="$daftarBulan" :dipilih="$bulan !== '' ? [$bulan] : []" />
 
                     <x-admin.filter-wilayah :opsi="$daftarWilayah" :dipilih="request('wilayah')" />
 

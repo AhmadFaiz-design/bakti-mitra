@@ -371,7 +371,6 @@
             <script>
                 (function() {
                     const HARGA_SATUAN = @json($hargaSatuan);
-                    const BATAS_HONOR = @json($batasHonor);
                     const SATUAN = @json($penugasan->satuan);
                     const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
 

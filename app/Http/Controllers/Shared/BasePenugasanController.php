@@ -39,6 +39,18 @@ abstract class BasePenugasanController extends Controller
             $perPage = 10;
         }
 
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
+        $maxQuery = DB::table('kontrak_pekerjaan as kp')
+            ->join('penugasan as p', 'p.id', '=', 'kp.penugasan_id')
+            ->when($this->hanyaTugasSendiri, fn($q) => $q->where('p.koordinator_id', Auth::id()))
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->whereYear('p.tanggal_mulai', $bulanTahun)
+                ->whereMonth('p.tanggal_mulai', $bulanAngka))
+            ->selectRaw('COALESCE(SUM(kp.jumlah), 0) as total')
+            ->groupBy('kp.penugasan_id')
+            ->orderByDesc('total');
+
         $maxQuery = DB::table('kontrak_pekerjaan as kp')
             ->join('penugasan as p', 'p.id', '=', 'kp.penugasan_id')
             ->when($this->hanyaTugasSendiri, fn($q) => $q->where('p.koordinator_id', Auth::id()))
@@ -72,7 +84,10 @@ abstract class BasePenugasanController extends Controller
         $ringkasan['belum'] = $ringkasan['total'] - $ringkasan['dibayar'];
 
         /* ---------- Tren bulan ini vs bulan lalu untuk badge kartu ---------- */
-        $blnIni  = now('Asia/Makassar');
+        /* ---------- Tren bulan terpilih/berjalan vs bulan sebelumnya untuk badge kartu ---------- */
+        $blnIni  = ($bulanTahun && $bulanAngka)
+            ? Carbon::create($bulanTahun, $bulanAngka, 1, 0, 0, 0, 'Asia/Makassar')
+            : now('Asia/Makassar');
         $blnLalu = $blnIni->copy()->subMonthNoOverflow();
 
         $ambilRingkasanBulan = function (Carbon $tgl) {
@@ -148,12 +163,39 @@ abstract class BasePenugasanController extends Controller
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftar->lastPage()]));
         }
 
+        // === TARUH DI SINI (menggantikan $daftarWilayah & $daftarTugas yang lama) ===
+        $sekarang   = now('Asia/Makassar');
+        $kunciBulan = Penugasan::query()
+            ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
+            ->whereNotNull('tanggal_mulai')
+            ->selectRaw('YEAR(tanggal_mulai) as th, MONTH(tanggal_mulai) as bl')
+            ->distinct()
+            ->get()
+            ->map(fn($r) => sprintf('%04d-%02d', $r->th, $r->bl))
+            ->push($sekarang->format('Y-m'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $daftarBulan = $kunciBulan->map(function ($k) {
+            [$y, $m] = array_map('intval', explode('-', $k));
+
+            return [
+                'v' => $k,
+                't' => Carbon::create($y, $m, 1)->locale('id')->translatedFormat('F Y'),
+            ];
+        });
+
         $daftarWilayah = Mitra::whereNotNull('wilayah')
             ->distinct()->orderBy('wilayah')->pluck('wilayah');
 
         $daftarTugas = Penugasan::whereNotNull('uraian_pekerjaan')
             ->when($this->hanyaTugasSendiri, fn($q) => $q->where('koordinator_id', Auth::id()))
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->whereYear('tanggal_mulai', $bulanTahun)
+                ->whereMonth('tanggal_mulai', $bulanAngka))
             ->distinct()->orderBy('uraian_pekerjaan')->pluck('uraian_pekerjaan');
+        // === SAMPAI SINI ===
 
         $daftarKoordinator = $this->bisaPilihKoordinator
             ? User::where('role', 'koordinator')->orderBy('name')->get(['id', 'name'])
@@ -162,10 +204,12 @@ abstract class BasePenugasanController extends Controller
         return view('shared.penugasan.index', $this->sharedData() + compact(
             'daftar',
             'q',
+            'bulan',
             'status',
             'ringkasan',
             'tren',
             'honorMaks',
+            'daftarBulan',
             'daftarWilayah',
             'daftarTugas',
             'daftarKoordinator',
@@ -761,11 +805,15 @@ abstract class BasePenugasanController extends Controller
     /** Query penugasan induk dengan filter role, pencarian, status, dan panel filter */
     protected function filterQuery(Request $request): Builder
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
         $q      = trim((string) $request->input('q', ''));
         $status = $request->input('status');
 
         $query = Penugasan::query()
             ->when($this->hanyaTugasSendiri, fn($query) => $query->where('koordinator_id', Auth::id()))
+            ->when($bulanTahun && $bulanAngka, fn($query) => $query
+                ->whereYear('tanggal_mulai', $bulanTahun)
+                ->whereMonth('tanggal_mulai', $bulanAngka))
             ->when($q !== '', fn($query) => $query->where(function ($w) use ($q) {
                 $w->where('uraian_pekerjaan', 'like', "%{$q}%")
                     ->orWhere('sebagai', 'like', "%{$q}%")
@@ -926,6 +974,8 @@ abstract class BasePenugasanController extends Controller
     /** Export hasil filter ke CSV atau PDF */
     public function export(Request $request)
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
         $format       = $request->input('format') === 'pdf' ? 'pdf' : 'csv';
         $penugasanIds = $this->filterQuery($request)->pluck('penugasan.id');
 
@@ -934,7 +984,7 @@ abstract class BasePenugasanController extends Controller
             ->latest('id')
             ->get();
 
-        $namaFile = 'penugasan-mitra-' . now()->format('Ymd-His');
+        $namaFile = 'penugasan-mitra-' . ($bulan !== '' ? $bulan . '-' : '') . now()->format('Ymd-His');
         $tgl = fn($d) => $d ? Carbon::parse($d)->format('d/m/Y') : '-';
 
         if ($format === 'csv') {
@@ -988,6 +1038,10 @@ abstract class BasePenugasanController extends Controller
 
         $keterangan = ['Status: ' . $statusLabel];
 
+        if ($bulanTahun && $bulanAngka) {
+            $keterangan[] = 'Bulan: ' . Carbon::create($bulanTahun, $bulanAngka, 1)->locale('id')->translatedFormat('F Y');
+        }
+
         if (trim((string) $request->input('q')) !== '') {
             $keterangan[] = 'Pencarian: "' . trim($request->input('q')) . '"';
         }
@@ -1026,6 +1080,15 @@ abstract class BasePenugasanController extends Controller
 
     /* ===================== Shared Context & Helper ===================== */
 
+    private function parseBulan(Request $request): array
+    {
+        $bulan = (string) $request->input('bulan', '');
+        if (preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $bulan, $m)) {
+            return [$bulan, (int) $m[1], (int) $m[2]];
+        }
+
+        return ['', null, null];
+    }
     protected function bersihkanKontrakKosong(?Kontrak $kontrak): void
     {
         if (!$kontrak) {
@@ -1144,7 +1207,28 @@ abstract class BasePenugasanController extends Controller
             'satuan'              => ['required', Rule::in(config('penugasan.satuan'))],
             'harga_satuan'        => 'required|integer|min:1',
             'tanggal_mulai'       => 'required|date',
-            'tanggal_selesai'     => 'required|date|after_or_equal:tanggal_mulai',
+            'tanggal_selesai'     => [
+                'required',
+                'date',
+                'after_or_equal:tanggal_mulai',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $mulaiRaw = request()->input('tanggal_mulai');
+                    if (!$mulaiRaw || !$value) {
+                        return;
+                    }
+
+                    try {
+                        $mulai   = Carbon::parse($mulaiRaw);
+                        $selesai = Carbon::parse($value);
+
+                        if ($mulai->year !== $selesai->year || $mulai->month !== $selesai->month) {
+                            $fail('Tanggal mulai dan tanggal selesai tidak boleh berada di bulan yang berbeda.');
+                        }
+                    } catch (\Throwable $e) {
+                        // Format tanggal tidak valid akan ditangani rule 'date'
+                    }
+                },
+            ],
             'paket_data_pulsa'    => 'nullable|boolean',
             'ro_paket_data_pulsa' => ['nullable', 'required_if:paket_data_pulsa,1', Rule::in(config('penugasan.ro_pulsa'))],
         ];

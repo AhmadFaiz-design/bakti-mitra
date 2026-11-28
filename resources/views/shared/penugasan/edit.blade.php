@@ -185,6 +185,48 @@
                 });
                 harga.value = formatRp(harga.value);
 
+                const tglMulai = document.getElementById('tanggal_mulai');
+                const tglSelesai = document.getElementById('tanggal_selesai');
+                const errTanggal = document.getElementById('errTanggalSelesai');
+
+                function aturBatasTanggal() {
+                    const m = tglMulai.value;
+                    const s = tglSelesai.value;
+
+                    if (m) {
+                        const [tahun, bulan] = m.split('-').map(Number);
+                        const akhirBulan = new Date(tahun, bulan, 0).getDate();
+                        const maxStr = `${tahun}-${String(bulan).padStart(2, '0')}-${String(akhirBulan).padStart(2, '0')}`;
+
+                        tglSelesai.min = m;
+                        tglSelesai.max = maxStr;
+                    } else {
+                        tglSelesai.removeAttribute('min');
+                        tglSelesai.removeAttribute('max');
+                    }
+
+                    let pesan = '';
+                    if (m && s) {
+                        if (m.slice(0, 7) !== s.slice(0, 7)) {
+                            pesan = 'Tanggal mulai dan tanggal selesai tidak boleh berada di bulan yang berbeda.';
+                        } else if (s < m) {
+                            pesan = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+                        }
+                    }
+
+                    tglSelesai.setCustomValidity(pesan);
+                    if (errTanggal) {
+                        errTanggal.textContent = pesan;
+                        errTanggal.hidden = !pesan;
+                    }
+                }
+
+                tglMulai.addEventListener('change', aturBatasTanggal);
+                tglMulai.addEventListener('input', aturBatasTanggal);
+                tglSelesai.addEventListener('change', aturBatasTanggal);
+                tglSelesai.addEventListener('input', aturBatasTanggal);
+                aturBatasTanggal();
+
                 const pulsa = document.getElementById('paket_data_pulsa');
                 const grupPulsa = document.getElementById('grupRoPulsa');
                 const aturPulsa = () => {

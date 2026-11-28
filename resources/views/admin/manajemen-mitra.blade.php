@@ -1,3 +1,9 @@
+@php
+    $bulan = $bulan ?? '';
+    $daftarBulan = $daftarBulan ?? collect();
+    $statusPerMitra = $statusPerMitra ?? [];
+@endphp
+
 <x-admin.main>
     {{-- HEADER HALAMAN (tanpa subjudul) --}}
     <x-header judul="Data Mitra" />
@@ -48,11 +54,15 @@
         </div>
     </section>
 
-    {{-- PENCARIAN, STATUS, FILTER --}}
+    {{-- PENCARIAN, BULAN, STATUS, FILTER --}}
     <section class="mitra-toolbar">
+        {{-- 1. Form Pencarian --}}
         <form method="GET" action="{{ route('admin.datamitra') }}" style="display: contents">
             @if (request()->filled('per_page'))
                 <input type="hidden" name="per_page" value="{{ $perPage }}">
+            @endif
+            @if ($bulan !== '')
+                <input type="hidden" name="bulan" value="{{ $bulan }}">
             @endif
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="sort" value="{{ $sort }}">
@@ -76,6 +86,8 @@
             </label>
         </form>
 
+
+        {{-- 3. Dropdown Status --}}
         <x-admin.status-dropdown :options="[
             'semua' => 'Semua',
             'tersedia' => 'Tersedia',
@@ -90,9 +102,11 @@
                 $honorMode === 'nominal'
                     ? request()->filled('honor_jumlah')
                     : request()->filled('honor_dari') || request()->filled('honor_sampai');
-            $jumlahFilter = (int) $adaHonor + (int) request()->filled('wilayah') + count($tugasDipilih);
+            $jumlahFilter =
+                (int) $adaHonor + (int) ($bulan !== '') + (int) request()->filled('wilayah') + count($tugasDipilih);
         @endphp
 
+        {{-- 4. Tombol Filter Lanjutan --}}
         <button type="button" class="outline-btn" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
             <svg>
                 <use href="#i-filter" />
@@ -184,7 +198,7 @@
                             </td>
 
                             <td>
-                                @php $st = $mitra->status_ketersediaan; @endphp
+                                @php $st = $statusPerMitra[$mitra->id] ?? $mitra->status_ketersediaan; @endphp
                                 <span class="status-badge {{ $st['key'] }}">{{ $st['label'] }}</span>
                             </td>
 
@@ -200,7 +214,7 @@
                                 <button type="button" class="action-btn" aria-label="Aksi {{ $mitra->user->name }}"
                                     aria-haspopup="true" aria-expanded="false" data-nama="{{ $mitra->user->name }}"
                                     data-sobat="{{ $mitra->user->username }}"
-                                    data-honor="Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 3500000, 0, ',', '.') }}"
+                                    data-honor="Rp {{ number_format($mitra->pekerjaan_sum_jumlah ?? 0, 0, ',', '.') }}"
                                     data-tugas="{{ json_encode($tugas) }}" data-wilayah="{{ $mitra->wilayah }}"
                                     data-edit-url="{{ $urlEdit }}" data-delete-url="{{ $urlHapus }}">
                                     &#8942;
@@ -213,7 +227,7 @@
                                 @if ($q !== '')
                                     Tidak ada mitra yang cocok dengan "{{ $q }}".
                                 @else
-                                    Belum ada data mitra pada status ini.
+                                    Belum ada data mitra pada filter ini.
                                     <a href="{{ route('admin.mitra.import') }}">Import dari Excel</a>
                                 @endif
                             </td>
@@ -279,7 +293,7 @@
         </div>
     </section>
 
-    {{-- POPOVER AKSI MITRA, FILTER PANEL, EXPORT MODAL, DAN SCRIPT LANJUTKAN DI SINI (SAMA SEPERTI SEBELUMNYA) --}}
+    {{-- POPOVER AKSI MITRA --}}
     <div class="mitra-popover" id="mitraPopover" role="dialog" aria-label="Detail mitra">
         <div class="pop-field">
             <span class="pop-label">Name</span>
@@ -307,7 +321,6 @@
             <div class="pop-chips" id="popTugas"></div>
         </div>
 
-
         <div class="pop-field">
             <span class="pop-label">Aksi</span>
             <div class="pop-actions">
@@ -326,6 +339,8 @@
             </div>
         </div>
     </div>
+
+    {{-- PANEL FILTER --}}
     <div class="filter-overlay" id="filterOverlay"></div>
 
     <aside class="filter-panel" id="filterPanel" role="dialog" aria-label="Filter Mitra" aria-hidden="true">
@@ -353,6 +368,9 @@
             <div class="filter-body">
                 <h2 class="filter-title">Filter Mitra</h2>
 
+                <x-admin.filter-tugas judul="Bulan" placeholder="Cari Bulan / Tahun" nama="bulan"
+                    :banyak="false" :opsi="$daftarBulan" :dipilih="$bulan !== '' ? [$bulan] : []" />
+
                 <x-admin.filter-wilayah :opsi="$opsiWilayah" :dipilih="request('wilayah')" />
 
                 <x-admin.filter-tugas judul="Pekerjaan" placeholder="Cari Pekerjaan" :opsi="$opsiTugas"
@@ -379,12 +397,15 @@
     <x-admin.filter-js />
     <x-admin.export-js button="exportMitra" />
 
+    {{-- MODAL EXPORT --}}
     <div class="modal-overlay" id="exportOverlay"></div>
 
     <div class="export-modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle"
         aria-hidden="true">
         <form method="GET" action="{{ route('admin.mitra.export') }}" id="exportForm">
-            {{-- bawa semua pencarian dan filter yang sedang aktif --}}
+            @if ($bulan !== '')
+                <input type="hidden" name="bulan" value="{{ $bulan }}">
+            @endif
             <input type="hidden" name="q" value="{{ $q }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="sort" value="{{ $sort }}">
@@ -441,6 +462,7 @@
         @csrf
         @method('DELETE')
     </form>
+
     @push('scripts')
         <script>
             /* Popover aksi mitra */
@@ -463,13 +485,11 @@
                     const w = pop.offsetWidth,
                         h = pop.offsetHeight;
 
-                    // Utamakan di kiri tombol (kolom aksi ada di sisi kanan tabel)
                     let left = r.left - w - gap;
                     if (left < margin) left = r.right + gap;
                     left = Math.min(left, window.innerWidth - w - margin);
                     left = Math.max(left, margin);
 
-                    // Sejajar atas tombol, jaga agar tidak keluar layar
                     let top = r.top;
                     top = Math.min(top, window.innerHeight - h - margin);
                     top = Math.max(top, margin);
@@ -479,7 +499,6 @@
                 }
 
                 function buka(btn) {
-
                     if (aktif && aktif !== btn) {
                         aktif.setAttribute('aria-expanded', 'false');
                     }
@@ -515,7 +534,6 @@
                     posisi(btn);
                 }
 
-                // Klik titik tiga (delegasi event)
                 tbody.addEventListener('click', e => {
                     const btn = e.target.closest('.action-btn');
                     if (!btn) return;
@@ -523,7 +541,6 @@
                     (aktif === btn) ? tutup(): buka(btn);
                 });
 
-                // Klik di luar popover = tutup
                 document.addEventListener('click', e => {
                     if (aktif && !pop.contains(e.target)) tutup();
                 });
@@ -535,7 +552,6 @@
                     if (aktif && !pop.contains(e.target)) tutup();
                 }, true);
 
-                // Tombol edit & hapus
                 document.getElementById('popEdit').addEventListener('click', () => {
                     const url = aktif?.dataset.editUrl;
                     if (url) {
@@ -556,7 +572,7 @@
                     const url = aktif?.dataset.deleteUrl;
                     const nama = aktif?.dataset.nama ?? 'mitra ini';
 
-                    tutup(); // tutup popover aksi lebih dulu
+                    tutup();
 
                     if (!url) {
                         if (typeof popup === 'function') {

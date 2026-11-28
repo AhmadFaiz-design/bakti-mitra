@@ -5501,3 +5501,12 @@ main:has(.bulk-dock-wrap:not([hidden])) .table-card {
     background: #FCD7D4;
     color: #5C1D19;
 }
+
+/* Dropdown pilih bulan di toolbar */
+.bulan-select {
+    cursor: pointer;
+    padding-right: 14px;
+    font: 500 13px 'Poppins', sans-serif;
+    color: var(--ink);
+    background-color: var(--white);
+}

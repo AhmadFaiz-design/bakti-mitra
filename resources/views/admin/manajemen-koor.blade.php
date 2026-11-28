@@ -1,11 +1,13 @@
 @php
+    $bulan = $bulan ?? '';
+    $daftarBulan = $daftarBulan ?? collect();
     $tugasDipilih = array_values(array_filter((array) request('tugas', [])));
     $adaPekerjaan = request()->filled('pekerjaan_min') || request()->filled('pekerjaan_max');
     $adaMitra = request()->filled('mitra_min') || request()->filled('mitra_max');
-    $jumlahFilter = (int) $adaPekerjaan + (int) $adaMitra + count($tugasDipilih);
+    $jumlahFilter = (int) ($bulan !== '') + (int) $adaPekerjaan + (int) $adaMitra + count($tugasDipilih);
 
-    // Input tersembunyi untuk meneruskan filter ke form pencarian
-    $kunciFilter = ['pekerjaan_min', 'pekerjaan_max', 'mitra_min', 'mitra_max'];
+    // Input tersembunyi untuk meneruskan filter ke form pencarian & export
+    $kunciFilter = ['bulan', 'pekerjaan_min', 'pekerjaan_max', 'mitra_min', 'mitra_max'];
     $hiddenFilter = collect($kunciFilter)
         ->filter(fn($k) => request()->filled($k))
         ->values()
@@ -13,6 +15,7 @@
         ->merge(collect($tugasDipilih)->map(fn($t) => '<input type="hidden" name="tugas[]" value="' . e($t) . '">'))
         ->implode('');
 @endphp
+
 <x-admin.main>
     {{-- HEADER HALAMAN (tanpa subjudul) --}}
     <x-header judul="Data Koordinator" />
@@ -341,6 +344,9 @@
 
             <div class="filter-body">
                 <h2 class="filter-title">Filter Koordinator</h2>
+
+                <x-admin.filter-tugas judul="Bulan" placeholder="Cari Bulan / Tahun" nama="bulan"
+                    :banyak="false" :opsi="$daftarBulan" :dipilih="$bulan !== '' ? [$bulan] : []" />
 
                 <x-admin.filter-tugas judul="Tugas" placeholder="Cari Tugas" :opsi="$daftarTugas" :dipilih="$tugasDipilih" />
 

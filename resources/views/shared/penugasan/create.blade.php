@@ -83,14 +83,15 @@
 
                     <div class="form-group">
                         <label for="tanggal_mulai">Tanggal Mulai</label>
-                        <input type="date" id="tanggal_mulai" name="tanggal_mulai"
-                            value="{{ old('tanggal_mulai') }}" required>
+                        <input type="date" id="tanggal_mulai" name="tanggal_mulai" value="{{ old('tanggal_mulai') }}"
+                            required>
                     </div>
 
                     <div class="form-group">
                         <label for="tanggal_selesai">Tanggal Selesai</label>
                         <input type="date" id="tanggal_selesai" name="tanggal_selesai"
                             value="{{ old('tanggal_selesai') }}" required>
+                        <small id="errTanggalSelesai" class="field-error" hidden></small>
                     </div>
                 </div>
 
