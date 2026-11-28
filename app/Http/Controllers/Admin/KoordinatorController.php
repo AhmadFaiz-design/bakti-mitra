@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Database\Eloquent\Builder;
+use Carbon\Carbon;
 
 class KoordinatorController extends Controller
 {
@@ -23,6 +24,8 @@ class KoordinatorController extends Controller
         if (!in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
         }
+
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
 
         $status = in_array($request->query('status'), ['active', 'inactive'], true)
             ? $request->query('status')
@@ -37,61 +40,100 @@ class KoordinatorController extends Controller
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftarKoordinator->lastPage()]));
         }
 
-        // Nama pekerjaan tiap koordinator di halaman ini (untuk popover)
-        $pekerjaanPerKoordinator = DB::table('kontrak_pekerjaan')
-            ->whereIn('koordinator_id', $daftarKoordinator->pluck('id'))
-            ->whereNotNull('uraian_pekerjaan')
-            ->select('koordinator_id', 'uraian_pekerjaan')
+        // Nama pekerjaan tiap koordinator di halaman ini (mengikuti bulan terpilih jika ada)
+        $pekerjaanPerKoordinator = DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->whereIn('kp.koordinator_id', $daftarKoordinator->pluck('id'))
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
+            ->whereNotNull('kp.uraian_pekerjaan')
+            ->select('kp.koordinator_id', 'kp.uraian_pekerjaan')
             ->distinct()
             ->get()
             ->groupBy('koordinator_id')
             ->map(fn($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
 
-        // Pilihan dropdown "Pekerjaan" di panel filter
-        $daftarTugas = DB::table('kontrak_pekerjaan')
-            ->whereNotNull('koordinator_id')
-            ->whereNotNull('uraian_pekerjaan')
+        // Daftar pilihan bulan di dalam panel Filter
+        $sekarang   = now();
+        $kunciBulan = DB::table('kontrak')
+            ->select('periode_tahun', 'periode_bulan')
             ->distinct()
-            ->orderBy('uraian_pekerjaan')
-            ->pluck('uraian_pekerjaan');
+            ->get()
+            ->map(fn($r) => sprintf('%04d-%02d', $r->periode_tahun, $r->periode_bulan))
+            ->push($sekarang->format('Y-m'))
+            ->unique()
+            ->sortDesc()
+            ->values();
 
-        // Statistik dari seluruh koordinator
+        $daftarBulan = $kunciBulan->map(function ($k) {
+            [$y, $m] = array_map('intval', explode('-', $k));
+
+            return [
+                'v' => $k,
+                't' => Carbon::create($y, $m, 1)->locale('id')->translatedFormat('F Y'),
+            ];
+        });
+
+        // Pilihan dropdown "Tugas" di panel filter
+        $daftarTugas = DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->whereNotNull('kp.koordinator_id')
+            ->whereNotNull('kp.uraian_pekerjaan')
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
+            ->distinct()
+            ->orderBy('kp.uraian_pekerjaan')
+            ->pluck('kp.uraian_pekerjaan');
+
+        // Statistik koordinator
         $total       = User::where('role', 'koordinator')->count();
         $aktif       = User::where('role', 'koordinator')->where('is_active', true)->count();
         $nonaktif    = $total - $aktif;
         $persenAktif = $total > 0 ? (int) round(($aktif / $total) * 100) : 0;
 
-        // Total mitra unik yang ditangani koordinator & jumlah pekerjaan unik
+        // Total mitra unik & jumlah pekerjaan unik (mengikuti bulan terpilih jika ada)
         $partisipanMitra = (int) DB::table('kontrak_pekerjaan as kp')
             ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
             ->whereNotNull('kp.koordinator_id')
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
             ->distinct()
             ->count('k.mitra_id');
 
-        $jumlahPekerjaan = (int) DB::table('kontrak_pekerjaan')
-            ->whereNotNull('koordinator_id')
-            ->whereNotNull('uraian_pekerjaan')
+        $jumlahPekerjaan = (int) DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->whereNotNull('kp.koordinator_id')
+            ->whereNotNull('kp.uraian_pekerjaan')
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
             ->distinct()
-            ->count('uraian_pekerjaan');
+            ->count('kp.uraian_pekerjaan');
 
-        // Mitra aktif yang tersedia (belum bertugas bulan ini), selaras dengan Data Mitra
-        $bulanIni = now();
+        // Mitra aktif yang tersedia pada bulan acuan
+        $acuanTahun = $bulanTahun ?? $sekarang->year;
+        $acuanBulan = $bulanAngka ?? $sekarang->month;
+
         $mitraTersedia = DB::table('mitra')
             ->join('users', 'users.id', '=', 'mitra.user_id')
             ->where('users.is_active', true)
-            ->whereNotExists(function ($s) use ($bulanIni) {
+            ->whereNotExists(function ($s) use ($acuanTahun, $acuanBulan) {
                 $s->select(DB::raw(1))
                     ->from('kontrak_pekerjaan as kp')
                     ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
                     ->whereColumn('k.mitra_id', 'mitra.id')
-                    ->where('k.periode_tahun', $bulanIni->year)
-                    ->where('k.periode_bulan', $bulanIni->month);
+                    ->where('k.periode_tahun', $acuanTahun)
+                    ->where('k.periode_bulan', $acuanBulan);
             })
             ->count();
 
         return view('admin.manajemen-koor', compact(
             'daftarKoordinator',
             'pekerjaanPerKoordinator',
+            'daftarBulan',
             'daftarTugas',
             'total',
             'aktif',
@@ -101,18 +143,17 @@ class KoordinatorController extends Controller
             'partisipanMitra',
             'mitraTersedia',
             'jumlahPekerjaan',
+            'bulan',
             'status',
             'sort',
             'q'
         ));
     }
 
-    /**
-     * Query koordinator lengkap dengan pencarian, filter, dan urutan.
-     * Dipakai oleh index() dan export().
-     */
     private function buildQuery(Request $request): Builder
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
         $status = in_array($request->query('status'), ['active', 'inactive'], true)
             ? $request->query('status')
             : 'semua';
@@ -121,14 +162,32 @@ class KoordinatorController extends Controller
             : 'name';
         $q = trim((string) $request->query('q', ''));
 
-        // Jumlah pekerjaan berbeda & jumlah mitra berbeda per koordinator
-        $pekerjaanSql = '(select count(distinct kp.uraian_pekerjaan)
+        // Jumlah pekerjaan & jumlah mitra per koordinator (mengikuti bulan terpilih jika ada)
+        if ($bulanTahun && $bulanAngka) {
+            $t = (int) $bulanTahun;
+            $b = (int) $bulanAngka;
+
+            $pekerjaanSql = "(select count(distinct kp.uraian_pekerjaan)
+                          from kontrak_pekerjaan kp
+                          join kontrak k on k.id = kp.kontrak_id
+                          where kp.koordinator_id = users.id
+                            and k.periode_tahun = $t
+                            and k.periode_bulan = $b)";
+            $mitraSql = "(select count(distinct k.mitra_id)
                       from kontrak_pekerjaan kp
+                      join kontrak k on k.id = kp.kontrak_id
+                      where kp.koordinator_id = users.id
+                        and k.periode_tahun = $t
+                        and k.periode_bulan = $b)";
+        } else {
+            $pekerjaanSql = '(select count(distinct kp.uraian_pekerjaan)
+                          from kontrak_pekerjaan kp
+                          where kp.koordinator_id = users.id)';
+            $mitraSql = '(select count(distinct k.mitra_id)
+                      from kontrak_pekerjaan kp
+                      join kontrak k on k.id = kp.kontrak_id
                       where kp.koordinator_id = users.id)';
-        $mitraSql = '(select count(distinct k.mitra_id)
-                  from kontrak_pekerjaan kp
-                  join kontrak k on k.id = kp.kontrak_id
-                  where kp.koordinator_id = users.id)';
+        }
 
         $query = User::query()
             ->where('role', 'koordinator')
@@ -140,7 +199,6 @@ class KoordinatorController extends Controller
             $query->where('users.is_active', $status === 'active');
         }
 
-        // Pencarian
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('users.name', 'like', "%{$q}%")
@@ -148,7 +206,6 @@ class KoordinatorController extends Controller
             });
         }
 
-        // Filter rentang jumlah pekerjaan & jumlah mitra
         $angka = fn($v) => (int) preg_replace('/\D/', '', (string) $v);
 
         foreach ([['pekerjaan', $pekerjaanSql], ['mitra', $mitraSql]] as [$kunci, $sql]) {
@@ -160,18 +217,20 @@ class KoordinatorController extends Controller
             }
         }
 
-        // Filter pekerjaan (koordinator yang pernah memberi salah satu pekerjaan terpilih)
         $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
         if ($tugasDipilih) {
-            $query->whereExists(function ($s) use ($tugasDipilih) {
+            $query->whereExists(function ($s) use ($tugasDipilih, $bulanTahun, $bulanAngka) {
                 $s->select(DB::raw(1))
                     ->from('kontrak_pekerjaan as kp')
+                    ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
                     ->whereColumn('kp.koordinator_id', 'users.id')
-                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
+                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih)
+                    ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                        ->where('k.periode_tahun', $bulanTahun)
+                        ->where('k.periode_bulan', $bulanAngka));
             });
         }
 
-        // Urutan
         if ($sort === 'pekerjaan-desc') {
             $query->orderByDesc('jumlah_pekerjaan')->orderBy('users.name');
         } elseif ($sort === 'mitra-desc') {
@@ -183,22 +242,22 @@ class KoordinatorController extends Controller
         return $query;
     }
 
-    /** Export hasil filter ke CSV atau PDF */
     public function export(Request $request)
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
         $format = $request->query('format') === 'pdf' ? 'pdf' : 'csv';
         $status = in_array($request->query('status'), ['active', 'inactive'], true)
             ? $request->query('status')
             : 'semua';
 
         $daftar   = $this->buildQuery($request)->get();
-        $namaFile = 'data-koordinator-' . now()->format('Ymd-His');
+        $namaFile = 'data-koordinator-' . ($bulan !== '' ? $bulan . '-' : '') . now()->format('Ymd-His');
 
-        // ================= CSV =================
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($daftar) {
                 $out = fopen('php://output', 'w');
-                fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
+                fwrite($out, "\xEF\xBB\xBF");
 
                 fputcsv($out, ['No', 'Nama', 'NIP / ID', 'Email', 'Jumlah Pekerjaan', 'Jumlah Mitra', 'Status'], ';', '"', '');
 
@@ -206,7 +265,7 @@ class KoordinatorController extends Controller
                     fputcsv($out, [
                         $i + 1,
                         $k->name,
-                        '="' . $k->username . '"', // cegah Excel mengubah angka panjang
+                        '="' . $k->username . '"',
                         $k->email,
                         (int) $k->jumlah_pekerjaan,
                         (int) $k->jumlah_mitra,
@@ -217,8 +276,11 @@ class KoordinatorController extends Controller
             }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
         }
 
-        // ================= PDF =================
         $ringkasan = ['Status: ' . ['active' => 'Aktif', 'inactive' => 'Tidak Aktif', 'semua' => 'Semua'][$status]];
+
+        if ($bulanTahun && $bulanAngka) {
+            $ringkasan[] = 'Bulan: ' . Carbon::create($bulanTahun, $bulanAngka, 1)->locale('id')->translatedFormat('F Y');
+        }
 
         if (trim((string) $request->query('q')) !== '') {
             $ringkasan[] = 'Pencarian: "' . trim($request->query('q')) . '"';
@@ -256,6 +318,16 @@ class KoordinatorController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $namaFile . '.pdf"',
         ]);
+    }
+
+    private function parseBulan(Request $request): array
+    {
+        $bulan = (string) $request->query('bulan', '');
+        if (preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $bulan, $m)) {
+            return [$bulan, (int) $m[1], (int) $m[2]];
+        }
+
+        return ['', null, null];
     }
 
     /** Hapus akun koordinator */

@@ -1,5 +1,5 @@
 @php
-    $wilayahList = ['Kendari', 'Mandonga', 'Baruga', 'Poasia', 'Kadia', 'Abeli'];
+    $wilayahList = ['Kota Kendari', 'Kab. Konawe Kepulauan'];
     // Wilayah hasil import (misalnya Konawe) tetap tampil sebagai pilihan
     if ($mitra->wilayah && !in_array($mitra->wilayah, $wilayahList)) {
         $wilayahList[] = $mitra->wilayah;

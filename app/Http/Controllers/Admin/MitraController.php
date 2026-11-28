@@ -11,6 +11,8 @@ use Illuminate\Validation\Rule;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Database\Eloquent\Builder;
+use App\Support\BatasHonor;
+use Carbon\Carbon;
 
 class MitraController extends Controller
 {
@@ -21,9 +23,15 @@ class MitraController extends Controller
         if (!in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
         }
-        // ---- Batas atas slider honor (total honor tertinggi, dibulatkan ke atas per Rp100.000) ----
+
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
+        // ---- Batas atas slider honor (mengikuti bulan terpilih jika ada) ----
         $honorTertinggi = (int) DB::table('kontrak_pekerjaan as kp')
             ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
             ->select(DB::raw('SUM(kp.jumlah) as total'))
             ->groupBy('k.mitra_id')
             ->orderByDesc('total')
@@ -33,7 +41,7 @@ class MitraController extends Controller
         $status = in_array($request->query('status'), ['tersedia', 'bertugas', 'penuh'], true)
             ? $request->query('status')
             : 'semua';
-        $sort   = in_array($request->query('sort'), ['honor-desc', 'honor-asc'])
+        $sort = in_array($request->query('sort'), ['honor-desc', 'honor-asc'])
             ? $request->query('sort')
             : 'name';
         $q = trim((string) $request->query('q', ''));
@@ -43,10 +51,13 @@ class MitraController extends Controller
             return redirect()->to($request->fullUrlWithQuery(['page' => $daftarMitra->lastPage()]));
         }
 
-        // ---- Daftar tugas tiap mitra di halaman ini (untuk popover aksi) ----
+        // ---- Daftar tugas tiap mitra di halaman ini (mengikuti bulan terpilih jika ada) ----
         $tugasPerMitra = DB::table('kontrak_pekerjaan as kp')
             ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
             ->whereIn('k.mitra_id', $daftarMitra->pluck('id'))
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
             ->whereNotNull('kp.uraian_pekerjaan')
             ->select('k.mitra_id', 'kp.uraian_pekerjaan')
             ->distinct()
@@ -54,54 +65,111 @@ class MitraController extends Controller
             ->groupBy('mitra_id')
             ->map(fn($rows) => $rows->pluck('uraian_pekerjaan')->values()->all());
 
+        // ---- Daftar pilihan bulan untuk dropdown ----
+        $sekarang   = now();
+        $kunciBulan = DB::table('kontrak')
+            ->select('periode_tahun', 'periode_bulan')
+            ->distinct()
+            ->get()
+            ->map(fn($r) => sprintf('%04d-%02d', $r->periode_tahun, $r->periode_bulan))
+            ->push($sekarang->format('Y-m'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $daftarBulan = $kunciBulan->map(function ($k) {
+            [$y, $m] = array_map('intval', explode('-', $k));
+
+            return [
+                'v' => $k,
+                't' => Carbon::create($y, $m, 1)->locale('id')->translatedFormat('F Y'),
+            ];
+        });
+
         // ---- Pilihan dropdown filter ----
         $daftarWilayah = Mitra::whereNotNull('wilayah')
             ->distinct()
             ->orderBy('wilayah')
             ->pluck('wilayah');
 
-        $daftarTugas = DB::table('kontrak_pekerjaan')
-            ->whereNotNull('uraian_pekerjaan')
+        $daftarTugas = DB::table('kontrak_pekerjaan as kp')
+            ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
+            ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                ->where('k.periode_tahun', $bulanTahun)
+                ->where('k.periode_bulan', $bulanAngka))
+            ->whereNotNull('kp.uraian_pekerjaan')
             ->distinct()
-            ->orderBy('uraian_pekerjaan')
-            ->pluck('uraian_pekerjaan');
+            ->orderBy('kp.uraian_pekerjaan')
+            ->pluck('kp.uraian_pekerjaan');
 
-        // ---- Statistik (dari seluruh data) ----
-        // ---- Statistik (dari seluruh data) ----
-        $total = Mitra::count();
+        // ---- Statistik & status ketersediaan (bulan terpilih, atau bulan berjalan jika Semua Bulan) ----
+        $acuanTahun = $bulanTahun ?? $sekarang->year;
+        $acuanBulan = $bulanAngka ?? $sekarang->month;
 
-        // Aturan sama persis dengan accessor status_ketersediaan (bulan berjalan, akun aktif)
-        $bulanIni = now();
-        $filterBulanIni = fn($q) => $q
-            ->where('kontrak.periode_tahun', $bulanIni->year)
-            ->where('kontrak.periode_bulan', $bulanIni->month);
+        $filterBulanAcuan = fn($q) => $q
+            ->where('kontrak.periode_tahun', $acuanTahun)
+            ->where('kontrak.periode_bulan', $acuanBulan);
 
-        $batas = (int) config('mitra.batas_honor');
+        $peranBulan = $this->peranMitraPadaBulan($acuanTahun, $acuanBulan);
+        $total      = Mitra::count();
 
         $aktifSemua = Mitra::query()
             ->join('users', 'users.id', '=', 'mitra.user_id')
             ->where('users.is_active', true)
-            ->select('mitra.id')
-            ->withSum(['pekerjaan as honor_bulan_ini' => $filterBulanIni], 'jumlah')
-            ->withCount(['pekerjaan as tugas_bulan_ini' => $filterBulanIni])
+            ->select('mitra.id', 'mitra.wilayah')
+            ->withSum(['pekerjaan as honor_bulan_ini' => $filterBulanAcuan], 'jumlah')
+            ->withCount(['pekerjaan as tugas_bulan_ini' => $filterBulanAcuan])
             ->get();
 
-        $penuh       = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini >= $batas)->count();
-        $bertugas    = $aktifSemua->filter(fn($m) => (int) $m->honor_bulan_ini < $batas && (int) $m->tugas_bulan_ini > 0)->count();
-        $hampirPenuh = $aktifSemua->filter(fn($m) => $batas > 0
-            && (int) $m->honor_bulan_ini >= ($batas * 0.8)
-            && (int) $m->honor_bulan_ini < $batas
-            && (int) $m->tugas_bulan_ini > 0)->count();
-        $tersedia    = $aktifSemua->count() - $penuh - $bertugas;
+        $penuh = $bertugas = $hampirPenuh = 0;
 
+        foreach ($aktifSemua as $m) {
+            $batas = BatasHonor::untukMitra($m->wilayah, $peranBulan[$m->id] ?? []);
+            $honor = (int) $m->honor_bulan_ini;
+            $tugas = (int) $m->tugas_bulan_ini;
+
+            if ($batas > 0 && $honor >= $batas) {
+                $penuh++;
+            } elseif ($tugas > 0) {
+                $bertugas++;
+                if ($batas > 0 && $honor >= ($batas * 0.8)) {
+                    $hampirPenuh++;
+                }
+            }
+        }
+
+        $tersedia    = $aktifSemua->count() - $penuh - $bertugas;
         $jumlahAktif = $aktifSemua->count();
-        $persen = $jumlahAktif > 0
+        $persen      = $jumlahAktif > 0
             ? (int) round((($bertugas + $penuh) / $jumlahAktif) * 100)
             : 0;
+
+        // Status per baris mitra pada halaman ini agar badge tabel akurat mengikuti bulan terpilih
+        $statusPerMitra = [];
+        foreach ($daftarMitra as $m) {
+            if (!($m->user?->is_active ?? false)) {
+                $statusPerMitra[$m->id] = $m->status_ketersediaan;
+                continue;
+            }
+
+            $batas = BatasHonor::untukMitra($m->wilayah, $peranBulan[$m->id] ?? []);
+            $honor = (int) $m->honor_bulan_ini;
+            $tugas = (int) $m->tugas_bulan_ini;
+
+            if ($batas > 0 && $honor >= $batas) {
+                $statusPerMitra[$m->id] = ['key' => 'penuh', 'label' => 'Penuh'];
+            } elseif ($tugas > 0) {
+                $statusPerMitra[$m->id] = ['key' => 'bertugas', 'label' => 'Bertugas'];
+            } else {
+                $statusPerMitra[$m->id] = ['key' => 'tersedia', 'label' => 'Tersedia'];
+            }
+        }
 
         return view('admin.manajemen-mitra', compact(
             'daftarMitra',
             'tugasPerMitra',
+            'statusPerMitra',
+            'daftarBulan',
             'daftarWilayah',
             'daftarTugas',
             'honorMaks',
@@ -112,6 +180,7 @@ class MitraController extends Controller
             'penuh',
             'perPage',
             'persen',
+            'bulan',
             'status',
             'sort',
             'q'
@@ -281,6 +350,8 @@ class MitraController extends Controller
      */
     private function buildQuery(Request $request): Builder
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
         $status = in_array($request->query('status'), ['tersedia', 'bertugas', 'penuh'], true)
             ? $request->query('status')
             : 'semua';
@@ -289,51 +360,87 @@ class MitraController extends Controller
             : 'name';
         $q = trim((string) $request->query('q', ''));
 
-        $honorSql = '(select COALESCE(sum(kp.jumlah), 0)
+        $sekarang   = now();
+        $acuanTahun = $bulanTahun ?? $sekarang->year;
+        $acuanBulan = $bulanAngka ?? $sekarang->month;
+
+        $filterBulanAcuan = fn($q) => $q
+            ->where('kontrak.periode_tahun', $acuanTahun)
+            ->where('kontrak.periode_bulan', $acuanBulan);
+
+        $filterHonorDipilih = function ($q) use ($bulanTahun, $bulanAngka) {
+            if ($bulanTahun && $bulanAngka) {
+                $q->where('kontrak.periode_tahun', $bulanTahun)
+                    ->where('kontrak.periode_bulan', $bulanAngka);
+            }
+        };
+
+        $honorSql = ($bulanTahun && $bulanAngka)
+            ? '(select COALESCE(sum(kp.jumlah), 0)
+                  from kontrak_pekerjaan kp
+                  join kontrak k on k.id = kp.kontrak_id
+                  where k.mitra_id = mitra.id
+                    and k.periode_tahun = ' . (int) $bulanTahun . '
+                    and k.periode_bulan = ' . (int) $bulanAngka . ')'
+            : '(select COALESCE(sum(kp.jumlah), 0)
                   from kontrak_pekerjaan kp
                   join kontrak k on k.id = kp.kontrak_id
                   where k.mitra_id = mitra.id)';
-
-        $bulanIni = now();
-        $filterBulanIni = fn($q) => $q
-            ->where('kontrak.periode_tahun', $bulanIni->year)
-            ->where('kontrak.periode_bulan', $bulanIni->month);
 
         $query = Mitra::query()
             ->join('users', 'users.id', '=', 'mitra.user_id')
             ->select('mitra.*')
             ->with('user')
-            ->withSum('pekerjaan', 'jumlah') // tetap, untuk kolom Total Honor, filter, dan sort
-            ->withSum(['pekerjaan as honor_bulan_ini' => $filterBulanIni], 'jumlah')
-            ->withCount(['pekerjaan as tugas_bulan_ini' => $filterBulanIni]);
+            ->withSum(['pekerjaan' => $filterHonorDipilih], 'jumlah')
+            ->withSum(['pekerjaan as honor_bulan_ini' => $filterBulanAcuan], 'jumlah')
+            ->withCount(['pekerjaan as tugas_bulan_ini' => $filterBulanAcuan]);
 
-        // Filter status ketersediaan (aturannya sama dengan accessor status_ketersediaan)
+        // Filter status ketersediaan (mengikuti bulan acuan & batas dinamis per wilayah/peran)
         if ($status !== 'semua') {
-            $batas = (int) config('mitra.batas_honor');
+            $peranBulan = $this->peranMitraPadaBulan($acuanTahun, $acuanBulan);
 
-            $honorBulanSql = '(select COALESCE(sum(kp.jumlah), 0)
-                      from kontrak_pekerjaan kp
-                      join kontrak k on k.id = kp.kontrak_id
-                      where k.mitra_id = mitra.id
-                        and k.periode_tahun = ? and k.periode_bulan = ?)';
-
-            $adaTugasBulanIni = fn($s) => $s->select(DB::raw(1))
+            $adaTugasAcuan = fn($s) => $s->select(DB::raw(1))
                 ->from('kontrak_pekerjaan as kp')
                 ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
                 ->whereColumn('k.mitra_id', 'mitra.id')
-                ->where('k.periode_tahun', $bulanIni->year)
-                ->where('k.periode_bulan', $bulanIni->month);
+                ->where('k.periode_tahun', $acuanTahun)
+                ->where('k.periode_bulan', $acuanBulan);
 
-            // Status ini hanya berlaku untuk akun aktif
             $query->where('users.is_active', true);
 
-            if ($status === 'penuh') {
-                $query->whereRaw("$honorBulanSql >= ?", [$bulanIni->year, $bulanIni->month, $batas]);
-            } elseif ($status === 'bertugas') {
-                $query->whereRaw("$honorBulanSql < ?", [$bulanIni->year, $bulanIni->month, $batas])
-                    ->whereExists($adaTugasBulanIni);
-            } else { // tersedia
-                $query->whereNotExists($adaTugasBulanIni);
+            if ($status === 'tersedia') {
+                $query->whereNotExists($adaTugasAcuan);
+            } else {
+                // Tentukan ID mitra yang mencapai batas honor pada bulan acuan
+                $mitraBertugas = DB::table('mitra')
+                    ->join('kontrak as k', 'k.mitra_id', '=', 'mitra.id')
+                    ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+                    ->where('k.periode_tahun', $acuanTahun)
+                    ->where('k.periode_bulan', $acuanBulan)
+                    ->groupBy('mitra.id', 'mitra.wilayah')
+                    ->selectRaw('mitra.id, mitra.wilayah, COALESCE(SUM(kp.jumlah), 0) as total_honor')
+                    ->get();
+
+                $idPenuh = [];
+                foreach ($mitraBertugas as $row) {
+                    $batas = BatasHonor::untukMitra($row->wilayah, $peranBulan[$row->id] ?? []);
+                    if ($batas > 0 && (int) $row->total_honor >= $batas) {
+                        $idPenuh[] = $row->id;
+                    }
+                }
+
+                if ($status === 'penuh') {
+                    if (empty($idPenuh)) {
+                        $query->whereRaw('1 = 0');
+                    } else {
+                        $query->whereIn('mitra.id', $idPenuh);
+                    }
+                } else { // bertugas
+                    $query->whereExists($adaTugasAcuan);
+                    if (!empty($idPenuh)) {
+                        $query->whereNotIn('mitra.id', $idPenuh);
+                    }
+                }
             }
         }
 
@@ -365,15 +472,18 @@ class MitraController extends Controller
             $query->where('mitra.wilayah', $request->wilayah);
         }
 
-        // Filter tugas
+        // Filter tugas (mengikuti bulan terpilih jika ada)
         $tugasDipilih = array_values(array_filter((array) $request->input('tugas', [])));
         if ($tugasDipilih) {
-            $query->whereExists(function ($s) use ($tugasDipilih) {
+            $query->whereExists(function ($s) use ($tugasDipilih, $bulanTahun, $bulanAngka) {
                 $s->select(DB::raw(1))
                     ->from('kontrak_pekerjaan as kp')
                     ->join('kontrak as k', 'k.id', '=', 'kp.kontrak_id')
                     ->whereColumn('k.mitra_id', 'mitra.id')
-                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih);
+                    ->whereIn('kp.uraian_pekerjaan', $tugasDipilih)
+                    ->when($bulanTahun && $bulanAngka, fn($q) => $q
+                        ->where('k.periode_tahun', $bulanTahun)
+                        ->where('k.periode_bulan', $bulanAngka));
             });
         }
 
@@ -391,19 +501,20 @@ class MitraController extends Controller
 
     public function export(Request $request)
     {
+        [$bulan, $bulanTahun, $bulanAngka] = $this->parseBulan($request);
+
         $status = in_array($request->query('status'), ['tersedia', 'bertugas', 'penuh'], true)
             ? $request->query('status')
             : 'semua';
         $format = $request->query('format') === 'pdf' ? 'pdf' : 'csv';
 
         $daftar   = $this->buildQuery($request)->get();
-        $namaFile = 'data-mitra-' . now()->format('Ymd-His');
+        $namaFile = 'data-mitra-' . ($bulan !== '' ? $bulan . '-' : '') . now()->format('Ymd-His');
 
-        // ================= CSV =================
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($daftar) {
                 $out = fopen('php://output', 'w');
-                fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
+                fwrite($out, "\xEF\xBB\xBF");
 
                 fputcsv($out, ['No', 'Nama', 'Sobat ID', 'NIK', 'Wilayah', 'Total Honor', 'Status'], ';', '"', '');
 
@@ -411,7 +522,7 @@ class MitraController extends Controller
                     fputcsv($out, [
                         $i + 1,
                         $m->user?->name,
-                        '="' . $m->user?->username . '"', // cegah Excel mengubah angka panjang
+                        '="' . $m->user?->username . '"',
                         '="' . $m->nik . '"',
                         $m->wilayah,
                         (int) ($m->pekerjaan_sum_jumlah ?? 0),
@@ -422,7 +533,6 @@ class MitraController extends Controller
             }, $namaFile . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
         }
 
-        // ================= PDF =================
         $labelStatus = [
             'tersedia' => 'Tersedia',
             'bertugas' => 'Bertugas',
@@ -430,6 +540,9 @@ class MitraController extends Controller
             'semua'    => 'Semua',
         ][$status];
         $ringkasan = ['Status: ' . $labelStatus];
+        if ($bulanTahun && $bulanAngka) {
+            $ringkasan[] = 'Bulan: ' . Carbon::create($bulanTahun, $bulanAngka, 1)->locale('id')->translatedFormat('F Y');
+        }
         if (trim((string) $request->query('q')) !== '') {
             $ringkasan[] = 'Pencarian: "' . trim($request->query('q')) . '"';
         }
@@ -466,6 +579,31 @@ class MitraController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $namaFile . '.pdf"',
         ]);
+    }
+
+    private function parseBulan(Request $request): array
+    {
+        $bulan = (string) $request->query('bulan', '');
+        if (preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $bulan, $m)) {
+            return [$bulan, (int) $m[1], (int) $m[2]];
+        }
+
+        return ['', null, null];
+    }
+
+    private function peranMitraPadaBulan(int $tahun, int $bulan): array
+    {
+        return DB::table('kontrak as k')
+            ->join('kontrak_pekerjaan as kp', 'kp.kontrak_id', '=', 'k.id')
+            ->where('k.periode_tahun', $tahun)
+            ->where('k.periode_bulan', $bulan)
+            ->whereNotNull('kp.sebagai')
+            ->select('k.mitra_id', 'kp.sebagai')
+            ->distinct()
+            ->get()
+            ->groupBy('mitra_id')
+            ->map(fn($rows) => $rows->pluck('sebagai')->all())
+            ->all();
     }
 
     /** Hapus banyak akun mitra sekaligus */
